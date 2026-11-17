@@ -77,6 +77,9 @@ export class Engine {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: dpr < 2, alpha: false, powerPreference: 'default' });
     this.renderer.setPixelRatio(dpr);
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+    // soft sun shadows, used only in the one-hectare close-up (and never in lite mode)
+    this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.setClearColor('#06080c');
     this.controls = new OrbitControls(this.camera, canvas);
     this.controls.enableDamping = true;

@@ -49,6 +49,7 @@ export interface UiStrings {
   mapHint: string;
   /** the unit word, never abbreviated */
   hectares: string;
+  mapTwoFingers: string;
   reportTitle: string;
   reportIntro: string;
   contents: string;

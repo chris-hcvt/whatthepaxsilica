@@ -158,8 +158,15 @@ export function MapLayer({ prepare, active, insets }: { prepare: boolean; active
         attributionControl: { compact: true },
         dragRotate: false,
         pitchWithRotate: false,
-        dragPan: !touch, // on phones one finger keeps scrolling the page; pinch still zooms
-        scrollZoom: false, // the mouse wheel keeps scrolling the page
+        dragPan: true,
+        // phones: one finger keeps scrolling the story, two fingers move and zoom the map
+        cooperativeGestures: touch,
+        scrollZoom: false, // the mouse wheel keeps moving through the story; use + / − to zoom
+        locale: {
+          'CooperativeGesturesHandler.MobileHelpText': L.ui.mapTwoFingers,
+          'CooperativeGesturesHandler.WindowsHelpText': L.ui.mapTwoFingers,
+          'CooperativeGesturesHandler.MacHelpText': L.ui.mapTwoFingers,
+        },
         fadeDuration: 0,
       });
       map.touchZoomRotate.disableRotation();

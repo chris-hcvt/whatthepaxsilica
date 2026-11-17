@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { pointInRing, ringCentroid } from './geo';
 import type { SiteScene } from './site';
 import { HOME_LOTS, type HomeKey } from '../content/story';
+import { buildHouse, facadeTexture, roofTexture } from './houses';
 
 /**
  * "How big is one hectare?" — a real 100 m × 100 m square on the site, filled with homes of a chosen size,
@@ -11,31 +12,30 @@ import { HOME_LOTS, type HomeKey } from '../content/story';
 
 export type { HomeKey };
 
-/** How each home size is drawn. The number of homes is HOME_LOTS[k].perHectare (10,000 ÷ lot size, rounded down). */
+/** How each home size is laid out. The number of homes is HOME_LOTS[k].perHectare (10,000 ÷ lot size, rounded down). */
 interface HomeLayout {
   /** lots laid out rows × cols across the square; spare lots stay as open space */
   rows: number;
   cols: number;
-  /** house footprint as a share of the lot, wall and roof heights in metres */
-  fw: number;
-  fd: number;
-  wall: number;
-  roof: number;
   lawn: string;
 }
 
 const HOMES: Record<HomeKey, HomeLayout> = {
-  regular: { rows: 12, cols: 13, fw: 0.62, fd: 0.66, wall: 2.7, roof: 1.5, lawn: '#b9a98a' },
-  medium: { rows: 12, cols: 7, fw: 0.68, fd: 0.7, wall: 5.6, roof: 1.8, lawn: '#7ea866' },
-  large: { rows: 6, cols: 6, fw: 0.6, fd: 0.6, wall: 6.4, roof: 2.4, lawn: '#6c9f58' },
-  mansion: { rows: 5, cols: 2, fw: 0.52, fd: 0.58, wall: 8, roof: 3, lawn: '#5f9a4e' },
+  regular: { rows: 12, cols: 13, lawn: '#bdb3a0' },
+  medium: { rows: 12, cols: 7, lawn: '#86a86a' },
+  large: { rows: 6, cols: 6, lawn: '#6fa25a' },
+  mansion: { rows: 5, cols: 2, lawn: '#67a052' },
 };
 
 const SIDE = 0.1; // km
 const COURT: [number, number] = [0.028, 0.015]; // FIBA court, 28 × 15 m
-const WALLS = ['#f3efe5', '#ecdcc0', '#d8e5ee', '#f2d8c9', '#dde9d0', '#f5e6b2', '#e6e1f0'];
-const ROOFS = ['#b4462f', '#8b3a2d', '#3e6e8e', '#696d74', '#a65d29', '#2f6a55', '#7b4b8f'];
+// pastel walls and painted corrugated-iron roofs, as on many Filipino houses
+const WALLS = ['#f4f0e6', '#f1e3c4', '#dbe8f0', '#f4dccd', '#e0ecd2', '#f7e9b6', '#ece6f2', '#ffffff'];
+const ROOFS = ['#b23a2a', '#8c2f28', '#2f5f8f', '#9aa0a6', '#a65d29', '#2f6b4f', '#5b6168', '#3b4d8a'];
 const MAX = 160;
+const SHADOW_HALF = 0.3; // km: the sun's shadow box around the square
+// in the close-up the sun comes from the south-west, so the house fronts facing the camera are lit
+const CLOSE_SUN = new THREE.Vector3(-0.35, 1, 0.8).normalize();
 
 export class HectareFx {
   /** south-west corner and centre of the square (scene x/z, km) */
@@ -49,10 +49,17 @@ export class HectareFx {
   private frame: THREE.Mesh;
   private court: THREE.Mesh;
   private beacon: THREE.Mesh;
+  /** a level, graded pad the homes stand on (top at padTop) */
+  private ground: THREE.Mesh;
+  private padTop = 0;
+  private sunDir = new THREE.Vector3();
   private lots: THREE.InstancedMesh;
   private walls: THREE.InstancedMesh;
   private roofs: THREE.InstancedMesh;
-  private pools: THREE.InstancedMesh;
+  private details: THREE.InstancedMesh;
+  private treeTops: THREE.InstancedMesh;
+  private trunks: THREE.InstancedMesh;
+  private trees: { x: number; z: number; s: number; h: number; a: number }[] = [];
   private grid: THREE.LineSegments;
   private gridMat: THREE.ShaderMaterial;
   private home: HomeKey = 'regular';
@@ -62,8 +69,20 @@ export class HectareFx {
   private placedFlat = -1;
   private gridPlacedFlat = -1;
   private houseCells: { x: number; z: number; delay: number; i: number }[] = [];
-  lite = false;
+  private liteMode = false;
   show = { plot: false, court: false, homes: false, grid: false };
+
+  get lite() {
+    return this.liteMode;
+  }
+
+  set lite(v: boolean) {
+    if (v === this.liteMode) return;
+    this.liteMode = v;
+    this.buildTrees();
+    this.apply();
+    this.place(true);
+  }
 
   constructor(private site: SiteScene) {
     const [x0, z0] = this.pickSpot();
@@ -107,21 +126,34 @@ export class HectareFx {
     bg.translate(0, 0.275, 0);
     this.beacon = new THREE.Mesh(bg, new THREE.MeshBasicMaterial({ color: '#ffd34d', transparent: true, opacity: 0.85, depthWrite: false }));
 
-    // homes
+    // homes: concrete under the lots (the gaps read as lanes), the lots, and three instanced house parts
+    const padG = new THREE.BoxGeometry(SIDE + 0.003, 1, SIDE + 0.003);
+    padG.translate(0, -0.5, 0);
+    this.ground = new THREE.Mesh(padG, new THREE.MeshLambertMaterial({ color: '#b5b0a5' }));
+    this.ground.receiveShadow = true;
     const lotG = new THREE.PlaneGeometry(1, 1);
     lotG.rotateX(-Math.PI / 2);
     this.lots = new THREE.InstancedMesh(lotG, new THREE.MeshLambertMaterial({ color: '#ffffff' }), MAX);
-    const wallG = new THREE.BoxGeometry(1, 1, 1);
-    wallG.translate(0, 0.5, 0);
-    this.walls = new THREE.InstancedMesh(wallG, new THREE.MeshLambertMaterial({ color: '#ffffff', emissive: '#2a2622' }), MAX);
-    const roofG = new THREE.ConeGeometry(Math.SQRT1_2, 1, 4, 1);
-    roofG.rotateY(Math.PI / 4);
-    roofG.translate(0, 0.5, 0);
-    this.roofs = new THREE.InstancedMesh(roofG, new THREE.MeshLambertMaterial({ color: '#ffffff', flatShading: true }), MAX);
-    const poolG = new THREE.BoxGeometry(1, 1, 1);
-    poolG.translate(0, 0.5, 0);
-    this.pools = new THREE.InstancedMesh(poolG, new THREE.MeshLambertMaterial({ color: '#3fb6e8', emissive: '#0d4f7a', emissiveIntensity: 0.6 }), 12);
-    for (const m of [this.lots, this.walls, this.roofs, this.pools]) {
+    this.lots.receiveShadow = true;
+    const empty = new THREE.BufferGeometry();
+    this.walls = new THREE.InstancedMesh(empty, new THREE.MeshLambertMaterial({ map: facadeTexture(), side: THREE.DoubleSide }), MAX);
+    this.roofs = new THREE.InstancedMesh(empty, new THREE.MeshLambertMaterial({ map: roofTexture(), side: THREE.DoubleSide }), MAX);
+    this.details = new THREE.InstancedMesh(empty, new THREE.MeshLambertMaterial({ vertexColors: true }), MAX);
+    for (const m of [this.walls, this.roofs, this.details]) {
+      m.castShadow = true;
+      m.receiveShadow = true;
+    }
+
+    // trees around the square, where the satellite image is green
+    const top = new THREE.IcosahedronGeometry(2.4, 0);
+    top.scale(1, 0.85, 1);
+    top.translate(0, 4.4, 0);
+    this.treeTops = new THREE.InstancedMesh(top, new THREE.MeshLambertMaterial({ color: '#ffffff', flatShading: true }), 7000);
+    const trunk = new THREE.CylinderGeometry(0.18, 0.28, 3, 5);
+    trunk.translate(0, 1.5, 0);
+    this.trunks = new THREE.InstancedMesh(trunk, new THREE.MeshLambertMaterial({ color: '#6b4e33' }), 7000);
+    for (const m of [this.treeTops, this.trunks]) m.castShadow = true;
+    for (const m of [this.lots, this.walls, this.roofs, this.details, this.treeTops, this.trunks]) {
       m.frustumCulled = false;
       m.count = 0;
     }
@@ -141,9 +173,100 @@ export class HectareFx {
     this.grid.renderOrder = 4;
     this.grid.frustumCulled = false;
 
-    this.group.add(this.plot, this.frame, this.court, this.beacon, this.lots, this.walls, this.roofs, this.pools, this.grid);
+    this.group.add(this.plot, this.frame, this.court, this.beacon, this.ground, this.lots, this.walls, this.roofs, this.details, this.treeTops, this.trunks, this.grid);
     site.scene.add(this.group);
+
+    // the sun casts shadows in a box around the square (only while the close-up is on screen)
+    const sun = site.sun;
+    this.sunDir.copy(sun.position).sub(sun.target.position).normalize();
+    sun.target.position.set(this.cx, site.heightAt(this.cx, this.cz), this.cz);
+    site.scene.add(sun.target);
+    sun.position.copy(sun.target.position).addScaledVector(this.sunDir, 2.5);
+    sun.shadow.mapSize.set(2048, 2048);
+    const cam = sun.shadow.camera;
+    cam.left = cam.bottom = -SHADOW_HALF;
+    cam.right = cam.top = SHADOW_HALF;
+    cam.near = 1;
+    cam.far = 4;
+    cam.updateProjectionMatrix();
+    sun.shadow.bias = -0.00012;
+    sun.shadow.normalBias = 0.00015;
+
+    this.buildTrees();
     this.apply();
+  }
+
+  /** scatter low-poly trees near the square, denser where the satellite image is dark green (tree cover) */
+  private buildTrees() {
+    const s = this.site;
+    const R = 0.42;
+    const step = this.liteMode ? 0.012 : 0.0078;
+    const img = s.imagery.image as (HTMLImageElement | ImageBitmap) | undefined;
+    let sample: ((x: number, z: number) => [number, number, number] | null) | null = null;
+    if (img && img.width) {
+      const W = img.width;
+      const H = img.height;
+      const toPx = (x: number, z: number) => [((x + s.halfWidth) / (2 * s.halfWidth)) * W, ((z + s.halfDepth) / (2 * s.halfDepth)) * H];
+      const [ax, ay] = toPx(this.cx - R, this.cz - R);
+      const [bx, by] = toPx(this.cx + R, this.cz + R);
+      const sx = Math.max(0, Math.floor(ax));
+      const sy = Math.max(0, Math.floor(ay));
+      const sw = Math.min(W - sx, Math.ceil(bx) - sx + 1);
+      const sh = Math.min(H - sy, Math.ceil(by) - sy + 1);
+      try {
+        const cv = document.createElement('canvas');
+        cv.width = sw;
+        cv.height = sh;
+        const ctx = cv.getContext('2d', { willReadFrequently: true })!;
+        ctx.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
+        const data = ctx.getImageData(0, 0, sw, sh).data;
+        sample = (x, z) => {
+          const [px, py] = toPx(x, z);
+          const i = Math.floor(px) - sx;
+          const j = Math.floor(py) - sy;
+          if (i < 0 || j < 0 || i >= sw || j >= sh) return null;
+          const k = (j * sw + i) * 4;
+          return [data[k], data[k + 1], data[k + 2]];
+        };
+      } catch {
+        sample = null;
+      }
+    }
+    let seed = 1234567;
+    const rnd = () => {
+      seed = (seed * 1664525 + 1013904223) >>> 0;
+      return seed / 4294967296;
+    };
+    const margin = 0.012;
+    this.trees = [];
+    for (let gx = -R; gx <= R; gx += step) {
+      for (let gz = -R; gz <= R; gz += step) {
+        const x = this.cx + gx + (rnd() - 0.5) * step * 0.9;
+        const z = this.cz + gz + (rnd() - 0.5) * step * 0.9;
+        const d = Math.hypot(x - this.cx, z - this.cz);
+        if (d > R) continue;
+        if (x > this.x0 - margin && x < this.x0 + SIDE + margin && z > this.z0 - margin && z < this.z0 + SIDE + margin) continue;
+        let p = 0.3;
+        const c = sample?.(x, z);
+        if (c) {
+          const [r, g, b] = c;
+          const bright = (r + g + b) / 765;
+          const exg = (2 * g - r - b) / (r + g + b + 1);
+          p = Math.min(1, Math.max(0, (0.2 - bright) / 0.075)) * Math.min(1, Math.max(0, (exg - 0.25) / 0.3));
+        }
+        // thin out towards the edge so the forest fades into the satellite image
+        const edge = 1 - Math.max(0, (d - R * 0.7) / (R * 0.3));
+        if (rnd() < p * 0.75 * edge) this.trees.push({ x, z, s: 0.7 + rnd() * 0.75, h: 0.8 + rnd() * 0.5, a: rnd() * Math.PI });
+        // otherwise, now and then a shrub or small tree on the grassland
+        else if (rnd() < (0.16 + p * 0.3) * edge) this.trees.push({ x, z, s: 0.25 + rnd() * 0.3, h: 0.7 + rnd() * 0.4, a: rnd() * Math.PI });
+      }
+    }
+    this.trees = this.trees.slice(0, this.treeTops.instanceMatrix.count);
+    const greens = ['#3f7a34', '#4f8a3a', '#356b2c', '#5c9a44', '#47803a', '#2f5f29'];
+    const col = new THREE.Color();
+    this.trees.forEach((_t, i) => this.treeTops.setColorAt(i, col.set(greens[Math.floor(rnd() * greens.length)]).offsetHSL(0, 0, (rnd() - 0.5) * 0.06)));
+    if (this.treeTops.instanceColor) this.treeTops.instanceColor.needsUpdate = true;
+    this.treeTops.count = this.trunks.count = this.trees.length;
   }
 
   /** the flattest 100 m square near the middle of the hub */
@@ -247,20 +370,29 @@ export class HectareFx {
     }
     if (show.grid && !was.grid) this.reveal = instant || this.lite ? 9 : 0;
     this.apply();
-    this.place();
+    this.place(true);
   }
 
   private apply() {
     const { plot, court, homes, grid } = this.show;
-    this.plot.visible = plot;
+    const close = plot && !grid;
+    this.plot.visible = plot && !homes;
     this.frame.visible = plot;
     // zoomed out, the square is filled in solid so it stays visible
-    this.plotMat.opacity = grid ? 0.95 : homes ? 0.0 : 0.22;
+    this.plotMat.opacity = grid ? 0.95 : 0.22;
     this.court.visible = court;
     this.beacon.visible = grid;
-    for (const m of [this.lots, this.walls, this.roofs, this.pools]) m.visible = homes;
+    this.ground.visible = homes;
+    for (const m of [this.lots, this.walls, this.roofs, this.details]) m.visible = homes;
+    this.treeTops.visible = this.trunks.visible = close;
     this.grid.visible = grid;
     this.gridMat.uniforms.uReveal.value = this.reveal;
+    // sun shadows only in the close-up (and not on slow devices)
+    const shadows = close && !this.liteMode;
+    const sun = this.site.sun;
+    sun.castShadow = shadows;
+    this.site.terrain.receiveShadow = shadows;
+    sun.position.copy(sun.target.position).addScaledVector(close ? CLOSE_SUN : this.sunDir, 2.5);
   }
 
   private buildHomes() {
@@ -273,6 +405,15 @@ export class HectareFx {
     for (let k = 0; k < spare; k++) empty.add(Math.floor(((k + 0.5) * total) / spare));
     const lw = SIDE / spec.cols;
     const ld = SIDE / spec.rows;
+    const parts = buildHouse(this.home, lw * 1000, ld * 1000);
+    for (const [mesh, g] of [
+      [this.walls, parts.walls],
+      [this.roofs, parts.roofs],
+      [this.details, parts.details],
+    ] as const) {
+      if (mesh.geometry.attributes.position) mesh.geometry.dispose();
+      mesh.geometry = g;
+    }
     const c = new THREE.Color();
     this.houseCells = [];
     let n = 0;
@@ -281,14 +422,14 @@ export class HectareFx {
         const idx = r * spec.cols + q;
         const x = this.x0 + (q + 0.5) * lw;
         const z = this.z0 + (r + 0.5) * ld;
-        this.lots.setColorAt(idx, c.set(empty.has(idx) ? '#4f8f45' : spec.lawn));
+        this.lots.setColorAt(idx, c.set(empty.has(idx) ? '#4f8f45' : spec.lawn).offsetHSL(0, 0, ((((idx * 2654435761) >>> 4) % 7) - 3) * 0.006));
         if (empty.has(idx)) continue;
         const delay = ((r + q) / (spec.rows + spec.cols)) * 0.9 + ((idx * 37) % 11) * 0.012;
         this.houseCells.push({ x, z, delay, i: n });
         // a fixed shuffle so neighbouring houses differ without forming stripes
         const mix = (idx * 2654435761) >>> 0;
-        const wall = this.home === 'mansion' ? '#f6f4ee' : WALLS[(mix >>> 8) % WALLS.length];
-        const roof = this.home === 'mansion' ? '#4a4f57' : ROOFS[(mix >>> 16) % ROOFS.length];
+        const wall = this.home === 'mansion' ? ['#f7f4ec', '#efe6d4', '#ffffff'][(mix >>> 8) % 3] : WALLS[(mix >>> 8) % WALLS.length];
+        const roof = this.home === 'mansion' ? ['#4a4f57', '#7a3b2c', '#3b4250'][(mix >>> 16) % 3] : ROOFS[(mix >>> 16) % ROOFS.length];
         this.walls.setColorAt(n, c.set(wall));
         this.roofs.setColorAt(n, c.set(roof));
         n++;
@@ -297,16 +438,31 @@ export class HectareFx {
     this.lots.count = total;
     this.walls.count = n;
     this.roofs.count = n;
-    this.pools.count = this.home === 'mansion' ? n : 0;
+    this.details.count = n;
     for (const m of [this.lots, this.walls, this.roofs]) if (m.instanceColor) m.instanceColor.needsUpdate = true;
   }
 
   /** re-sample heights after the terrain changes (only for the parts on show) */
-  place() {
+  place(force = false) {
     const s = this.site;
     const flatNow = s.flatAmount;
+    if (force) this.placedFlat = -1;
     if (this.show.plot && this.placedFlat !== flatNow) {
       this.placedFlat = flatNow;
+      // level pad: top just above the highest ground under the square, sides down to the lowest
+      let lo = Infinity;
+      let hi = -Infinity;
+      for (let i = 0; i <= 10; i++) {
+        for (let j = 0; j <= 10; j++) {
+          const h = s.heightAt(this.x0 + (i / 10) * SIDE, this.z0 + (j / 10) * SIDE);
+          lo = Math.min(lo, h);
+          hi = Math.max(hi, h);
+        }
+      }
+      this.padTop = hi + 0.0004;
+      this.ground.position.set(this.cx, this.padTop, this.cz);
+      this.ground.scale.set(1, this.padTop - lo + 0.003, 1);
+
       const pp = this.plot.geometry.attributes.position as THREE.BufferAttribute;
       for (let i = 0; i < pp.count; i++) {
         const x = pp.getX(i) + 0; // geometry is centred; positioned by the mesh
@@ -327,7 +483,7 @@ export class HectareFx {
         const l = Math.hypot(tx, tz) || 1;
         tx /= l;
         tz /= l;
-        const h = s.heightAt(x, z) + 0.0025;
+        const h = this.show.homes ? this.padTop + 0.0003 : s.heightAt(x, z) + 0.0025;
         const w = width / 2;
         fp.set([x - tz * w, h, z + tx * w, x + tz * w, h, z - tx * w], i * 6);
       });
@@ -337,6 +493,7 @@ export class HectareFx {
       const ccz = this.cz - 0.026;
       this.court.position.set(ccx, s.heightAt(ccx, ccz) + 0.0018, ccz);
       this.beacon.position.set(this.cx, s.heightAt(this.cx, this.cz), this.cz);
+      this.placeTrees();
     }
     if (this.show.homes) this.placeHomes();
     if (this.show.grid && this.gridPlacedFlat !== flatNow) {
@@ -348,7 +505,6 @@ export class HectareFx {
   }
 
   private placeHomes() {
-    const s = this.site;
     const spec = HOMES[this.home];
     const lw = SIDE / spec.cols;
     const ld = SIDE / spec.rows;
@@ -360,28 +516,37 @@ export class HectareFx {
       for (let c = 0; c < spec.cols; c++) {
         const x = this.x0 + (c + 0.5) * lw;
         const z = this.z0 + (r + 0.5) * ld;
-        m.compose(v.set(x, s.heightAt(x, z) + 0.0016, z), q, sc.set(lw - 0.0012, 1, ld - 0.0012));
+        m.compose(v.set(x, this.padTop + 0.00012, z), q, sc.set(lw - 0.0012, 1, ld - 0.0012));
         this.lots.setMatrixAt(r * spec.cols + c, m);
       }
     }
-    const hw = lw * spec.fw;
-    const hd = ld * spec.fd;
+    // houses are modelled in metres: scale to km, and grow upwards when they appear
     for (const cell of this.houseCells) {
       const g = Math.min(1, Math.max(0, (this.grow * 1.9 - cell.delay) / 0.45));
-      const e = g * g * (3 - 2 * g);
-      const hx = this.home === 'mansion' ? cell.x - lw * 0.12 : cell.x;
-      const y = s.heightAt(cell.x, cell.z) + 0.0016;
-      const wallH = (spec.wall / 1000) * Math.max(0.001, e);
-      m.compose(v.set(hx, y, cell.z), q, sc.set(hw, wallH, hd));
+      const e = Math.max(0.001, g * g * (3 - 2 * g));
+      m.compose(v.set(cell.x, this.padTop + 0.00012, cell.z), q, sc.set(0.001, 0.001 * e, 0.001));
       this.walls.setMatrixAt(cell.i, m);
-      m.compose(v.set(hx, y + wallH, cell.z), q, sc.set(hw * 1.1, (spec.roof / 1000) * Math.max(0.001, e), hd * 1.1));
       this.roofs.setMatrixAt(cell.i, m);
-      if (this.home === 'mansion') {
-        m.compose(v.set(cell.x + lw * 0.33, y, cell.z), q, sc.set(0.009 * Math.max(0.001, e), 0.0007, 0.0045 * Math.max(0.001, e)));
-        this.pools.setMatrixAt(cell.i, m);
-      }
+      this.details.setMatrixAt(cell.i, m);
     }
-    for (const mesh of [this.lots, this.walls, this.roofs, this.pools]) mesh.instanceMatrix.needsUpdate = true;
+    for (const mesh of [this.lots, this.walls, this.roofs, this.details]) mesh.instanceMatrix.needsUpdate = true;
+  }
+
+  private placeTrees() {
+    const s = this.site;
+    const m = new THREE.Matrix4();
+    const q = new THREE.Quaternion();
+    const v = new THREE.Vector3();
+    const sc = new THREE.Vector3();
+    const up = new THREE.Vector3(0, 1, 0);
+    this.trees.forEach((t, i) => {
+      q.setFromAxisAngle(up, t.a);
+      m.compose(v.set(t.x, s.heightAt(t.x, t.z) - 0.0003, t.z), q, sc.set(0.001 * t.s, 0.001 * t.s * t.h, 0.001 * t.s));
+      this.treeTops.setMatrixAt(i, m);
+      this.trunks.setMatrixAt(i, m);
+    });
+    this.treeTops.instanceMatrix.needsUpdate = true;
+    this.trunks.instanceMatrix.needsUpdate = true;
   }
 
   /** returns true while animating */

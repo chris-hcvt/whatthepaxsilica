@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { LocalProj, outerRing, pointInRing, ringCentroid, type LL, type SiteData, type Sitio } from './geo';
 import { SiteFx, type Fx, type FxLabels } from './fx';
 import type { HomeKey } from './hectare';
+import { addGroundDetail } from './ground';
 
 export const EXAG = 2.4; // vertical exaggeration for readability
 const WALL_H = 0.32; // km, visual height of the boundary "curtain"
@@ -42,6 +43,10 @@ const KEY_SITIOS = ['Sapang Kawayan', 'Binyayan', 'Manabayucan'];
 export class SiteScene {
   readonly scene = new THREE.Scene();
   readonly proj: LocalProj;
+  /** the light that casts the close-up shadows, the ground mesh and its satellite image */
+  readonly sun: THREE.DirectionalLight;
+  readonly terrain: THREE.Mesh;
+  readonly imagery: THREE.Texture;
   private nx: number;
   private ny: number;
   private widthKm: number;
@@ -101,6 +106,8 @@ export class SiteScene {
     const sun = new THREE.DirectionalLight('#fff4e0', 1.9);
     sun.position.set(-12, 18, -8);
     this.scene.add(sun);
+    this.sun = sun;
+    this.imagery = imagery;
 
     this.hubXZ = data.hub.map((p) => this.proj.xz(p));
     this.nccXZ = data.ncc.map((p) => this.proj.xz(p));
@@ -117,7 +124,10 @@ export class SiteScene {
     for (let i = 0; i < pos.count; i++) pos.setY(i, this.cur[i]);
     this.geo.computeVertexNormals();
     imagery.colorSpace = THREE.SRGBColorSpace;
-    this.scene.add(new THREE.Mesh(this.geo, new THREE.MeshLambertMaterial({ map: imagery })));
+    const groundMat = new THREE.MeshLambertMaterial({ map: imagery });
+    addGroundDetail(groundMat);
+    this.terrain = new THREE.Mesh(this.geo, groundMat);
+    this.scene.add(this.terrain);
     this.scene.add(this.buildSkirt());
 
     // overlay drawn on a canvas and draped on the same geometry
@@ -567,7 +577,7 @@ export class SiteScene {
       hub: { target: hc.clone(), offset: new THREE.Vector3(5.5, 9, 10) },
       hubClose: { target: hc.clone(), offset: new THREE.Vector3(2.6, 6.2, 6.0) },
       // close on the one-hectare square, from the same direction as hubClose so the zoom-out is a straight pull-back
-      hectare: { target: this.fx.hectareTarget(), offset: new THREE.Vector3(2.6, 6.2, 6.0).normalize().multiplyScalar(0.27) },
+      hectare: { target: this.fx.hectareTarget(), offset: new THREE.Vector3(2.6, 6.2, 6.0).normalize().multiplyScalar(aspect < 0.9 ? 0.25 : 0.215) },
       ambient: { target: hc.clone(), offset: new THREE.Vector3(9, 15, 15) },
       handoff: { target: hc.clone(), offset: new THREE.Vector3(0, 1, 0) },
       compare: { target: new THREE.Vector3(hc.x, this.hFlat, hc.z), offset: new THREE.Vector3(2.2, 7.4, 5.6) },

@@ -308,6 +308,12 @@ code {
 .story {
   position: relative;
   z-index: 10;
+  /* the empty space between cards lets the 3D view and the city map underneath get the pointer */
+  pointer-events: none;
+}
+.story .full,
+.story .foot {
+  pointer-events: auto;
 }
 .step {
   min-height: 100vh;
