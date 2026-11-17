@@ -1,8 +1,8 @@
 # What the Pax Silica?
 
-An evidence-first, slide-style explainer on **Pax Silica** — the US-led tech supply-chain pact — and the **~1,619-hectare hub** planned in New Clark City, Capas, Tarlac. It uses an interactive 3D terrain model to show how big the site is, where it is, and which communities live there. Available in **English and Filipino**.
+A scrolling, plain-language explainer on **Pax Silica** — the US-led tech supply-chain pact — and the **~1,619-hectare zone** planned in New Clark City, Capas, Tarlac. As you scroll, a 3D model of the real terrain shows where the zone is, how big it is (leveled and filled with SM Mall of Asia, Glorietta, BGC, Makati CBD and more), and which communities live there. It then lays out the pros and cons and a "who gets what" scorecard (no verdict). A separate **full report** (`/report/`) has every detail.
 
-Every number on the site links to its source (24 slides, 26 sources). Where official and critical figures disagree, both are shown.
+English is the default; a pop-up on first visit lets readers pick **English or Tagalog** (more languages planned). Every number links to its source.
 
 ## Run locally
 
@@ -25,20 +25,23 @@ After the first deploy, change `og:image` in `index.html` to the full URL (e.g. 
 
 | Path | What |
 |---|---|
-| `src/i18n/en.tsx`, `src/i18n/fil.tsx` | All slide text, one file per language |
+| `index.html`, `src/StoryApp.tsx` | The scrolling story |
+| `report/index.html`, `src/ReportApp.tsx` | The full report page |
+| `src/content/story.ts` | Story steps, the 3D scene for each step, comparison places, city map presets |
+| `src/i18n/story-en.tsx`, `story-tl.tsx` | Story text (English, Tagalog) |
+| `src/i18n/en.tsx`, `tl.tsx` | Report text and interface strings |
 | `src/content/sources.ts` | The source list — citation numbers come from its order |
-| `src/content/slides.ts` | Slide order, which 3D scene each slide shows, key numbers (`FACTS`) |
-| `src/three/` | 3D globe and terrain scene (three.js) |
-| `src/components/DropMap.tsx` | “Drop it on your city” map (MapLibre) |
+| `src/three/` | 3D terrain scene (three.js), incl. the leveling animation |
+| `src/components/DropMap.tsx` | “Drop it on your city” map (MapLibre + OpenFreeMap) with city presets and search |
 | `public/data/` | Pre-processed geodata, terrain and imagery |
 | `data-prep/` | Scripts used to build the data (see `data-prep/README.md`) |
 
 ### Adding a language (Cebuano, Ilocano, …)
 
-1. Copy `src/i18n/fil.tsx` to e.g. `src/i18n/ceb.tsx`, rename the export, set `code`/`name`, and translate every string.
-2. Register it in `src/i18n/index.ts`.
+1. Copy `src/i18n/tl.tsx` and `src/i18n/story-tl.tsx` (e.g. to `ceb.tsx` / `story-ceb.tsx`), rename the exports, set `code`/`name`, and translate every string.
+2. Register it in `LOCALES` in `src/i18n/index.ts` and remove it from `UPCOMING`.
 
-The language switcher picks it up automatically, and `?lang=ceb` links work.
+The language pop-up picks it up automatically, and `?lang=ceb` links work.
 
 ## How the hub outline was made
 

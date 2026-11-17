@@ -28,7 +28,7 @@ def outer(geom):
         return geom['coordinates'][0]
     return max(geom['coordinates'], key=lambda p: len(p[0]))[0]
 
-for key, m in d['malls'].items():
+for key, m in d['refs'].items():
     ring = np.array(outer(m['geom']))
     clon, clat = ring[:, 0].mean(), ring[:, 1].mean()
     kxm = 111.32 * math.cos(math.radians(clat))
@@ -65,6 +65,7 @@ for key, m in d['malls'].items():
         if best is None or len(placed) > len(best):
             best = placed
     m['placements'] = best
+    m['packed'] = len(best)
     print(key, 'packed', len(best), 'area-fit', round(1619 / m['area_ha'], 1))
 
 json.dump(d, open(P, 'w'), separators=(',', ':'))

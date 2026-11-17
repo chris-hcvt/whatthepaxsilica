@@ -229,14 +229,6 @@ export const SOURCES: Source[] = [
     url: 'https://www.openstreetmap.org/copyright',
     kind: 'data',
   },
-  {
-    id: 'naturalearth',
-    publisher: 'Natural Earth',
-    title: 'Admin 0 country outlines (1:110m)',
-    date: '—',
-    url: 'https://www.naturalearthdata.com/',
-    kind: 'data',
-  },
 ];
 
 export const SOURCE_INDEX: Record<string, number> = Object.fromEntries(SOURCES.map((s, i) => [s.id, i + 1]));

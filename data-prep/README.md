@@ -25,8 +25,16 @@ A cloud-masked Sentinel-2 L2A true-colour composite (Sep 13 – Oct 18, 2026; ti
 
 Copernicus DEM GLO-30 over the same box, averaged to a 257 × 204 grid and stored as little-endian `uint16` decimetres (`dem.bin`).
 
-## 4. Malls (`pack_malls.py`)
+## 4. Comparison places (`trace_districts.py`, `build_refs.py`, `pack_malls.py`)
 
-Mall lot polygons come from OpenStreetMap (via Nominatim). `pack_malls.py` packs whole copies of each footprint, in 4 rotations, inside the hub outline on a 10 m raster with a ~10 m gap. It writes the placements into `site.json`. Area-based ratios (e.g. 82 × SM Mall of Asia) use the official 1,619 ha.
+- **Malls** (SM Mall of Asia, Glorietta, SM North EDSA, SM Megamall, SM City Pampanga, SM City Clark): lot or building polygons from OpenStreetMap via Nominatim (`refs/newmalls.json` and earlier lookups).
+- **Makati CBD** and **Ortigas Center**: no official polygon exists, so `trace_districts.py` follows their commonly cited bounding roads in OpenStreetMap data (Makati CBD: EDSA, Gil Puyat Ave, A. Arnaiz Ave, Chino Roces Ave → ~259 ha; Ortigas Center: Ortigas Ave, Meralco Ave, Shaw Blvd, EDSA → ~137 ha, vs ~108 ha cited by its association).
+- **BGC**: no published boundary, so it is a square of BCDA's 240 ha.
+
+`build_refs.py` merges them into `site.json`; `pack_malls.py` then packs whole copies inside the hub outline (10 m raster, 4 rotations, ~10 m gap). Area ratios (e.g. 82 × SM Mall of Asia) use the official 1,619 ha; the story shows one copy for each district.
+
+## 5. Leveling
+
+The 3D "leveled" view sets every terrain vertex inside the hub outline to the average height inside it, blending back to natural ground over 450 m outside the edge. It is an illustration for comparing sizes, not an engineering plan.
 
 `extract.py` is a small HTML-to-text helper used while reading sources.

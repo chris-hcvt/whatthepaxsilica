@@ -10,11 +10,15 @@ export interface Sitio {
   people?: string;
 }
 
-export interface MallData {
+export interface RefData {
+  kind: 'mall' | 'district';
   name: string;
-  city: string;
+  place: string;
   area_ha: number;
+  /** how the outline was made: OpenStreetMap shape, traced along bounding roads, or a square of the published area */
+  basis: 'osm' | 'roads' | 'square';
   placements?: [number, number, number][];
+  packed?: number;
   geom: { type: 'Polygon' | 'MultiPolygon'; coordinates: number[][][] | number[][][][] };
 }
 
@@ -24,7 +28,7 @@ export interface SiteData {
   hub: LL[];
   ncc: LL[];
   sitios: Sitio[];
-  malls: Record<string, MallData>;
+  refs: Record<string, RefData>;
   comparatorsHa: Record<string, number>;
 }
 
@@ -75,7 +79,7 @@ export function ringCentroid(ring: [number, number][]): [number, number] {
 }
 
 /** Outer ring of the largest polygon in a GeoJSON Polygon/MultiPolygon. */
-export function outerRing(geom: MallData['geom']): LL[] {
+export function outerRing(geom: RefData['geom']): LL[] {
   if (geom.type === 'Polygon') return (geom.coordinates as number[][][])[0] as LL[];
   const polys = geom.coordinates as number[][][][];
   let best = polys[0][0];

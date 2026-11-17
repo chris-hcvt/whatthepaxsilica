@@ -1,15 +1,28 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { GlobeScene } from './globe';
-import { SiteScene, type SiteLabels } from './site';
-import type { ScenePreset } from '../content/slides';
+import { SiteScene, type SiteLabels, type SiteView } from './site';
 import type { SiteData } from './geo';
 
 export interface Insets {
-  left: number; // px of the screen covered by the text panel on the left
-  bottom: number; // px covered by a bottom sheet (mobile)
-  top?: number; // px covered by the top bar
+  left: number; // px of the screen covered by text on the left (desktop)
+  bottom: number; // px covered at the bottom (phones)
+  top?: number; // px covered by the header
 }
+
+export type SceneState =
+  | {
+      kind: 'site';
+      view: SiteView;
+      ncc?: boolean;
+      hub?: boolean;
+      wall?: boolean;
+      sitios?: 'key' | 'all';
+      flat?: boolean;
+      /** show the reference currently picked in the UI */
+      ref?: boolean;
+      spin?: boolean;
+    }
+  | { kind: 'none' };
 
 const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 
@@ -17,10 +30,10 @@ export class Engine {
   readonly renderer: THREE.WebGLRenderer;
   readonly camera = new THREE.PerspectiveCamera(38, 1, 0.01, 200);
   readonly controls: OrbitControls;
-  readonly globe = new GlobeScene();
   site: SiteScene | null = null;
   private sitePromise: Promise<SiteScene> | null = null;
-  private mode: 'globe' | 'site' | 'none' = 'none';
+  private mode: 'site' | 'none' = 'none';
+  private flownIn = false;
   private raf = 0;
   private last = performance.now();
   private dirty = true;
@@ -28,8 +41,8 @@ export class Engine {
   private insets: Insets = { left: 0, bottom: 0 };
   private w = 1;
   private h = 1;
+  private lastState: Extract<SceneState, { kind: 'site' }> | null = null;
   reducedMotion = false;
-  onModeChange?: (mode: 'globe' | 'site' | 'none') => void;
   onSiteProgress?: (state: 'loading' | 'ready' | 'error') => void;
 
   constructor(
@@ -40,16 +53,23 @@ export class Engine {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: dpr < 2, alpha: false, powerPreference: 'default' });
     this.renderer.setPixelRatio(dpr);
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+    this.renderer.setClearColor('#06080c');
     this.controls = new OrbitControls(this.camera, canvas);
     this.controls.enableDamping = true;
     this.controls.dampingFactor = 0.08;
     this.controls.maxPolarAngle = Math.PI * 0.47;
     this.controls.minDistance = 2;
     this.controls.maxDistance = 45;
+    this.controls.autoRotateSpeed = 0.35;
+    // the story is driven by scrolling, so the camera is not user-controlled:
+    // this keeps page scrolling and pinch-zoom working over the 3D view on phones
     this.controls.enabled = false;
+    canvas.style.touchAction = 'auto';
     this.controls.addEventListener('change', () => (this.dirty = true));
-    this.controls.addEventListener('start', () => (this.fly = null));
-    this.globe.load().then(() => (this.dirty = true));
+    this.controls.addEventListener('start', () => {
+      this.fly = null;
+      this.controls.autoRotate = false;
+    });
     this.loop = this.loop.bind(this);
     this.raf = requestAnimationFrame(this.loop);
   }
@@ -72,9 +92,8 @@ export class Engine {
     if (ox || oy) this.camera.setViewOffset(w, h, ox, oy, w, h);
     else this.camera.clearViewOffset();
     this.camera.updateProjectionMatrix();
-    // re-frame the 3D site when the free screen area changes (e.g. the text sheet is collapsed)
-    if (this.mode === 'site' && this.site && this.lastSite) {
-      const { position, target } = this.site.view(this.lastSite.preset.view, this.visibleAspect(), this.visibleFrac());
+    if (this.mode === 'site' && this.site && this.lastState) {
+      const { position, target } = this.site.view(this.lastState.view, this.visibleAspect(), this.visibleFrac());
       this.flyTo(position, target, 0.9);
     }
     this.dirty = true;
@@ -84,17 +103,14 @@ export class Engine {
     return (this.w - this.insets.left) / Math.max(1, this.h - this.insets.bottom - (this.insets.top ?? 0));
   }
 
-  /** share of the screen height left for the 3D scene (1 on desktop, ~0.4 on phones) */
   private visibleFrac() {
     return Math.max(0.25, (this.h - this.insets.bottom - (this.insets.top ?? 0)) / Math.max(1, this.h));
   }
 
-  private lastSite: { preset: Extract<ScenePreset, { kind: 'site' }> } | null = null;
-
   loadSite(): Promise<SiteScene> {
     if (this.sitePromise) return this.sitePromise;
     this.onSiteProgress?.('loading');
-    const small = window.innerWidth < 900 || (navigator as Navigator & { deviceMemory?: number }).deviceMemory! < 4;
+    const small = window.innerWidth < 900 || ((navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? 8) < 4;
     const imgUrl = small ? '/data/site/imagery-1024.jpg' : '/data/site/imagery-2048.jpg';
     this.sitePromise = Promise.all([
       fetch('/data/geo/site.json').then((r) => r.json() as Promise<SiteData>),
@@ -116,55 +132,43 @@ export class Engine {
     return this.sitePromise;
   }
 
-  async setPreset(preset: ScenePreset, opts: { mall: string; labels: SiteLabels }) {
-    if (preset.kind === 'globe') {
-      this.switchMode('globe');
-      this.controls.enabled = false;
-      this.globe.setHighlight(preset.highlight);
-      this.globe.spin = !!preset.spin && !this.reducedMotion;
-      this.globe.focus(preset.focus[0], preset.focus[1], preset.zoom ?? 1, this.reducedMotion);
-      this.dirty = true;
-      return;
-    }
-    if (preset.kind === 'site') {
-      const site = await this.loadSite();
-      const firstTime = this.mode !== 'site';
-      this.switchMode('site');
-      this.controls.enabled = true;
-      site.setLayers(
-        { ncc: preset.ncc, hub: preset.hub, wall: preset.wall, sitios: preset.sitios, mall: preset.malls ? opts.mall : null },
-        opts.labels,
-      );
-      this.lastSite = { preset };
-      const { position, target } = site.view(preset.view, this.visibleAspect(), this.visibleFrac());
-      if (firstTime) {
-        // start high above and fly in
-        const start = target.clone().add(new THREE.Vector3(0, 34, 26));
-        this.camera.position.copy(this.reducedMotion ? position : start);
-        this.controls.target.copy(target);
-      }
-      this.flyTo(position, target, firstTime ? 2.6 : 1.7);
-      return;
-    }
-    this.switchMode('none');
-    this.controls.enabled = false;
+  private layers(s: Extract<SceneState, { kind: 'site' }>, refKey: string) {
+    return { ncc: s.ncc, hub: s.hub, wall: s.wall, sitios: s.sitios, flat: s.flat, ref: s.ref ? refKey : null };
   }
 
-  private switchMode(m: 'globe' | 'site' | 'none') {
-    if (m === this.mode) return;
-    this.mode = m;
-    if (m !== 'site') this.site?.hideLabels();
-    if (m === 'globe') {
-      this.camera.position.set(0, 0, 3.9);
-      this.controls.target.set(0, 0, 0);
-      this.camera.lookAt(0, 0, 0);
+  async setState(state: SceneState, opts: { refKey: string; labels: SiteLabels }) {
+    if (state.kind === 'none') {
+      this.mode = 'none';
+      this.site?.hideLabels();
+      return;
     }
-    this.onModeChange?.(m);
+    const site = await this.loadSite();
+    const wasSite = this.mode === 'site';
+    this.mode = 'site';
+    this.controls.autoRotate = !!state.spin && !this.reducedMotion;
+    site.setLayers(this.layers(state, opts.refKey), opts.labels, this.reducedMotion);
+    this.lastState = state;
+    const { position, target } = site.view(state.view, this.visibleAspect(), this.visibleFrac());
+    if (!this.flownIn) {
+      this.flownIn = true;
+      this.controls.target.copy(target);
+      this.camera.position.copy(this.reducedMotion ? position : target.clone().add(new THREE.Vector3(0, 34, 26)));
+      this.flyTo(position, target, 2.8);
+    } else {
+      this.flyTo(position, target, wasSite ? 1.6 : 0.01);
+    }
     this.dirty = true;
   }
 
+  refresh(state: SceneState, opts: { refKey: string; labels: SiteLabels }) {
+    if (this.site && state.kind === 'site') {
+      this.site.setLayers(this.layers(state, opts.refKey), opts.labels, this.reducedMotion);
+      this.dirty = true;
+    }
+  }
+
   private flyTo(position: THREE.Vector3, target: THREE.Vector3, dur: number) {
-    if (this.reducedMotion) {
+    if (this.reducedMotion || dur < 0.05) {
       this.camera.position.copy(position);
       this.controls.target.copy(target);
       this.fly = null;
@@ -174,53 +178,27 @@ export class Engine {
     this.fly = { from: this.camera.position.clone(), to: position, tFrom: this.controls.target.clone(), tTo: target, t: 0, dur };
   }
 
-  refreshLabels(labels: SiteLabels, preset: ScenePreset, mall: string) {
-    if (this.site && preset.kind === 'site') {
-      this.site.setLayers(
-        { ncc: preset.ncc, hub: preset.hub, wall: preset.wall, sitios: preset.sitios, mall: preset.malls ? mall : null },
-        labels,
-      );
-      this.dirty = true;
-    }
-  }
-
   private loop(now: number) {
     this.raf = requestAnimationFrame(this.loop);
     const dt = Math.min(0.1, (now - this.last) / 1000);
     this.last = now;
-    if (document.hidden) return;
+    if (document.hidden || this.mode !== 'site' || !this.site) return;
     let active = false;
-    if (this.mode === 'globe') {
-      active = this.globe.update(dt);
-      const z = (this.w < 760 ? 4.6 : 3.9) / this.globe.zoom;
-      if (Math.abs(this.camera.position.z - z) > 1e-4) {
-        this.camera.position.set(0, 0, z);
-        active = true;
-      }
-    } else if (this.mode === 'site') {
-      if (this.fly) {
-        const f = this.fly;
-        f.t = Math.min(1, f.t + dt / f.dur);
-        const k = ease(f.t);
-        this.camera.position.lerpVectors(f.from, f.to, k);
-        this.controls.target.lerpVectors(f.tFrom, f.tTo, k);
-        if (f.t >= 1) this.fly = null;
-        active = true;
-      }
-      if (this.controls.update()) active = true;
+    if (this.fly) {
+      const f = this.fly;
+      f.t = Math.min(1, f.t + dt / f.dur);
+      const k = ease(f.t);
+      this.camera.position.lerpVectors(f.from, f.to, k);
+      this.controls.target.lerpVectors(f.tFrom, f.tTo, k);
+      if (f.t >= 1) this.fly = null;
+      active = true;
     }
+    if (this.site.update(dt)) active = true;
+    if (this.controls.update()) active = true;
     if (active || this.dirty) {
       this.dirty = false;
-      if (this.mode === 'globe') {
-        this.camera.lookAt(0, 0, 0);
-        this.renderer.render(this.globe.scene, this.camera);
-      } else if (this.mode === 'site' && this.site) {
-        this.renderer.render(this.site.scene, this.camera);
-        this.site.updateLabels(this.camera, this.w, this.h, true);
-      } else {
-        this.renderer.setClearColor('#06080c');
-        this.renderer.clear();
-      }
+      this.renderer.render(this.site.scene, this.camera);
+      this.site.updateLabels(this.camera, this.w, this.h);
     }
   }
 }

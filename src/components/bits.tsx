@@ -2,7 +2,6 @@ import type { ReactNode } from 'react';
 import { useDeck } from '../deck';
 import { SOURCES, SOURCE_INDEX, sourceById, type SourceKind } from '../content/sources';
 import { FACTS, timesFit, type MallKey } from '../content/slides';
-import type { LL } from '../three/geo';
 
 export function Cite({ s }: { s: string | string[] }) {
   const { openSource } = useDeck();
@@ -219,37 +218,6 @@ export function MallPicker({ label }: { label: (n: number, name: string, ha: num
         ))}
       </div>
       <div className="mall-result">{label(timesFit(FACTS.malls[mall]), names[mall], FACTS.malls[mall], FACTS.mallsPacked[mall])}</div>
-    </div>
-  );
-}
-
-export const DROP_CITIES: { id: string; ll: LL }[] = [
-  { id: 'makati', ll: [121.0244, 14.5547] },
-  { id: 'qc', ll: [121.0437, 14.6507] },
-  { id: 'manila', ll: [120.9822, 14.5995] },
-  { id: 'cebu', ll: [123.8907, 10.3157] },
-  { id: 'davao', ll: [125.6128, 7.0731] },
-  { id: 'baguio', ll: [120.596, 16.4023] },
-  { id: 'iloilo', ll: [122.5621, 10.7202] },
-  { id: 'cdo', ll: [124.6319, 8.4542] },
-  { id: 'bacolod', ll: [122.9511, 10.6765] },
-  { id: 'zamboanga', ll: [122.079, 6.9214] },
-  { id: 'tarlac', ll: [120.596, 15.4755] },
-  { id: 'capas', ll: [120.4875, 15.3075] },
-];
-
-export function DropControls() {
-  const { L, setDropCenter, dropLabel } = useDeck();
-  return (
-    <div className="dropcontrols">
-      <div className="chips">
-        {DROP_CITIES.map((c) => (
-          <button key={c.id} type="button" className={`chip ${dropLabel === c.id ? 'on' : ''} ${c.id === 'capas' ? 'origin' : ''}`} onClick={() => setDropCenter(c.ll, c.id)}>
-            {L.cities[c.id]}
-          </button>
-        ))}
-      </div>
-      <p className="hint">{L.ui.mapHint}</p>
     </div>
   );
 }

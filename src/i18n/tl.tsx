@@ -4,7 +4,6 @@ import {
   Cite,
   CityBars,
   DocList,
-  DropControls,
   GainsTable,
   Goals,
   Lead,
@@ -20,18 +19,16 @@ import {
 } from '../components/bits';
 import { FACTS, timesFit } from '../content/slides';
 import { MEMBERS } from '../content/members';
+import { chaptersTl, storyTl } from './story-tl';
 
 const fmt = (n: number) => n.toLocaleString('en-US');
 
-export const fil: Locale = {
-  code: 'fil',
-  name: 'Filipino',
+export const tl: Locale = {
+  code: 'tl',
+  name: 'Tagalog',
   ui: {
     siteTitle: 'What the Pax Silica?',
-    tagline: 'Ang kasunduang pang-teknolohiya ng US at ang 1,619-ektaryang hub na itatayo sa Capas, Tarlac — ipinaliwanag gamit ang ebidensya.',
-    prev: 'Nakaraang slide',
-    next: 'Susunod na slide',
-    slideOf: (n, t) => `${n} / ${t}`,
+    tagline: 'May planong 1,619-ektaryang tech zone sa Capas, Tarlac. Ang dapat malaman ng bawat Pilipino — sa mga 4 na minuto.',
     sources: 'Sanggunian',
     allSources: 'Mga sanggunian at dokumento',
     close: 'Isara',
@@ -41,14 +38,25 @@ export const fil: Locale = {
     loading3d: 'Nilo-load ang 3D na lupain…',
     error3d: 'Hindi ma-load ang 3D. Tingnan ang koneksyon at i-reload.',
     noWebgl: 'Hindi kaya ng device mo ang 3D, pero nasa teksto ang lahat ng impormasyon.',
-    hideText: 'Itago ang teksto ↓',
-    showText: 'Ipakita ang teksto ↑',
     dragHint: 'I-drag para umikot · i-pinch o i-scroll para mag-zoom',
-    mapHint: 'Mag-tap kahit saan sa mapa para ilipat doon ang balangkas. Totoong laki pa rin ito.',
     approx: 'tantiyang balangkas',
-    openLink: 'Buksan',
-    start: 'Simulan',
     skipTo: 'Lumaktaw sa nilalaman',
+    fullReport: 'Buong ulat',
+    backToStory: '← Bumalik sa kuwento',
+    learnMore: 'Alamin pa',
+    scrollCue: 'Mag-scroll para magsimula',
+    chooseLanguage: 'Piliin ang wika',
+    moreLanguagesSoon: 'Darating pa ang ibang wika',
+    soon: 'malapit na',
+    mapSearch: 'Maghanap ng lungsod o bayan…',
+    mapSearchGo: 'Hanapin',
+    mapNotFound: 'Hindi makita ang lugar. Subukan ang ibang baybay.',
+    mapHint: 'Tip: mag-tap kahit saan sa mapa para ilipat doon ang balangkas.',
+    reportTitle: 'Buong ulat',
+    reportIntro: 'Ang detalyadong bersyon: bawat pahayag, numero at dokumento, may sanggunian. Magkatabi ang opisyal na pahayag at ang mga kritiko.',
+    contents: 'Nilalaman',
+    prev: 'Nakaraan',
+    next: 'Susunod',
   },
   acts: {
     intro: '',
@@ -75,12 +83,15 @@ export const fil: Locale = {
     ncc: 'New Clark City',
     inside: 'nasa loob ng minapang hub',
     outside: (km) => `${km} km sa labas ng gilid`,
-    mallCount: (n, name) => `${n} buong ${name}, ayon sa tunay na sukat`,
+    refCount: (n, name, kind) => (kind === 'mall' ? `${n} buong ${name}, ayon sa tunay na sukat` : `1 ${name}, ayon sa tunay na sukat`),
+    levelled: 'Pinatag para maikumpara (paglalarawan)',
   },
   cities: {
-    makati: 'Makati',
+    makati: 'Makati (Ayala)',
     qc: 'Quezon City',
-    manila: 'Maynila',
+    manila: 'Maynila (Quiapo)',
+    bgc: 'BGC, Taguig',
+    ortigas: 'Ortigas',
     cebu: 'Lungsod ng Cebu',
     davao: 'Lungsod ng Davao',
     baguio: 'Baguio',
@@ -91,6 +102,8 @@ export const fil: Locale = {
     tarlac: 'Lungsod ng Tarlac',
     capas: '↩ Totoong lugar (Capas)',
   },
+  chapters: chaptersTl,
+  story: storyTl,
   slides: {
     intro: {
       title: 'What the Pax Silica?',
@@ -284,7 +297,7 @@ export const fil: Locale = {
             hanggang <b>99 na taon</b>.
             <Cite s={['gma-sovereignty', 'mongabay', 'pna-signing']} />
           </p>
-          <Note>Sa 3D: dilaw na putol-putol na linya = New Clark City; pula = ang hub. Tantiya lang ang dalawang balangkas — tingnan ang “Saan eksakto?” kung paano ito ginawa.</Note>
+          <Note>Tantiya lang ang mga balangkas ng New Clark City at ng hub na ginamit sa kuwento — tingnan ang “Saan eksakto?” kung paano ito ginawa.</Note>
         </>
       ),
     },
@@ -335,7 +348,7 @@ export const fil: Locale = {
             ilang daang metro lang ang layo.
             <Cite s={['copernicus', 'osm']} />
           </p>
-          <Note>Ituring na tantiya ang pulang balangkas (±~0.5 km). Kapag inilabas ng BCDA ang totoong hangganan, papalitan namin ito.</Note>
+          <Note>Ituring na tantiya ang balangkas (±~0.5 km). Kapag inilabas ng BCDA ang totoong hangganan, papalitan namin ito.</Note>
         </>
       ),
     },
@@ -353,7 +366,7 @@ export const fil: Locale = {
               <>
                 <b className="big">{n}×</b> {name} <span className="muted">({ha} ha bawat isa)</span>
                 <span className="packed">
-                  Batay iyan sa sukat. Kung buong gusali ang isisiksik, kasama ang mga puwang, <b>{packed}</b> kopya ang kasya sa minapang balangkas — makikita sa 3D.
+                  Batay iyan sa sukat. Kung buong gusali ang isisiksik, kasama ang mga puwang, <b>{packed}</b> kopya ang kasya sa minapang balangkas (makikita sa 3D ng kuwento).
                 </span>
               </>
             )}
@@ -362,7 +375,7 @@ export const fil: Locale = {
             <Stat value={`≈ ${fmt(Math.round(FACTS.hubHa / FACTS.footballPitchHa))}`} label="football field (105 × 68 m)" />
             <Stat value={`${FACTS.hubKm2} km²`} label="parang parisukat na 4 km × 4 km" />
           </StatGrid>
-          <Note>Ang mga puting bloke sa 3D ay eksaktong hugis ng lote ng mall na pinili mo.</Note>
+          
         </>
       ),
     },
@@ -392,16 +405,6 @@ export const fil: Locale = {
             <Stat value="≈ 3.2×" label="Kampus ng UP Diliman" tone="red" />
           </StatGrid>
           <Note>Kinuwenta ang mga sukat mula sa OpenStreetMap at maaaring bahagyang iba sa opisyal na land area.</Note>
-        </>
-      ),
-    },
-    drop: {
-      kicker: 'Subukan mo',
-      title: 'Ilapag sa lungsod mo',
-      body: (
-        <>
-          <p>Ang minapang balangkas ng hub, inilipat kahit saan mo gusto, sa tunay nitong laki.</p>
-          <DropControls />
         </>
       ),
     },

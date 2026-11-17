@@ -1,20 +1,28 @@
 import type { ReactNode } from 'react';
 import type { Act } from '../content/slides';
+import type { Chapter } from '../content/story';
 import type { SourceKind } from '../content/sources';
 import type { SiteLabels } from '../three/site';
 
+/** A section of the detailed report. */
 export interface SlideText {
   kicker?: string;
   title: string;
   body: ReactNode;
 }
 
+/** One step of the scrolling story. */
+export interface StoryStep {
+  kicker?: ReactNode;
+  title: ReactNode;
+  body?: ReactNode;
+  /** optional "Learn more" content */
+  more?: ReactNode;
+}
+
 export interface UiStrings {
   siteTitle: string;
   tagline: string;
-  prev: string;
-  next: string;
-  slideOf: (n: number, total: number) => string;
   sources: string;
   allSources: string;
   close: string;
@@ -24,14 +32,26 @@ export interface UiStrings {
   loading3d: string;
   error3d: string;
   noWebgl: string;
-  hideText: string;
-  showText: string;
   dragHint: string;
-  mapHint: string;
   approx: string;
-  openLink: string;
-  start: string;
   skipTo: string;
+  fullReport: string;
+  backToStory: string;
+  learnMore: string;
+  scrollCue: string;
+  chooseLanguage: string;
+  moreLanguagesSoon: string;
+  soon: string;
+  mapSearch: string;
+  mapSearchGo: string;
+  mapNotFound: string;
+  mapHint: string;
+  reportTitle: string;
+  reportIntro: string;
+  contents: string;
+  // kept for the report's interactive bits
+  prev: string;
+  next: string;
 }
 
 export interface Locale {
@@ -40,8 +60,12 @@ export interface Locale {
   name: string;
   ui: UiStrings;
   acts: Record<Act, string>;
+  chapters: Record<Chapter, string>;
   kinds: Record<SourceKind, string>;
   site: SiteLabels;
+  /** report sections */
   slides: Record<string, SlideText>;
+  /** story steps */
+  story: Record<string, StoryStep>;
   cities: Record<string, string>;
 }

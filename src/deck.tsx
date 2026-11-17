@@ -1,17 +1,21 @@
 import { createContext, useContext } from 'react';
 import type { MallKey } from './content/slides';
+import type { RefKey } from './content/story';
 import type { LL } from './three/geo';
 import type { Locale } from './i18n/types';
 
 export interface DeckState {
   L: Locale;
+  openSource: (id: string | null) => void;
+  // report: mall picker
   mall: MallKey;
   setMall: (m: MallKey) => void;
+  // story: reference picker and city map
+  refKey: RefKey;
+  setRefKey: (k: RefKey) => void;
   dropCenter: LL;
   setDropCenter: (c: LL, label?: string) => void;
   dropLabel: string;
-  openSource: (id: string | null) => void;
-  go: (index: number) => void;
 }
 
 export const DeckContext = createContext<DeckState | null>(null);

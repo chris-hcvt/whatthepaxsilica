@@ -4,7 +4,6 @@ import {
   Cite,
   CityBars,
   DocList,
-  DropControls,
   GainsTable,
   Goals,
   Lead,
@@ -20,6 +19,7 @@ import {
 } from '../components/bits';
 import { FACTS, timesFit } from '../content/slides';
 import { MEMBERS } from '../content/members';
+import { chaptersEn, storyEn } from './story-en';
 
 const fmt = (n: number) => n.toLocaleString('en-US');
 
@@ -28,10 +28,7 @@ export const en: Locale = {
   name: 'English',
   ui: {
     siteTitle: 'What the Pax Silica?',
-    tagline: 'The US-led tech pact and the 1,619-hectare hub planned in Capas, Tarlac — explained with the evidence.',
-    prev: 'Previous slide',
-    next: 'Next slide',
-    slideOf: (n, t) => `${n} / ${t}`,
+    tagline: 'A 1,619-hectare tech zone is planned in Capas, Tarlac. What every Filipino should know — in about 4 minutes.',
     sources: 'Sources',
     allSources: 'Sources & documents',
     close: 'Close',
@@ -41,14 +38,25 @@ export const en: Locale = {
     loading3d: 'Loading 3D terrain…',
     error3d: 'The 3D view could not load. Check your connection and reload.',
     noWebgl: 'Your device cannot show 3D graphics, but all the facts are in the text.',
-    hideText: 'Hide text ↓',
-    showText: 'Show text ↑',
     dragHint: 'Drag to look around · pinch or scroll to zoom',
-    mapHint: 'Tap anywhere on the map to move the outline there. Its true size is kept.',
     approx: 'approx. outline',
-    openLink: 'Open',
-    start: 'Start',
     skipTo: 'Skip to content',
+    fullReport: 'Full report',
+    backToStory: '← Back to the story',
+    learnMore: 'Learn more',
+    scrollCue: 'Scroll to start',
+    chooseLanguage: 'Choose your language',
+    moreLanguagesSoon: 'More languages coming soon',
+    soon: 'soon',
+    mapSearch: 'Search a city or town…',
+    mapSearchGo: 'Go',
+    mapNotFound: 'Place not found. Try another spelling.',
+    mapHint: 'Tip: tap anywhere on the map to move the outline there.',
+    reportTitle: 'Full report',
+    reportIntro: 'The detailed version: every claim, number and document, with sources. Official claims and their critics are shown side by side.',
+    contents: 'Contents',
+    prev: 'Previous',
+    next: 'Next',
   },
   acts: {
     intro: '',
@@ -75,12 +83,15 @@ export const en: Locale = {
     ncc: 'New Clark City',
     inside: 'inside the mapped hub',
     outside: (km) => `${km} km outside the edge`,
-    mallCount: (n, name) => `${n} whole ${name} sites, to scale`,
+    refCount: (n, name, kind) => (kind === 'mall' ? `${n} whole ${name} sites, to scale` : `1 ${name}, to scale`),
+    levelled: 'Leveled for comparison (illustration)',
   },
   cities: {
-    makati: 'Makati',
+    makati: 'Makati (Ayala)',
     qc: 'Quezon City',
-    manila: 'Manila',
+    manila: 'Manila (Quiapo)',
+    bgc: 'BGC, Taguig',
+    ortigas: 'Ortigas',
     cebu: 'Cebu City',
     davao: 'Davao City',
     baguio: 'Baguio',
@@ -91,6 +102,8 @@ export const en: Locale = {
     tarlac: 'Tarlac City',
     capas: '↩ Real site (Capas)',
   },
+  chapters: chaptersEn,
+  story: storyEn,
   slides: {
     intro: {
       title: 'What the Pax Silica?',
@@ -284,7 +297,7 @@ export const en: Locale = {
             <Cite s={['gma-sovereignty', 'mongabay', 'pna-signing']} />
           </p>
           <Note>
-            In the 3D view: dashed yellow = New Clark City; red = the hub. Both outlines are approximate — see “Where exactly?” for how they were made.
+            The New Clark City and hub outlines used in the story are approximate — see “Where exactly?” for how they were made.
           </Note>
         </>
       ),
@@ -335,7 +348,7 @@ export const en: Locale = {
             the official {fmt(FACTS.hubHa)} ha (+7%). Village positions agree with OpenStreetMap to within a few hundred meters.
             <Cite s={['copernicus', 'osm']} />
           </p>
-          <Note>Treat the red outline as approximate (±~0.5 km). If BCDA publishes the real boundary, we will replace it.</Note>
+          <Note>Treat the outline as approximate (±~0.5 km). If BCDA publishes the real boundary, we will replace it.</Note>
         </>
       ),
     },
@@ -354,7 +367,7 @@ export const en: Locale = {
               <>
                 <b className="big">{n}×</b> {name} <span className="muted">({ha} ha each)</span>
                 <span className="packed">
-                  That’s by area. Packed as whole buildings, with the gaps that leaves, <b>{packed}</b> copies fit inside the mapped outline — shown in 3D.
+                  That’s by area. Packed as whole buildings, with the gaps that leaves, <b>{packed}</b> copies fit inside the mapped outline (see the 3D view in the story).
                 </span>
               </>
             )}
@@ -363,7 +376,7 @@ export const en: Locale = {
             <Stat value={`≈ ${fmt(Math.round(FACTS.hubHa / FACTS.footballPitchHa))}`} label="football pitches (105 × 68 m)" />
             <Stat value={`${FACTS.hubKm2} km²`} label="about a 4 km × 4 km square" />
           </StatGrid>
-          <Note>White blocks in 3D are true-to-shape copies of the mall lot you pick.</Note>
+          
         </>
       ),
     },
@@ -393,16 +406,6 @@ export const en: Locale = {
             <Stat value="≈ 3.2×" label="UP Diliman campus" tone="red" />
           </StatGrid>
           <Note>Boundary areas are computed from OpenStreetMap and can differ slightly from official land-area figures.</Note>
-        </>
-      ),
-    },
-    drop: {
-      kicker: 'Try it',
-      title: 'Drop it on your city',
-      body: (
-        <>
-          <p>The mapped outline of the hub, moved to any place you choose, at its true size.</p>
-          <DropControls />
         </>
       ),
     },
