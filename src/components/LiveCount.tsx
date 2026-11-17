@@ -19,7 +19,6 @@ export function usePresence(): number | null {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({ id }),
-          keepalive: true,
         });
         if (!(r.headers.get('content-type') || '').includes('application/json') || r.status === 503 || r.status === 404) {
           stopped = true; // not deployed or not configured: keep the counter hidden
