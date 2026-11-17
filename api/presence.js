@@ -1,64 +1,60 @@
 /**
  * Live "viewing now" counter.
  *
- * Each open tab sends { id } every ~25 s (and { id, leave: true } when it closes). The id is a random
- * per-tab value — no personal data. Tabs seen in the last 60 s are counted with a Redis sorted set.
+ * Each open tab POSTs { id } every ~25 s (and { id, leave: true } when it is hidden or closed). The id is a
+ * random per-tab value: no personal data. Tabs seen in the last 60 s are counted.
  *
- * Storage: Upstash Redis via the Vercel Marketplace integration, which sets KV_REST_API_URL and
- * KV_REST_API_TOKEN (UPSTASH_REDIS_REST_URL / _TOKEN also work). Without them the endpoint answers
- * { configured: false } and the site simply hides the counter.
+ * Storage: Vercel's built-in Runtime Cache (no extra service). If an Upstash Redis integration is ever added
+ * (KV_REST_API_URL / KV_REST_API_TOKEN), it is used instead for exact counts.
  */
-export const config = { runtime: 'edge' };
+import { getCache } from '@vercel/functions';
+import { touch } from './_presence-core.js';
 
-const KEY = 'wtps:presence';
+const UPSTASH_KEY = 'wtps:presence';
 const WINDOW_MS = 60_000;
 
-const json = (body, status = 200) =>
-  new Response(JSON.stringify(body), {
-    status,
-    headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
+async function viaUpstash(url, token, id, leave) {
+  const now = Date.now();
+  const commands = leave
+    ? [['ZREM', UPSTASH_KEY, id], ['ZREMRANGEBYSCORE', UPSTASH_KEY, '0', String(now - WINDOW_MS)], ['ZCARD', UPSTASH_KEY]]
+    : [
+        ['ZADD', UPSTASH_KEY, String(now), id],
+        ['ZREMRANGEBYSCORE', UPSTASH_KEY, '0', String(now - WINDOW_MS)],
+        ['ZCARD', UPSTASH_KEY],
+        ['PEXPIRE', UPSTASH_KEY, String(WINDOW_MS * 5)],
+      ];
+  const r = await fetch(`${url.replace(/\/$/, '')}/pipeline`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+    body: JSON.stringify(commands),
   });
+  if (!r.ok) throw new Error(`upstash ${r.status}`);
+  const out = await r.json();
+  return Number(out?.[2]?.result);
+}
 
-export default async function handler(req) {
-  const url = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
-  const token = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
-  if (!url || !token) return json({ count: null, configured: false });
-  if (req.method !== 'POST') return json({ error: 'POST only' }, 405);
+export default async function handler(req, res) {
+  res.setHeader('cache-control', 'no-store');
+  if (req.method !== 'POST') return res.status(405).json({ error: 'POST only' });
 
-  let body;
-  try {
-    body = await req.json();
-  } catch {
-    return json({ error: 'bad json' }, 400);
+  let body = req.body;
+  if (typeof body === 'string') {
+    try {
+      body = JSON.parse(body);
+    } catch {
+      body = null;
+    }
   }
   const id = typeof body?.id === 'string' ? body.id : '';
-  if (!/^[A-Za-z0-9-]{8,64}$/.test(id)) return json({ error: 'bad id' }, 400);
-
-  const now = Date.now();
-  const commands = body.leave
-    ? [
-        ['ZREM', KEY, id],
-        ['ZREMRANGEBYSCORE', KEY, '0', String(now - WINDOW_MS)],
-        ['ZCARD', KEY],
-      ]
-    : [
-        ['ZADD', KEY, String(now), id],
-        ['ZREMRANGEBYSCORE', KEY, '0', String(now - WINDOW_MS)],
-        ['ZCARD', KEY],
-        ['PEXPIRE', KEY, String(WINDOW_MS * 5)],
-      ];
+  if (!/^[A-Za-z0-9-]{8,64}$/.test(id)) return res.status(400).json({ error: 'bad id' });
+  const leave = body?.leave === true;
 
   try {
-    const r = await fetch(`${url.replace(/\/$/, '')}/pipeline`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}`, 'content-type': 'application/json' },
-      body: JSON.stringify(commands),
-    });
-    if (!r.ok) return json({ count: null }, 502);
-    const out = await r.json();
-    const count = Number(out?.[2]?.result);
-    return json({ count: Number.isFinite(count) ? count : null });
+    const url = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
+    const token = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+    const count = url && token ? await viaUpstash(url, token, id, leave) : await touch(getCache({ namespace: 'wtps' }), id, leave);
+    return res.status(200).json({ count: Number.isFinite(count) ? count : null });
   } catch {
-    return json({ count: null }, 502);
+    return res.status(200).json({ count: null });
   }
 }

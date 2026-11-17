@@ -23,12 +23,13 @@ After the first deploy, change `og:image` in `index.html` to the full URL (e.g. 
 
 ## Live "viewing now" counter
 
-The header shows how many people have the site open (tabs active in the last 60 seconds). It uses a tiny Vercel Function (`api/presence.js`) and a free Upstash Redis database:
+The header shows roughly how many people have the site open (tabs active in the last 60 seconds). It needs **no setup and no outside service**: a tiny Vercel Function (`api/presence.js`, logic in `api/_presence-core.js`) keeps the list in Vercel's built-in Runtime Cache, which is included on every plan. Functions run in Singapore (`"regions": ["sin1"]` in `vercel.json`) so every visitor shares one cache.
 
-1. In the Vercel dashboard, open this project → **Storage** (or **Integrations → Marketplace**) → add **Upstash for Redis** (free plan) and connect it to this project.
-2. Redeploy. The integration adds `KV_REST_API_URL` and `KV_REST_API_TOKEN`; the counter appears automatically.
+- Each tab sends an anonymous random id every 25 seconds and a "leaving" ping when it is hidden or closed. No personal data is stored.
+- The number is close but not exact at busy moments (the cache has no atomic counters), and it can reset to the true count after a quiet spell if Vercel clears the cache. Either fixes itself within about a minute.
+- Optional exact counts: if an Upstash Redis integration is ever connected to the project (it sets `KV_REST_API_URL` and `KV_REST_API_TOKEN`), the function uses it automatically. Nothing else to change.
 
-Until then the counter stays hidden. Each tab sends an anonymous random id every 25 seconds — no personal data is stored. On the free plan, Upstash allows a limited number of commands per month (each ping uses 3–4); if the site gets very popular, check the Upstash usage page.
+After the first deploy, change `og:image` in `index.html` to the full URL (e.g. `https://<your-domain>/og.jpg`) so Facebook/Messenger previews show the image.
 
 ## Structure
 
