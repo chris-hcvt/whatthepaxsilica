@@ -58,6 +58,7 @@ export const en: Locale = {
     contents: 'Contents',
     reportError: 'Report an error',
     insetPlace: 'Capas, Tarlac',
+    viewingNow: (n) => `${n} viewing now`,
     insetNote: 'The Philippines is one of about 25 Pax Silica countries.',
     stepOf: (k, n) => `${k} of ${n}`,
     credits: 'Map outline: A. Ortega / Countermapping PH (via Human Rights Watch), georeferenced. Imagery: Copernicus Sentinel-2 (2026). Terrain: Copernicus DEM. Maps: © OpenStreetMap contributors, OpenFreeMap. Place search: GeoNames.',

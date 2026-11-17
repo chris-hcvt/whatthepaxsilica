@@ -3,6 +3,7 @@ import { DeckContext, type DeckState } from './deck';
 import { SLIDES, type MallKey } from './content/slides';
 import { LOCALES, LANGS, initialLang, saveLang, type LangCode } from './i18n';
 import { SourcesDrawer } from './components/Chrome';
+import { LiveCount, usePresence } from './components/LiveCount';
 
 const SECTIONS = SLIDES.filter((s) => s.id !== 'intro' && s.id !== 'drop');
 
@@ -12,6 +13,7 @@ export default function ReportApp() {
   const [mall, setMall] = useState<MallKey>('moa');
   const [drawer, setDrawer] = useState<{ open: boolean; hl: string | null }>({ open: false, hl: null });
   const L = LOCALES[lang];
+  const viewers = usePresence();
 
   useEffect(() => {
     document.documentElement.lang = lang;
@@ -47,6 +49,7 @@ export default function ReportApp() {
         </a>
         <div />
         <div className="sbar-actions">
+          <LiveCount count={viewers} label={L.ui.viewingNow} />
           <div className="langs" role="group" aria-label={L.ui.language}>
             {LANGS.map((l) => (
               <button

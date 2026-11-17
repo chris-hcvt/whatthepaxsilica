@@ -21,6 +21,15 @@ Import this repo in Vercel. It is a plain Vite app: build command `npm run build
 
 After the first deploy, change `og:image` in `index.html` to the full URL (e.g. `https://<your-domain>/og.jpg`) so Facebook/Messenger previews show the image.
 
+## Live "viewing now" counter
+
+The header shows how many people have the site open (tabs active in the last 60 seconds). It uses a tiny Vercel Function (`api/presence.js`) and a free Upstash Redis database:
+
+1. In the Vercel dashboard, open this project → **Storage** (or **Integrations → Marketplace**) → add **Upstash for Redis** (free plan) and connect it to this project.
+2. Redeploy. The integration adds `KV_REST_API_URL` and `KV_REST_API_TOKEN`; the counter appears automatically.
+
+Until then the counter stays hidden. Each tab sends an anonymous random id every 25 seconds — no personal data is stored. On the free plan, Upstash allows a limited number of commands per month (each ping uses 3–4); if the site gets very popular, check the Upstash usage page.
+
 ## Structure
 
 | Path | What |

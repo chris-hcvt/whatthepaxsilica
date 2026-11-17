@@ -52,6 +52,7 @@ export interface UiStrings {
   contents: string;
   reportError: string;
   insetPlace: string;
+  viewingNow: (n: number) => string;
   insetNote: string;
   stepOf: (k: number, n: number) => string;
   credits: string;

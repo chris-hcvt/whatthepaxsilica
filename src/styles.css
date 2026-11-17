@@ -1848,3 +1848,57 @@ html.snap-page {
     font-size: 22px;
   }
 }
+
+/* live viewer counter */
+.livecount {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  border: 1px solid rgba(80, 220, 140, 0.35);
+  background: rgba(40, 160, 90, 0.12);
+  font-size: 12.5px;
+  white-space: nowrap;
+  animation: labelin 0.5s ease both;
+}
+.livecount b {
+  font-variant-numeric: tabular-nums;
+}
+.live-label {
+  color: var(--muted);
+}
+.live-dot {
+  position: relative;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #3ddc84;
+}
+.live-dot::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: #3ddc84;
+  animation: livepulse 1.8s ease-out infinite;
+}
+@keyframes livepulse {
+  to {
+    transform: scale(2.6);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .live-dot::after {
+    animation: none;
+  }
+}
+@media (max-width: 899px) {
+  .live-label {
+    display: none;
+  }
+  .livecount {
+    padding: 5px 9px;
+  }
+}
