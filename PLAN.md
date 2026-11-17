@@ -47,18 +47,18 @@ Deployed on Vercel.
 |---|---|---|
 | Barangay boundaries (Capas, Bamban) | OpenStreetMap / HDX COD-AB (PSA) | exact admin polygons |
 | New Clark City boundary | OSM, BCDA master plan | official if available |
-| **1,620-ha Pax Silica site** | **BCDA map (not yet found publicly)** | **exact if we get it; otherwise drawn from published aerial photos and descriptions, labeled "approximate"** |
+| **1,620-ha Pax Silica site** | Countermapping PH map (via HRW), georeferenced — BCDA denied FOI for the official map | **approximate, ±~0.5 km** |
 | Communities | OSM villages and sitios, news reports | sitio-level only |
 | Malls and landmarks | OSM building footprints | exact footprints |
 | Terrain and imagery | satellite and elevation tiles | about 30 m terrain |
 
-## Tech
-- **Next.js** (static export) on **Vercel**, which gives good link previews when shared on Facebook and Messenger.
-- **MapLibre GL + deck.gl**: 3D terrain, extruded footprints, globe, and a camera fly-to for each slide.
-- Map tiles: MapTiler (free key) for satellite and terrain, or Google Photorealistic 3D Tiles for real 3D malls (needs a billing account).
-- Built mobile-first; a light 2D mode for slow connections.
-- Every figure lives in `data/facts.json` with its source URL and date, and the slides read from it.
-- English + Filipino toggle.
+## Tech (as built)
+- **Vite + React + three.js**, deployed on **Vercel**. No API keys or paid services.
+- 3D terrain and satellite imagery are pre-baked (Copernicus DEM + Sentinel-2) and served as static files.
+- **MapLibre + OpenFreeMap** for “Drop it on your city”, loaded only on that slide.
+- Built mobile-first: smaller texture on phones, capped pixel ratio, bottom-sheet text.
+- Sources live in `src/content/sources.ts`; key numbers in `FACTS` (`src/content/slides.ts`).
+- English + Filipino toggle, set up so more languages can be added.
 
 ## Phases
 1. **Data**: a sourced fact sheet, boundary GeoJSON and mall footprints.

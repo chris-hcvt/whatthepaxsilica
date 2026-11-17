@@ -1,0 +1,54 @@
+# What the Pax Silica?
+
+An evidence-first, slide-style explainer on **Pax Silica** — the US-led tech supply-chain pact — and the **~1,619-hectare hub** planned in New Clark City, Capas, Tarlac. It uses an interactive 3D terrain model to show how big the site is, where it is, and which communities live there. Available in **English and Filipino**.
+
+Every number on the site links to its source (24 slides, 26 sources). Where official and critical figures disagree, both are shown.
+
+## Run locally
+
+```bash
+npm install
+npm run dev      # http://localhost:5173
+npm run build    # production build in dist/
+```
+
+## Deploy (Vercel)
+
+Import this repo in Vercel. It is a plain Vite app: build command `npm run build`, output `dist/` (already set in `vercel.json`). No API keys or paid services are needed:
+
+- 3D terrain and satellite imagery are pre-baked files in `public/data/site/` (served from Vercel's CDN).
+- The “Drop it on your city” map uses free [OpenFreeMap](https://openfreemap.org) tiles and only loads on that slide.
+
+After the first deploy, change `og:image` in `index.html` to the full URL (e.g. `https://<your-domain>/og.jpg`) so Facebook/Messenger previews show the image.
+
+## Structure
+
+| Path | What |
+|---|---|
+| `src/i18n/en.tsx`, `src/i18n/fil.tsx` | All slide text, one file per language |
+| `src/content/sources.ts` | The source list — citation numbers come from its order |
+| `src/content/slides.ts` | Slide order, which 3D scene each slide shows, key numbers (`FACTS`) |
+| `src/three/` | 3D globe and terrain scene (three.js) |
+| `src/components/DropMap.tsx` | “Drop it on your city” map (MapLibre) |
+| `public/data/` | Pre-processed geodata, terrain and imagery |
+| `data-prep/` | Scripts used to build the data (see `data-prep/README.md`) |
+
+### Adding a language (Cebuano, Ilocano, …)
+
+1. Copy `src/i18n/fil.tsx` to e.g. `src/i18n/ceb.tsx`, rename the export, set `code`/`name`, and translate every string.
+2. Register it in `src/i18n/index.ts`.
+
+The language switcher picks it up automatically, and `?lang=ceb` links work.
+
+## How the hub outline was made
+
+BCDA has not published the official boundary and denied an FOI request for it. The outline here is traced from the independent map by **A. Ortega / Countermapping PH**, as published by Human Rights Watch (Nov 16, 2026). It was georeferenced against satellite imagery and is **approximate (±~0.5 km)**. Its area computes to ~1,738 ha against the official 1,619 ha. Details are in `data-prep/README.md` and on the last slide.
+
+## Credits
+
+- Hub outline: derived from the map by A. Ortega / Countermapping PH (graphic by Human Rights Watch). The original map image is not redistributed here.
+- Imagery: contains modified Copernicus Sentinel data 2026. Elevation: Copernicus DEM GLO-30 © DLR e.V. 2010–2014 and © Airbus Defence and Space GmbH 2014–2018, provided under COPERNICUS by the EU and ESA.
+- Mall footprints, city boundaries, village locations and base map: © OpenStreetMap contributors (ODbL); tiles by OpenFreeMap.
+- Country outlines: Natural Earth (public domain).
+
+Spotted an error or have a better source? Please open an issue.
