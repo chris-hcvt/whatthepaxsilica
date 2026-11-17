@@ -222,6 +222,14 @@ export const SOURCES: Source[] = [
     note: 'Contains modified Copernicus Sentinel data 2026. Elevation © DLR e.V. 2010–2014 and © Airbus Defence and Space GmbH 2014–2018, provided under COPERNICUS by the EU and ESA.',
   },
   {
+    id: 'geonames',
+    publisher: 'GeoNames',
+    title: 'Philippine city and town centres used by the map search (CC BY 4.0)',
+    date: 'Nov 2026',
+    url: 'https://www.geonames.org/',
+    kind: 'data',
+  },
+  {
     id: 'osm',
     publisher: 'OpenStreetMap contributors',
     title: 'Mall footprints, city boundaries and village locations; base map tiles via OpenFreeMap',

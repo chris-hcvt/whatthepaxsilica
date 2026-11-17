@@ -38,3 +38,7 @@ Copernicus DEM GLO-30 over the same box, averaged to a 257 × 204 grid and store
 The 3D "leveled" view sets every terrain vertex inside the hub outline to the average height inside it, blending back to natural ground over 450 m outside the edge. It is an illustration for comparing sizes, not an engineering plan.
 
 `extract.py` is a small HTML-to-text helper used while reading sources.
+
+## 6. Place search (`build_places.py`)
+
+The map's search box suggests Philippine city and town centres from a local list built from the GeoNames PH dump (CC BY 4.0): capital and municipal-seat points (PPLC/PPLA/PPLA2/PPLA3), other places of 15,000+ people, and municipality points where no seat point exists — 1,816 places, ~31 KB gzipped. Only searches that match nothing locally (barangays, landmarks) fall back to one OpenStreetMap Nominatim request.

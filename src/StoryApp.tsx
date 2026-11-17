@@ -52,18 +52,37 @@ export default function StoryApp() {
     document.title = lang === 'tl' ? 'What the Pax Silica? · Tagalog' : 'What the Pax Silica?';
   }, [lang]);
 
-  // which step is crossing the middle of the screen
+  // which step is under the middle of the screen (checked on every scroll frame, so fast jumps never miss a step)
   useEffect(() => {
-    const els = Array.from(document.querySelectorAll<HTMLElement>('[data-step]'));
-    const io = new IntersectionObserver(
-      (entries) => {
-        for (const e of entries) if (e.isIntersecting) setActive(Number((e.target as HTMLElement).dataset.step));
-      },
-      { rootMargin: '-48% 0px -48% 0px' },
-    );
-    els.forEach((el) => io.observe(el));
-    return () => io.disconnect();
-  }, [lang]);
+    let raf = 0;
+    const compute = () => {
+      raf = 0;
+      const mid = window.innerHeight * 0.5;
+      let best = 0;
+      let bestDist = Infinity;
+      for (const el of Array.from(document.querySelectorAll<HTMLElement>('[data-step]'))) {
+        const r = el.getBoundingClientRect();
+        const d = r.top <= mid && r.bottom > mid ? 0 : Math.min(Math.abs(r.top - mid), Math.abs(r.bottom - mid));
+        if (d < bestDist) {
+          bestDist = d;
+          best = Number(el.dataset.step);
+          if (d === 0) break;
+        }
+      }
+      setActive(best);
+    };
+    const onScroll = () => {
+      if (!raf) raf = requestAnimationFrame(compute);
+    };
+    compute();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
+    };
+  }, []);
 
   // load the map shortly before it scrolls into view
   useEffect(() => {
@@ -94,10 +113,17 @@ export default function StoryApp() {
     }
   };
 
+  // jump straight to a chapter: smooth-scrolling past every 3D scene on the way is slow on phones
   const goChapter = useCallback((c: Chapter) => {
     const i = STEPS.findIndex((s) => s.chapter === c);
-    document.querySelector(`[data-step="${i}"]`)?.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
-  }, [reduced]);
+    const el = document.querySelector<HTMLElement>(`[data-step="${i}"]`);
+    if (!el) return;
+    const card = el.querySelector<HTMLElement>('.card');
+    const target = card
+      ? card.getBoundingClientRect().top + window.scrollY - (window.innerHeight - card.offsetHeight) / 2
+      : el.getBoundingClientRect().top + window.scrollY - 56;
+    window.scrollTo({ top: Math.max(0, target), behavior: 'auto' });
+  }, []);
 
   const deck: DeckState = {
     L,
@@ -142,7 +168,7 @@ export default function StoryApp() {
         </nav>
         <div className="sbar-actions">
           <LangButton lang={lang} label={L.ui.language} onClick={() => setLangOpen(true)} />
-          <a className="tbtn hide-sm" href={reportHref}>
+          <a className="tbtn report-btn" href={reportHref}>
             {L.ui.fullReport}
           </a>
         </div>
@@ -220,14 +246,13 @@ export default function StoryApp() {
             <b>{L.ui.siteTitle}</b> — {L.ui.tagline}
           </p>
           <p className="muted">
-            Map outline: A. Ortega / Countermapping PH (via Human Rights Watch), georeferenced. Imagery: Copernicus Sentinel-2 (2026). Terrain: Copernicus
-            DEM. Maps: © OpenStreetMap contributors, OpenFreeMap.{' '}
+            {L.ui.credits}{' '}
             <button type="button" className="linklike" onClick={() => setDrawer({ open: true, hl: null })}>
               {L.ui.allSources}
             </button>{' '}
             ·{' '}
             <a href="https://github.com/chris-hcvt/whatthepaxsilica/issues" target="_blank" rel="noopener noreferrer">
-              Report an error
+              {L.ui.reportError}
             </a>
           </p>
         </footer>

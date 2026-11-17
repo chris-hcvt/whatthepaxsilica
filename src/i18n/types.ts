@@ -45,10 +45,13 @@ export interface UiStrings {
   mapSearch: string;
   mapSearchGo: string;
   mapNotFound: string;
+  mapSearchBusy: string;
   mapHint: string;
   reportTitle: string;
   reportIntro: string;
   contents: string;
+  reportError: string;
+  credits: string;
   // kept for the report's interactive bits
   prev: string;
   next: string;
