@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { SiteScene, type SiteLabels, type SiteView } from './site';
+import type { Fx } from './fx';
+import { dataUrl } from '../content/data-url';
 import type { SiteData } from './geo';
 
 export interface Insets {
@@ -21,6 +23,7 @@ export type SceneState =
       /** show the reference currently picked in the UI */
       ref?: boolean;
       spin?: boolean;
+      fx?: Fx[];
     }
   | { kind: 'none' };
 
@@ -43,13 +46,18 @@ export class Engine {
   private h = 1;
   private lastState: Extract<SceneState, { kind: 'site' }> | null = null;
   reducedMotion = false;
+  /** simpler rendering for slow devices: lower resolution, no looping animations */
+  lite = false;
+  private perf = { frames: 0, time: 0, checked: false };
   onSiteProgress?: (state: 'loading' | 'ready' | 'error') => void;
 
   constructor(
     canvas: HTMLCanvasElement,
     private labelLayer: HTMLElement,
   ) {
-    const dpr = Math.min(window.devicePixelRatio || 1, window.innerWidth < 760 ? 1.5 : 2);
+    const mem = (navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? 8;
+    this.lite = mem <= 2 || !!(navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData;
+    const dpr = this.lite ? 1 : Math.min(window.devicePixelRatio || 1, window.innerWidth < 760 ? 1.5 : 2);
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: dpr < 2, alpha: false, powerPreference: 'default' });
     this.renderer.setPixelRatio(dpr);
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -111,15 +119,16 @@ export class Engine {
     if (this.sitePromise) return this.sitePromise;
     this.onSiteProgress?.('loading');
     const small = window.innerWidth < 900 || ((navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? 8) < 4;
-    const imgUrl = small ? '/data/site/imagery-1024.jpg' : '/data/site/imagery-2048.jpg';
+    const imgUrl = dataUrl(small ? '/data/site/imagery-1024.jpg' : '/data/site/imagery-2048.jpg');
     this.sitePromise = Promise.all([
-      fetch('/data/geo/site.json').then((r) => r.json() as Promise<SiteData>),
-      fetch('/data/site/dem.bin').then((r) => r.arrayBuffer()),
+      fetch(dataUrl('/data/geo/site.json')).then((r) => r.json() as Promise<SiteData>),
+      fetch(dataUrl('/data/site/dem.bin')).then((r) => r.arrayBuffer()),
       new THREE.TextureLoader().loadAsync(imgUrl),
     ])
       .then(([data, dem, tex]) => {
         tex.anisotropy = Math.min(8, this.renderer.capabilities.getMaxAnisotropy());
         this.site = new SiteScene(data, dem, tex, this.labelLayer);
+        this.site.lite = this.lite;
         this.onSiteProgress?.('ready');
         this.dirty = true;
         return this.site;
@@ -133,7 +142,7 @@ export class Engine {
   }
 
   private layers(s: Extract<SceneState, { kind: 'site' }>, refKey: string) {
-    return { ncc: s.ncc, hub: s.hub, wall: s.wall, sitios: s.sitios, flat: s.flat, ref: s.ref ? refKey : null };
+    return { ncc: s.ncc, hub: s.hub, wall: s.wall, sitios: s.sitios, flat: s.flat, ref: s.ref ? refKey : null, fx: s.fx ?? [] };
   }
 
   async setState(state: SceneState, opts: { refKey: string; labels: SiteLabels }) {
@@ -145,7 +154,7 @@ export class Engine {
     const site = await this.loadSite();
     const wasSite = this.mode === 'site';
     this.mode = 'site';
-    this.controls.autoRotate = !!state.spin && !this.reducedMotion;
+    this.controls.autoRotate = !!state.spin && !this.reducedMotion && !this.lite;
     site.setLayers(this.layers(state, opts.refKey), opts.labels, this.reducedMotion);
     this.lastState = state;
     const { position, target } = site.view(state.view, this.visibleAspect(), this.visibleFrac());
@@ -199,6 +208,25 @@ export class Engine {
       this.dirty = false;
       this.renderer.render(this.site.scene, this.camera);
       this.site.updateLabels(this.camera, this.w, this.h);
+      this.watchPerformance(dt);
+    }
+  }
+
+  /** after ~2 s of animation, drop to a lighter mode if frames are slow */
+  private watchPerformance(dt: number) {
+    if (this.perf.checked || this.lite) return;
+    if (dt > 0.5) return; // ignore pauses (tab switches)
+    this.perf.frames++;
+    this.perf.time += dt;
+    if (this.perf.frames < 90) return;
+    this.perf.checked = true;
+    if (this.perf.time / this.perf.frames > 1 / 24) {
+      this.lite = true;
+      this.renderer.setPixelRatio(1);
+      this.renderer.setSize(this.w, this.h, false);
+      this.controls.autoRotate = false;
+      if (this.site) this.site.lite = true;
+      this.dirty = true;
     }
   }
 }

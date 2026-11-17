@@ -51,6 +51,9 @@ export interface UiStrings {
   reportIntro: string;
   contents: string;
   reportError: string;
+  insetPlace: string;
+  insetNote: string;
+  stepOf: (k: number, n: number) => string;
   credits: string;
   // kept for the report's interactive bits
   prev: string;

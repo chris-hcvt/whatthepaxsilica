@@ -1,8 +1,8 @@
 import type { StoryStep } from './types';
 import type { Chapter } from '../content/story';
 import { REFS, CITY_STATS, HUB_HA } from '../content/story';
-import { Cite, CityBars, NumberChart, Timeline } from '../components/bits';
-import { BigNumber, Bullets, ProsCons, RefPicker, ScoreCard } from '../components/story-bits';
+import { Cite, CityBars, Timeline } from '../components/bits';
+import { BigNumber, Bullets, DotChart, ProsCons, RefPicker, ScoreCard } from '../components/story-bits';
 
 export const chaptersTl: Record<Chapter, string> = {
   basics: 'Ang basics',
@@ -69,7 +69,6 @@ export const storyTl: Record<string, StoryStep> = {
     ),
   },
   'plan-where': {
-    kicker: 'Ang plano',
     title: 'Saan: New Clark City, Capas, Tarlac',
     body: (
       <p>
@@ -133,7 +132,6 @@ export const storyTl: Record<string, StoryStep> = {
     ),
   },
   'size-number': {
-    kicker: 'Gaano ito kalaki?',
     title: <BigNumber value="1,619" unit="ektarya" />,
     body: (
       <p>
@@ -205,7 +203,6 @@ export const storyTl: Record<string, StoryStep> = {
     body: <p>Pumili ng lungsod, o hanapin ang bayan mo. Totoong laki pa rin ang balangkas.</p>,
   },
   'people-1': {
-    kicker: 'Sino ang nakatira roon?',
     title: 'Mga 200 pamilyang Aeta Hungey ang nakatira sa Sapang Kawayan',
     body: (
       <p>
@@ -228,17 +225,21 @@ export const storyTl: Record<string, StoryStep> = {
     title: 'Ilang tao ang ililipat? Walang opisyal na bilang.',
     body: (
       <div className="ncharts">
-        <NumberChart
-          title="Mga tantiya, ayon sa nagsabi"
-          max={20000}
-          rows={[
-            { value: 92, display: '92 tao', who: 'Liham ng BCDA', what: 'sa Barangay O’Donnell', cite: 'hrw', side: 'gov' },
-            { value: 200, display: '~200 tao', who: 'BCDA', what: 'sa 40 kabahayan, “iuusog nang bahagya”', cite: 'rfa', side: 'gov' },
-            { value: 1000, display: '~1,000 pamilya', who: 'Pinuno ng Aeta', what: 'sa kanilang lupaing ninuno', cite: 'pressenza', side: 'critic' },
-            { value: 20000, display: '~20,000', who: 'Kalikasan', what: 'mga Aeta at magsasaka (kinontra ng Palasyo)', cite: 'summit', side: 'critic' },
-          ]}
-        />
-        <div className="offer">
+        <div className="snap">
+          <DotChart
+            legend="= 10 tao"
+            rows={[
+              { people: 92, display: '92 tao', who: 'Liham ng BCDA', what: 'sa Barangay O’Donnell', cite: 'hrw', side: 'gov' },
+              { people: 200, display: '~200 tao', who: 'BCDA', what: 'sa 40 kabahayan, “iuusog nang bahagya”', cite: 'rfa', side: 'gov' },
+              { people: 20000, display: '~20,000 tao', who: 'Kalikasan', what: 'mga Aeta at magsasaka (kinontra ng Palasyo)', cite: 'summit', side: 'critic' },
+            ]}
+          />
+          <p className="note">
+            Mga 1,000 pamilya ang bilang ng pinuno ng Aeta Hungey sa kanilang lupaing ninuno — bilang ng pamilya, hindi ng tao.
+            <Cite s="pressenza" />
+          </p>
+        </div>
+        <div className="offer snap">
           <h3>Ang iniaalok sa ngayon</h3>
           <Bullets
             items={[
@@ -327,7 +328,7 @@ export const storyTl: Record<string, StoryStep> = {
             },
           ]}
         />
-        <div className="verdict">
+        <div className="verdict snap">
           <h3>Kaya sino ang mas makikinabang?</h3>
           <p>Hindi pa ito masusukat. Nakasalalay ito sa mga kondisyong wala pang nakakakita. Bantayan ang mga ito kapag napirmahan na ang kasunduan:</p>
           <ol>

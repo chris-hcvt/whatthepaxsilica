@@ -1,3 +1,5 @@
+import { useEffect, useRef } from 'react';
+import { PH_CAPAS, PH_MANILA, PH_PATH, PH_VIEWBOX } from '../content/ph-outline';
 import type { ReactNode } from 'react';
 import { useDeck } from '../deck';
 import { Cite } from './bits';
@@ -42,7 +44,7 @@ export interface PCItem {
 
 export function ProsCons({ prosTitle, consTitle, pros, cons }: { prosTitle: ReactNode; consTitle: ReactNode; pros: PCItem[]; cons: PCItem[] }) {
   const col = (items: PCItem[], cls: string, title: ReactNode, sign: string) => (
-    <section className={`pc-col ${cls}`}>
+    <section className={`pc-col snap ${cls}`}>
       <h3>{title}</h3>
       <ul>
         {items.map((it, i) => (
@@ -98,7 +100,7 @@ export function ScoreCard({
   );
   return (
     <div className="scorecard" role="table">
-      <div className="sc-row sc-head" role="row">
+      <div className="sc-row sc-head snap" role="row">
         <div role="columnheader">{head[0]}</div>
         <div role="columnheader" className="ph">
           {head[1]}
@@ -108,7 +110,7 @@ export function ScoreCard({
         </div>
       </div>
       {rows.map((r, i) => (
-        <div className="sc-row" role="row" key={i}>
+        <div className="sc-row snap" role="row" key={i}>
           <div role="rowheader" className="sc-topic">
             {r.topic}
           </div>
@@ -144,4 +146,89 @@ export function Bullets({ items }: { items: ReactNode[] }) {
       ))}
     </ul>
   );
+}
+
+
+/** Small Philippines map with a pin on Capas, shown at the start of the story. */
+export function PhInset({ visible, place, note }: { visible: boolean; place: ReactNode; note: ReactNode }) {
+  return (
+    <div className={`ph-inset ${visible ? 'on' : ''}`} aria-hidden={!visible}>
+      <svg viewBox={PH_VIEWBOX} role="img" aria-label="Map of the Philippines">
+        <path d={PH_PATH} className="ph-land" />
+        <circle cx={PH_MANILA[0]} cy={PH_MANILA[1]} r="1.6" className="ph-manila" />
+        <circle cx={PH_CAPAS[0]} cy={PH_CAPAS[1]} r="5" className="ph-pulse" />
+        <circle cx={PH_CAPAS[0]} cy={PH_CAPAS[1]} r="2.4" className="ph-pin" />
+      </svg>
+      <div className="ph-text">
+        <b>{place}</b>
+        <span>{note}</span>
+      </div>
+    </div>
+  );
+}
+
+export interface DotRow {
+  people: number;
+  display: string;
+  who: ReactNode;
+  what: ReactNode;
+  cite: string | string[];
+  side: 'gov' | 'critic' | 'media';
+}
+
+/** Each dot is 10 people, so the gap between estimates is visible at a glance. */
+export function DotChart({ rows, legend }: { rows: DotRow[]; legend: ReactNode }) {
+  return (
+    <div className="dotchart">
+      <div className="dot-legend">
+        <span className="dot-sample" aria-hidden="true" /> {legend}
+      </div>
+      {rows.map((r, i) => (
+        <div className={`dotrow ${r.side}`} key={i}>
+          <div className="dotrow-head">
+            <b>{r.display}</b>
+            <span>
+              {r.who} — {r.what}
+              <Cite s={r.cite} />
+            </span>
+          </div>
+          <DotCanvas n={Math.max(1, Math.round(r.people / 10))} side={r.side} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function DotCanvas({ n, side }: { n: number; side: string }) {
+  const ref = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const c = ref.current!;
+    const draw = () => {
+      const w = c.parentElement!.clientWidth;
+      const dpr = Math.min(2, window.devicePixelRatio || 1);
+      const size = 5;
+      const gap = 2;
+      const cols = Math.max(1, Math.floor((w + gap) / (size + gap)));
+      const rows = Math.ceil(n / cols);
+      const h = rows * (size + gap);
+      c.width = w * dpr;
+      c.height = h * dpr;
+      c.style.height = `${h}px`;
+      const ctx = c.getContext('2d')!;
+      ctx.scale(dpr, dpr);
+      ctx.fillStyle = side === 'critic' ? '#ffc94d' : side === 'gov' ? '#74a9ff' : '#a5b1c2';
+      for (let i = 0; i < n; i++) {
+        const x = (i % cols) * (size + gap) + size / 2;
+        const y = Math.floor(i / cols) * (size + gap) + size / 2;
+        ctx.beginPath();
+        ctx.arc(x, y, size / 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    };
+    draw();
+    const ro = new ResizeObserver(draw);
+    ro.observe(c.parentElement!);
+    return () => ro.disconnect();
+  }, [n, side]);
+  return <canvas ref={ref} className="dotcanvas" aria-hidden="true" />;
 }

@@ -1,8 +1,8 @@
 import type { StoryStep } from './types';
 import type { Chapter } from '../content/story';
 import { REFS, CITY_STATS, HUB_HA } from '../content/story';
-import { Cite, CityBars, NumberChart, Timeline } from '../components/bits';
-import { BigNumber, Bullets, ProsCons, RefPicker, ScoreCard } from '../components/story-bits';
+import { Cite, CityBars, Timeline } from '../components/bits';
+import { BigNumber, Bullets, DotChart, ProsCons, RefPicker, ScoreCard } from '../components/story-bits';
 
 export const chaptersEn: Record<Chapter, string> = {
   basics: 'The basics',
@@ -69,7 +69,6 @@ export const storyEn: Record<string, StoryStep> = {
     ),
   },
   'plan-where': {
-    kicker: 'The plan',
     title: 'Where: New Clark City, Capas, Tarlac',
     body: (
       <p>
@@ -131,7 +130,6 @@ export const storyEn: Record<string, StoryStep> = {
     ),
   },
   'size-number': {
-    kicker: 'How big is it?',
     title: <BigNumber value="1,619" unit="hectares" />,
     body: (
       <p>
@@ -203,7 +201,6 @@ export const storyEn: Record<string, StoryStep> = {
     body: <p>Pick a city, or search your town. The outline keeps its real size.</p>,
   },
   'people-1': {
-    kicker: 'Who lives there?',
     title: 'About 200 Aeta Hungey families live in Sapang Kawayan',
     body: (
       <p>
@@ -227,17 +224,21 @@ export const storyEn: Record<string, StoryStep> = {
     body: (
       <>
         <div className="ncharts">
-          <NumberChart
-            title="Estimates, by who said it"
-            max={20000}
-            rows={[
-              { value: 92, display: '92 people', who: 'BCDA letter', what: 'in Barangay O’Donnell', cite: 'hrw', side: 'gov' },
-              { value: 200, display: '~200 people', who: 'BCDA', what: 'in 40 households, “pushed a little bit”', cite: 'rfa', side: 'gov' },
-              { value: 1000, display: '~1,000 families', who: 'Aeta chieftain', what: 'on their ancestral land', cite: 'pressenza', side: 'critic' },
-              { value: 20000, display: '~20,000', who: 'Kalikasan', what: 'Aetas and farmers (the Palace disputes this)', cite: 'summit', side: 'critic' },
-            ]}
-          />
-          <div className="offer">
+          <div className="snap">
+            <DotChart
+              legend="= 10 people"
+              rows={[
+                { people: 92, display: '92 people', who: 'BCDA letter', what: 'in Barangay O’Donnell', cite: 'hrw', side: 'gov' },
+                { people: 200, display: '~200 people', who: 'BCDA', what: 'in 40 households, “pushed a little bit”', cite: 'rfa', side: 'gov' },
+                { people: 20000, display: '~20,000 people', who: 'Kalikasan', what: 'Aetas and farmers (the Palace disputes this)', cite: 'summit', side: 'critic' },
+              ]}
+            />
+            <p className="note">
+              The Aeta Hungey chieftain counts about 1,000 families on their ancestral land — a count of families, not people.
+              <Cite s="pressenza" />
+            </p>
+          </div>
+          <div className="offer snap">
             <h3>What’s been offered so far</h3>
             <Bullets
               items={[
@@ -327,7 +328,7 @@ export const storyEn: Record<string, StoryStep> = {
             },
           ]}
         />
-        <div className="verdict">
+        <div className="verdict snap">
           <h3>So who benefits more?</h3>
           <p>It can’t be scored yet. It depends on terms nobody has seen. Watch for these when the agreement is signed:</p>
           <ol>

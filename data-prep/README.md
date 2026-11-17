@@ -42,3 +42,9 @@ The 3D "leveled" view sets every terrain vertex inside the hub outline to the av
 ## 6. Place search (`build_places.py`)
 
 The map's search box suggests Philippine city and town centres from a local list built from the GeoNames PH dump (CC BY 4.0): capital and municipal-seat points (PPLC/PPLA/PPLA2/PPLA3), other places of 15,000+ people, and municipality points where no seat point exists — 1,816 places, ~31 KB gzipped. Only searches that match nothing locally (barangays, landmarks) fall back to one OpenStreetMap Nominatim request.
+
+## 7. Map annotations (`refs/fx-osm.json`, `refs/makati-city.json`, `src/content/ph-outline.ts`)
+
+- Bangot River and Sapang Kawayan creek lines, and 34 farmland polygons near Binyayan, from the OpenStreetMap API (bbox 120.455–120.53°E, 15.29–15.35°N). A mapped cemetery in the same area is deliberately **not** shown.
+- Makati City's boundary (OSM relation 103716), laid onto the leveled zone for comparison.
+- The Philippines inset outline is Natural Earth 1:110m (public domain).

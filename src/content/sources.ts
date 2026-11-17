@@ -237,6 +237,14 @@ export const SOURCES: Source[] = [
     url: 'https://www.openstreetmap.org/copyright',
     kind: 'data',
   },
+  {
+    id: 'naturalearth',
+    publisher: 'Natural Earth',
+    title: 'Philippines outline for the small inset map (1:110m, public domain)',
+    date: '—',
+    url: 'https://www.naturalearthdata.com/',
+    kind: 'data',
+  },
 ];
 
 export const SOURCE_INDEX: Record<string, number> = Object.fromEntries(SOURCES.map((s, i) => [s.id, i + 1]));

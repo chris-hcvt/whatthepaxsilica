@@ -1,11 +1,12 @@
 import * as THREE from 'three';
 import { LocalProj, outerRing, pointInRing, ringCentroid, type LL, type SiteData, type Sitio } from './geo';
+import { SiteFx, type Fx, type FxLabels } from './fx';
 
 export const EXAG = 2.4; // vertical exaggeration for readability
 const WALL_H = 0.32; // km, visual height of the boundary "curtain"
 const FLAT_BAND = 0.45; // km, width of the slope between the levelled pad and natural ground
 
-export type SiteView = 'hero' | 'overview' | 'hub' | 'top' | 'communities' | 'compare';
+export type SiteView = 'hero' | 'overview' | 'hub' | 'hubClose' | 'top' | 'communities' | 'compare' | 'handoff' | 'ambient';
 
 export interface SiteLayers {
   ncc?: boolean;
@@ -14,6 +15,7 @@ export interface SiteLayers {
   sitios?: 'key' | 'all';
   ref?: string | null;
   flat?: boolean;
+  fx?: Fx[];
 }
 
 export interface SiteLabels {
@@ -23,6 +25,7 @@ export interface SiteLabels {
   outside: (km: string) => string;
   refCount: (shown: number, name: string, kind: 'mall' | 'district') => string;
   levelled: string;
+  fx: FxLabels;
 }
 
 interface Label {
@@ -57,9 +60,11 @@ export class SiteScene {
   private refKey: string | null = null;
   private refShown = 0;
   private labels: Label[] = [];
-  private labelLayer: HTMLElement;
-  private hubXZ: [number, number][];
-  private nccXZ: [number, number][];
+  readonly labelLayer: HTMLElement;
+  readonly hubXZ: [number, number][];
+  readonly nccXZ: [number, number][];
+  private fx!: SiteFx;
+  private wallMat!: THREE.ShaderMaterial;
   readonly hubCenter: THREE.Vector3;
   readonly nccCenter: THREE.Vector3;
   private hubLabelXZ: [number, number];
@@ -145,7 +150,27 @@ export class SiteScene {
     this.refLabel = this.addLabel('', new THREE.Vector3(), 'label3d mall');
     this.flatLabel = this.addLabel('', new THREE.Vector3(), 'label3d flat');
     this.buildSitios(data.sitios);
+    this.fx = new SiteFx(this);
     this.placeDynamic();
+  }
+
+  get halfWidth() {
+    return this.widthKm / 2;
+  }
+
+  get halfDepth() {
+    return this.depthKm / 2;
+  }
+
+  /** for the 3D → map handoff: the hub's bounding box centre and size (km) */
+  hubBox() {
+    const xs = this.hubXZ.map((p) => p[0]);
+    const zs = this.hubXZ.map((p) => p[1]);
+    return { cx: (Math.min(...xs) + Math.max(...xs)) / 2, cz: (Math.min(...zs) + Math.max(...zs)) / 2, w: Math.max(...xs) - Math.min(...xs), d: Math.max(...zs) - Math.min(...zs) };
+  }
+
+  set lite(v: boolean) {
+    this.fx.lite = v;
   }
 
   private computeWeights(pos: THREE.BufferAttribute) {
@@ -196,20 +221,23 @@ export class SiteScene {
     return g(ix, iy) * (1 - tx) * (1 - ty) + g(ix + 1, iy) * tx * (1 - ty) + g(ix, iy + 1) * (1 - tx) * ty + g(ix + 1, iy + 1) * tx * ty;
   }
 
-  /** animate levelling; returns true while moving */
+  /** animate levelling and effects; returns true while something moves */
   update(dt: number) {
+    let moving = this.fx.update(dt);
+    this.wallMat.uniforms.uPulse.value = this.fx.wallPulse();
     if (Math.abs(this.flat - this.flatTarget) < 1e-3) {
       if (this.normalsDirty) {
         this.geo.computeVertexNormals();
         this.normalsDirty = false;
         return true;
       }
-      return false;
+      return moving;
     }
     const step = dt / 1.4;
     this.flat = this.flat < this.flatTarget ? Math.min(this.flatTarget, this.flat + step) : Math.max(this.flatTarget, this.flat - step);
     this.applyFlat();
-    return true;
+    moving = true;
+    return moving;
   }
 
   setFlatInstant(on: boolean) {
@@ -255,6 +283,7 @@ export class SiteScene {
     this.refLabel.pos.set(hc.x, this.heightAt(hc.x, hc.z) + 0.45, hc.z - 1.2);
     this.flatLabel.pos.set(lx, this.heightAt(lx, lz) + 0.25, lz);
     if (this.refMesh) this.positionRefs();
+    this.fx?.place();
   }
 
   private buildSkirt() {
@@ -319,10 +348,11 @@ export class SiteScene {
       transparent: true,
       depthWrite: false,
       side: THREE.DoubleSide,
-      uniforms: { uColor: { value: new THREE.Color('#ff3b3b') } },
+      uniforms: { uColor: { value: new THREE.Color('#ff3b3b') }, uPulse: { value: 1 } },
       vertexShader: `attribute float aT; varying float vT; void main(){ vT = aT; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0);} `,
-      fragmentShader: `uniform vec3 uColor; varying float vT; void main(){ float a = mix(0.62, 0.0, pow(vT, 0.8)); gl_FragColor = vec4(uColor + vec3(0.25)*(1.0-vT), a);} `,
+      fragmentShader: `uniform vec3 uColor; uniform float uPulse; varying float vT; void main(){ float a = mix(0.62, 0.0, pow(vT, 0.8)) * uPulse; gl_FragColor = vec4(uColor + vec3(0.25)*(1.0-vT), a);} `,
     });
+    this.wallMat = mat;
     const mesh = new THREE.Mesh(g, mat);
     mesh.renderOrder = 2;
     const lg = new THREE.BufferGeometry();
@@ -357,7 +387,7 @@ export class SiteScene {
     }
   }
 
-  private addLabel(text: string, pos: THREE.Vector3, cls: string): Label {
+  addLabel(text: string, pos: THREE.Vector3, cls: string): Label {
     const el = document.createElement('div');
     el.className = cls;
     el.textContent = text;
@@ -369,7 +399,7 @@ export class SiteScene {
   }
 
   private drawOverlay(ncc: boolean, hub: boolean, flat: boolean) {
-    const key = `${ncc}${hub}${flat}`;
+    const key = `${ncc}${hub}${flat}${this.fx.overlayKey()}`;
     if (key === this.overlayKey) return;
     this.overlayKey = key;
     const ctx = this.overlayCanvas.getContext('2d')!;
@@ -418,6 +448,13 @@ export class SiteScene {
       ctx.strokeStyle = 'rgba(255,80,80,1)';
       ctx.stroke();
     }
+    this.fx.drawOverlay(ctx, px, W, H, this.data.hub);
+    if (hub && this.fx.has('pitches')) {
+      path(this.data.hub);
+      ctx.lineWidth = 5;
+      ctx.strokeStyle = 'rgba(255,80,80,1)';
+      ctx.stroke();
+    }
     this.overlayTex.needsUpdate = true;
   }
 
@@ -428,7 +465,7 @@ export class SiteScene {
       (this.refMesh.material as THREE.Material).dispose();
       this.refMesh = null;
     }
-    const ref = this.data.refs[key];
+    const ref = this.data.refs?.[key];
     if (!ref) return 0;
     const ring = outerRing(ref.geom);
     // footprint relative to its vertex mean, x = east, y = north (km): same convention as data-prep/pack_malls.py
@@ -472,6 +509,7 @@ export class SiteScene {
     const key = JSON.stringify(layers);
     if (key !== this.layerKey) {
       this.layerKey = key;
+      this.fx.set(layers.fx ?? [], instant);
       this.drawOverlay(!!layers.ncc, layers.hub !== false, !!layers.flat);
       this.wall.visible = !!layers.wall;
       this.sitioGroup.visible = !!layers.sitios;
@@ -483,16 +521,18 @@ export class SiteScene {
           this.refShown = this.buildRef(layers.ref);
           this.refKey = layers.ref;
         }
-        this.refMesh!.visible = true;
+        if (this.refMesh) this.refMesh.visible = true;
       } else if (this.refMesh) this.refMesh.visible = false;
     }
-    const ref = layers.ref ? this.data.refs[layers.ref] : null;
+    const ref = layers.ref ? this.data.refs?.[layers.ref] : null;
+    this.fx.setLabels(t.fx);
+    const busy = (layers.fx ?? []).some((f) => ['icons', 'lease', 'unknowns', 'pitches', 'makati'].includes(f));
     this.hubLabel.el.textContent = t.hub;
-    this.hubLabel.on = layers.hub !== false && !ref && !layers.flat;
+    this.hubLabel.on = layers.hub !== false && !ref && !layers.flat && !busy;
     this.nccLabel.el.textContent = t.ncc;
     this.nccLabel.on = !!layers.ncc;
     this.flatLabel.el.textContent = t.levelled;
-    this.flatLabel.on = !!layers.flat && !ref;
+    this.flatLabel.on = !!layers.flat && !ref && !busy;
     if (ref) {
       this.refLabel.el.textContent = t.refCount(this.refShown, ref.name, ref.kind);
       this.refLabel.on = true;
@@ -521,10 +561,21 @@ export class SiteScene {
       hero: { target: hc.clone().add(new THREE.Vector3(1.2, 0, -0.4)), offset: new THREE.Vector3(-6, 9.5, 12.5) },
       overview: { target: this.nccCenter.clone().add(new THREE.Vector3(0.5, 0, 1)), offset: new THREE.Vector3(7, 19, 18) },
       hub: { target: hc.clone(), offset: new THREE.Vector3(5.5, 9, 10) },
+      hubClose: { target: hc.clone(), offset: new THREE.Vector3(2.6, 6.2, 6.0) },
+      ambient: { target: hc.clone(), offset: new THREE.Vector3(9, 15, 15) },
+      handoff: { target: hc.clone(), offset: new THREE.Vector3(0, 1, 0) },
       compare: { target: new THREE.Vector3(hc.x, this.hFlat, hc.z), offset: new THREE.Vector3(2.2, 7.4, 5.6) },
       top: { target: hc.clone().add(new THREE.Vector3(0, 0, 0.5)), offset: new THREE.Vector3(0, 19, 3.2) },
       communities: { target: new THREE.Vector3((skx + hc.x) / 2 - 0.6, this.heightAt(skx, skz), (skz + hc.z) / 2), offset: new THREE.Vector3(3.6, 6.2, 7.2) },
     };
+    if (v === 'handoff') {
+      // straight down, north up, framing the hub the way the 2D map will
+      const b = this.hubBox();
+      const t = Math.tan(((38 / 2) * Math.PI) / 180) * 2;
+      const need = Math.max((b.d * 1.25) / frac, (b.w * 1.25) / (aspect * frac));
+      const target = new THREE.Vector3(b.cx, this.hFlat, b.cz);
+      return { target, position: target.clone().add(new THREE.Vector3(0, need / t, 0.001)) };
+    }
     const { target, offset } = views[v];
     return { target, position: target.clone().add(offset.multiplyScalar(far)) };
   }
@@ -546,9 +597,11 @@ export class SiteScene {
       const y = (-v.y * 0.5 + 0.5) * h;
       l.el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) translate(-50%, -100%)`;
     }
+    this.fx.updateLabels(camera, w, h);
   }
 
   hideLabels() {
     for (const l of this.labels) l.el.style.display = 'none';
+    this.fx.hideLabels();
   }
 }

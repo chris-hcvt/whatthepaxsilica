@@ -889,43 +889,6 @@ details.more p {
 }
 
 /* ---------- drop-on-your-city ---------- */
-.mapwrap {
-  padding: 0;
-}
-.dropsec {
-  position: relative;
-  height: 92vh;
-  min-height: 560px;
-}
-.drop-map {
-  position: absolute;
-  inset: 0;
-}
-.dropmap-inner {
-  width: 100%;
-  height: 100%;
-}
-.drop-card {
-  position: absolute;
-  z-index: 2;
-  left: var(--gutter);
-  top: 24px;
-  width: min(420px, calc(100% - 2 * var(--gutter)));
-  background: var(--surface);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid var(--line);
-  border-radius: 18px;
-  padding: 20px 22px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
-}
-.drop-card h2 {
-  margin: 0 0 8px;
-  font: 800 28px/1.1 var(--display);
-}
-.drop-card p {
-  margin: 0 0 12px;
-}
 .drop-search {
   display: flex;
   gap: 6px;
@@ -997,9 +960,7 @@ details.more p {
   color: #ffb3b3;
   font-size: 14px;
 }
-.drop-card .hint {
-  margin: 10px 0 0;
-}
+
 .drop-label {
   background: #d61f1f;
   color: #fff;
@@ -1359,21 +1320,531 @@ details.more p {
     grid-template-columns: 1fr;
     gap: 2px;
   }
-  .dropsec {
-    height: auto;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
+}
+
+/* =====================================================================
+   v3: snap scrolling, presented cards, map effects, map hand-off
+   ===================================================================== */
+html.snap-page {
+  scroll-snap-type: y mandatory;
+  scroll-padding-top: var(--bar);
+}
+@media (prefers-reduced-motion: reduce) {
+  html.snap-page {
+    scroll-snap-type: y proximity;
   }
-  .drop-card {
-    position: relative;
-    left: 0;
-    top: 0;
-    width: auto;
-    margin: 48px var(--gutter) 12px;
+}
+.step {
+  scroll-snap-align: center;
+  scroll-snap-stop: always;
+}
+.hero {
+  scroll-snap-align: start;
+}
+.snap,
+.full-head {
+  scroll-snap-align: start;
+}
+.foot {
+  scroll-snap-align: end;
+}
+
+.stage.quiet .label-layer {
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+/* cinematic vignette over the 3D */
+.vignette {
+  position: fixed;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  background:
+    radial-gradient(120% 90% at 65% 45%, transparent 55%, rgba(4, 6, 10, 0.55) 100%),
+    linear-gradient(rgba(4, 6, 10, 0.35), transparent 18%, transparent 82%, rgba(4, 6, 10, 0.45));
+  transition: background-color 0.6s ease;
+}
+.vignette.dim {
+  background-color: rgba(4, 6, 10, 0.35);
+}
+
+/* header progress */
+.sbar {
+  overflow: visible;
+}
+.sbar-progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: linear-gradient(90deg, var(--red), var(--amber));
+  transform-origin: left;
+  transition: transform 0.4s ease;
+}
+
+/* step rail (desktop) */
+.rail {
+  position: fixed;
+  z-index: 25;
+  right: 18px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.rail-dot {
+  width: 9px;
+  height: 9px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.22);
+  cursor: pointer;
+  transition: transform 0.25s, background 0.25s;
+}
+.rail-dot.k-full {
+  border-radius: 2px;
+}
+.rail-dot.k-map {
+  background: rgba(116, 169, 255, 0.45);
+}
+.rail-dot.past {
+  background: rgba(255, 255, 255, 0.5);
+}
+.rail-dot.on {
+  background: var(--red);
+  transform: scale(1.5);
+  box-shadow: 0 0 0 4px rgba(255, 77, 77, 0.2);
+}
+.rail-dot:hover {
+  transform: scale(1.35);
+}
+
+/* presented cards */
+.card {
+  position: relative;
+  opacity: 0;
+  transform: translateY(26px) scale(0.98);
+  transition:
+    opacity 0.55s ease,
+    transform 0.65s cubic-bezier(0.2, 0.7, 0.2, 1);
+  background:
+    linear-gradient(180deg, rgba(20, 25, 33, 0.92), rgba(10, 13, 18, 0.92)) padding-box,
+    linear-gradient(160deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.04) 40%, rgba(255, 77, 77, 0.25)) border-box;
+  border: 1px solid transparent;
+  border-radius: 20px;
+  box-shadow:
+    0 30px 80px rgba(0, 0, 0, 0.45),
+    0 1px 0 rgba(255, 255, 255, 0.06) inset;
+}
+.card.active,
+.hero-card {
+  opacity: 1;
+  transform: none;
+}
+.card.active > * {
+  animation: rise 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.card.active > :nth-child(2) {
+  animation-delay: 0.06s;
+}
+.card.active > :nth-child(3) {
+  animation-delay: 0.12s;
+}
+.card.active > :nth-child(4) {
+  animation-delay: 0.18s;
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
   }
-  .drop-map {
-    position: relative;
-    height: 70vh;
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.card-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.card-chap {
+  color: var(--amber);
+}
+.card-count {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.card .kicker {
+  color: var(--muted);
+}
+.card-title {
+  font-size: clamp(25px, 2.4vw, 34px);
+}
+.card-body > p {
+  margin: 0 0 12px;
+}
+.hero-card {
+  background: linear-gradient(180deg, rgba(6, 8, 12, 0.35), rgba(6, 8, 12, 0.8));
+  border: 0;
+  box-shadow: none;
+}
+.hero.is-active .hero-title {
+  animation: rise 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.scroll-cue {
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+/* full-width reading sections sit over the dimmed 3D */
+.full {
+  background:
+    linear-gradient(180deg, rgba(6, 8, 12, 0.72), rgba(6, 8, 12, 0.86) 30%, rgba(6, 8, 12, 0.9)),
+    radial-gradient(900px 500px at 90% 0%, rgba(255, 77, 77, 0.07), transparent 60%);
+  min-height: 100vh;
+}
+.full-head {
+  padding-top: 8px;
+}
+.pc-col,
+.sc-cell,
+.offer,
+.verdict,
+.dotchart {
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+.pc-col,
+.offer {
+  background: rgba(14, 18, 24, 0.82);
+}
+
+/* people dot chart */
+.dotchart {
+  background: rgba(14, 18, 24, 0.82);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 18px 20px;
+}
+.dot-legend {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+.dot-sample {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text);
+}
+.dotrow {
+  margin-bottom: 16px;
+}
+.dotrow-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  margin-bottom: 6px;
+}
+.dotrow-head b {
+  font: 800 20px/1 var(--display);
+}
+.dotrow.gov .dotrow-head b {
+  color: var(--blue);
+}
+.dotrow.critic .dotrow-head b {
+  color: var(--amber);
+}
+.dotrow-head span {
+  font-size: 13.5px;
+  color: var(--muted);
+}
+.dotcanvas {
+  display: block;
+  width: 100%;
+}
+
+/* Philippines inset */
+.ph-inset {
+  position: fixed;
+  z-index: 6;
+  right: 46px;
+  top: calc(var(--bar) + 18px);
+  width: 180px;
+  padding: 12px 12px 10px;
+  border-radius: 16px;
+  background: rgba(10, 13, 18, 0.82);
+  border: 1px solid var(--line);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  opacity: 0;
+  transform: translateY(-8px);
+  transition:
+    opacity 0.5s ease,
+    transform 0.5s ease;
+  pointer-events: none;
+}
+.ph-inset.on {
+  opacity: 1;
+  transform: none;
+}
+.ph-inset svg {
+  display: block;
+  width: 100%;
+  height: 150px;
+}
+.ph-land {
+  fill: rgba(255, 255, 255, 0.16);
+  stroke: rgba(255, 255, 255, 0.45);
+  stroke-width: 0.5;
+}
+.ph-pin {
+  fill: var(--red);
+}
+.ph-pulse {
+  fill: none;
+  stroke: var(--red);
+  stroke-width: 1;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: phpulse 1.8s ease-out infinite;
+}
+.ph-manila {
+  fill: var(--text);
+}
+@keyframes phpulse {
+  from {
+    transform: scale(0.4);
+    opacity: 1;
+  }
+  to {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+.ph-text {
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--muted);
+}
+.ph-text b {
+  display: block;
+  color: var(--text);
+  font-size: 13px;
+}
+
+/* map hand-off layer */
+.maplayer {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.8s ease,
+    visibility 0s linear 0.8s;
+  background: #0d1117;
+}
+.maplayer.on {
+  opacity: 1;
+  visibility: visible;
+  transition:
+    opacity 0.8s ease,
+    visibility 0s;
+}
+.maplayer-inner {
+  width: 100%;
+  height: 100%;
+}
+.maplayer .maplibregl-ctrl-top-right {
+  top: calc(var(--bar) + 8px);
+  right: 36px;
+}
+.step-map .card {
+  width: min(470px, 42vw);
+}
+.dropcontrols {
+  margin-top: 4px;
+}
+.dropcontrols .hint {
+  margin: 10px 0 0;
+}
+
+/* labels on the 3D map (bob with the separate `translate` property so the inline position transform is kept) */
+@keyframes fxbob {
+  50% {
+    translate: 0 -6px;
+  }
+}
+.label3d {
+  animation: labelin 0.45s ease both;
+}
+@keyframes labelin {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.label3d.fx {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+.label3d.fx svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex: none;
+}
+.fx-icon {
+  background: rgba(13, 30, 42, 0.88);
+  border-color: rgba(51, 195, 174, 0.7) !important;
+  color: #9ff0e2;
+}
+.fx-icon.bob0 {
+  animation:
+    labelin 0.45s ease both,
+    fxbob 3s ease-in-out infinite;
+}
+.fx-icon.bob1 {
+  animation:
+    labelin 0.45s ease both,
+    fxbob 3.4s ease-in-out infinite;
+}
+.fx-icon.bob2 {
+  animation:
+    labelin 0.45s ease both,
+    fxbob 2.8s ease-in-out infinite;
+}
+.fx-tag {
+  background: rgba(255, 77, 77, 0.16);
+  border-color: rgba(255, 120, 120, 0.7) !important;
+  color: #ffd0d0;
+}
+.fx-lease {
+  background: rgba(30, 24, 8, 0.9);
+  border-color: rgba(255, 201, 77, 0.8) !important;
+  color: #ffe2a3;
+  font-size: 13px;
+}
+.fx-unknown {
+  background: rgba(10, 13, 18, 0.9);
+  border-color: rgba(255, 201, 77, 0.6) !important;
+}
+.fx-q {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--amber);
+  color: #1d1500;
+  font-weight: 800;
+}
+.fx-pitches {
+  background: rgba(20, 70, 35, 0.9);
+  border-color: rgba(120, 220, 140, 0.8) !important;
+  font-size: 14px;
+  font-weight: 800;
+}
+.fx-makati {
+  background: rgba(20, 38, 70, 0.92);
+  border-color: rgba(156, 196, 255, 0.85) !important;
+  color: #dbe8ff;
+}
+.fx-families {
+  background: rgba(120, 10, 10, 0.88);
+  border-color: rgba(255, 140, 140, 0.8) !important;
+}
+.fx-river {
+  background: rgba(8, 40, 70, 0.88);
+  border-color: rgba(95, 183, 255, 0.85) !important;
+  color: #cfe8ff;
+}
+.fx-river.creek {
+  font-size: 11px;
+  opacity: 0.9;
+}
+.fx-farms {
+  background: rgba(50, 60, 10, 0.88);
+  border-color: rgba(234, 245, 140, 0.8) !important;
+  color: #f2f8c6;
+}
+.fx-manila {
+  background: rgba(20, 38, 70, 0.92);
+  border-color: rgba(156, 196, 255, 0.85) !important;
+  color: #dbe8ff;
+  font-weight: 700;
+}
+
+@media (max-width: 899px) {
+  .rail {
+    display: none;
+  }
+  .fx-icon span {
+    max-width: 92px;
+    white-space: normal;
+    line-height: 1.15;
+  }
+  .ph-inset {
+    right: auto;
+    left: 12px;
+    top: calc(var(--bar) + 10px);
+    width: 132px;
+    padding: 8px;
+  }
+  .ph-inset svg {
+    height: 104px;
+  }
+  .ph-text {
+    font-size: 10.5px;
+  }
+  .step-map .card {
+    width: 100%;
+  }
+  .step-map {
+    min-height: 100vh;
+  }
+  .maplayer .maplibregl-ctrl-top-right {
+    right: 8px;
+  }
+  .card {
+    transform: translateY(18px);
+  }
+  .label3d.fx {
+    font-size: 11px;
+    padding: 4px 8px;
+  }
+  .card-title {
+    font-size: 22px;
   }
 }

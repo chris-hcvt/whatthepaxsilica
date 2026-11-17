@@ -1,21 +1,23 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { DeckContext, type DeckState } from './deck';
 import { STEPS, CHAPTERS, type RefKey, type Chapter } from './content/story';
 import { LOCALES, initialLang, saveLang, savedLang, urlLang, type LangCode } from './i18n';
 import { Stage } from './components/Stage';
-import { DropMap } from './components/DropMap';
+import { MapLayer, DropControls } from './components/DropMap';
+import { PhInset } from './components/story-bits';
 import { LangButton, LangModal, SourcesDrawer } from './components/Chrome';
 import type { LL } from './three/geo';
 import type { Insets } from './three/engine';
 
 const prefersReduced = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+const MAP_STEP = STEPS.findIndex((s) => s.kind === 'map');
 
 function useInsets(): Insets {
   const calc = () => {
     const w = window.innerWidth;
     const h = window.innerHeight;
-    if (w >= 900) return { left: Math.round(Math.min(500, w * 0.4) + 32), bottom: 0, top: 60 };
-    return { left: 0, bottom: Math.round(h * 0.44), top: 56 };
+    if (w >= 900) return { left: Math.round(Math.min(520, w * 0.4) + 40), bottom: 0, top: 60 };
+    return { left: 0, bottom: Math.round(h * 0.46), top: 56 };
   };
   const [ins, setIns] = useState<Insets>(calc);
   useEffect(() => {
@@ -32,6 +34,13 @@ function useInsets(): Insets {
   return ins;
 }
 
+/** position of each step inside its chapter, for the "2 of 4" label */
+const CHAPTER_POS = STEPS.map((s, i) => {
+  if (!s.chapter) return null;
+  const inChap = STEPS.filter((x) => x.chapter === s.chapter);
+  return { k: inChap.indexOf(STEPS[i]) + 1, n: inChap.length };
+});
+
 export default function StoryApp() {
   const [lang, setLang] = useState<LangCode>(initialLang);
   const [langOpen, setLangOpen] = useState(() => !urlLang() && !savedLang());
@@ -40,9 +49,7 @@ export default function StoryApp() {
   const [dropCenter, setDropCenterState] = useState<LL>([121.0239, 14.5556]);
   const [dropLabel, setDropLabel] = useState('makati');
   const [drawer, setDrawer] = useState<{ open: boolean; hl: string | null }>({ open: false, hl: null });
-  const [mapNear, setMapNear] = useState(false);
   const [copied, setCopied] = useState(false);
-  const mapRef = useRef<HTMLElement>(null);
   const insets = useInsets();
   const reduced = useMemo(prefersReduced, []);
   const L = LOCALES[lang];
@@ -52,7 +59,7 @@ export default function StoryApp() {
     document.title = lang === 'tl' ? 'What the Pax Silica? · Tagalog' : 'What the Pax Silica?';
   }, [lang]);
 
-  // which step is under the middle of the screen (checked on every scroll frame, so fast jumps never miss a step)
+  // which step is under the middle of the screen (checked on every scroll frame)
   useEffect(() => {
     let raf = 0;
     const compute = () => {
@@ -84,14 +91,63 @@ export default function StoryApp() {
     };
   }, []);
 
-  // load the map shortly before it scrolls into view
+  // snap scrolling is for the story page only
   useEffect(() => {
-    const el = mapRef.current;
-    if (!el) return;
-    const io = new IntersectionObserver((e) => e[0].isIntersecting && setMapNear(true), { rootMargin: '600px 0px' });
-    io.observe(el);
-    return () => io.disconnect();
+    document.documentElement.classList.add('snap-page');
+    return () => document.documentElement.classList.remove('snap-page');
   }, []);
+
+  // desktop mouse wheel / trackpad: one gesture moves exactly one card (phones use native swipe snapping)
+  useEffect(() => {
+    if (window.matchMedia?.('(pointer: coarse)').matches) return;
+    let lockedUntil = 0;
+    let lastEvent = 0;
+    const centreOf = (i: number) => {
+      const el = document.querySelector<HTMLElement>(`[data-step="${i}"]`)!;
+      const r = el.getBoundingClientRect();
+      return el.classList.contains('full') ? r.top + window.scrollY - 60 : r.top + window.scrollY + r.height / 2 - window.innerHeight / 2;
+    };
+    const onWheel = (e: WheelEvent) => {
+      if (e.ctrlKey || Math.abs(e.deltaY) < Math.abs(e.deltaX)) return;
+      const target = e.target as HTMLElement;
+      if (target.closest('.drawer, .modal, .drop-sugg')) return;
+      const now = performance.now();
+      const gap = now - lastEvent;
+      lastEvent = now;
+      const els = Array.from(document.querySelectorAll<HTMLElement>('[data-step]'));
+      const mid = window.innerHeight / 2;
+      const cur = els.findIndex((el) => {
+        const r = el.getBoundingClientRect();
+        return r.top <= mid && r.bottom > mid;
+      });
+      const dir = Math.sign(e.deltaY);
+      const curEl = els[cur];
+      // inside a long reading section: scroll normally until its top or bottom edge
+      if (curEl?.classList.contains('full')) {
+        const r = curEl.getBoundingClientRect();
+        const atTop = r.top >= 50;
+        const atBottom = r.bottom <= window.innerHeight + 4;
+        if (!(dir < 0 && atTop) && !(dir > 0 && atBottom)) return;
+      }
+      const next = cur + dir;
+      if (cur < 0 || next < 0 || next >= els.length) return;
+      e.preventDefault();
+      // swallow the rest of this gesture (trackpad inertia) before taking the next step
+      if (now < lockedUntil || gap < 60) {
+        lockedUntil = Math.max(lockedUntil, now + 120);
+        return;
+      }
+      lockedUntil = now + 700;
+      const nextEl = els[next];
+      const top =
+        dir < 0 && nextEl.classList.contains('full')
+          ? nextEl.getBoundingClientRect().bottom + window.scrollY - window.innerHeight
+          : centreOf(next);
+      window.scrollTo({ top: Math.max(0, top), behavior: reduced ? 'auto' : 'smooth' });
+    };
+    window.addEventListener('wheel', onWheel, { passive: false });
+    return () => window.removeEventListener('wheel', onWheel);
+  }, [reduced]);
 
   const pickLang = (l: LangCode) => {
     setLang(l);
@@ -113,17 +169,17 @@ export default function StoryApp() {
     }
   };
 
-  // jump straight to a chapter: smooth-scrolling past every 3D scene on the way is slow on phones
-  const goChapter = useCallback((c: Chapter) => {
-    const i = STEPS.findIndex((s) => s.chapter === c);
+  // jump straight to a step: smooth-scrolling past every 3D scene on the way is slow on phones
+  const goStep = useCallback((i: number) => {
     const el = document.querySelector<HTMLElement>(`[data-step="${i}"]`);
     if (!el) return;
     const card = el.querySelector<HTMLElement>('.card');
     const target = card
-      ? card.getBoundingClientRect().top + window.scrollY - (window.innerHeight - card.offsetHeight) / 2
+      ? el.getBoundingClientRect().top + window.scrollY + el.offsetHeight / 2 - window.innerHeight / 2
       : el.getBoundingClientRect().top + window.scrollY - 56;
     window.scrollTo({ top: Math.max(0, target), behavior: 'auto' });
   }, []);
+  const goChapter = useCallback((c: Chapter) => goStep(STEPS.findIndex((s) => s.chapter === c)), [goStep]);
 
   const deck: DeckState = {
     L,
@@ -141,20 +197,22 @@ export default function StoryApp() {
   };
 
   const step = STEPS[active];
-  // keep the last 3D scene while a full-width section is not yet covering the screen
-  const scene = step.scene;
   const chapter = step.chapter;
   const reportHref = `/report/${lang !== 'en' ? `?lang=${lang}` : ''}`;
+  const progress = active / (STEPS.length - 1);
 
   return (
     <DeckContext.Provider value={deck}>
       <a className="skip" href="#story">
         {L.ui.skipTo}
       </a>
-      <Stage state={scene} refKey={refKey} labels={L.site} insets={insets} reducedMotion={reduced} ui={L.ui} />
+      <Stage state={step.scene} refKey={refKey} labels={L.site} insets={insets} reducedMotion={reduced} ui={L.ui} quiet={step.kind === 'full' || step.kind === 'map'} />
+      <MapLayer prepare={active >= MAP_STEP - 3} active={step.kind === 'map'} insets={insets} />
+      <PhInset visible={!!step.inset} place={L.ui.insetPlace} note={L.ui.insetNote} />
+      <div className={`vignette ${step.kind === 'full' ? 'dim' : ''}`} aria-hidden="true" />
 
       <header className="sbar">
-        <a className="brand" href="#top" onClick={(e) => (e.preventDefault(), window.scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' }))}>
+        <a className="brand" href="#top" onClick={(e) => (e.preventDefault(), window.scrollTo({ top: 0, behavior: 'auto' }))}>
           <span className="brand-mark" aria-hidden="true" />
           <span className="brand-text">{L.ui.siteTitle}</span>
         </a>
@@ -172,36 +230,47 @@ export default function StoryApp() {
             {L.ui.fullReport}
           </a>
         </div>
+        <div className="sbar-progress" style={{ transform: `scaleX(${progress})` }} aria-hidden="true" />
       </header>
+
+      <nav className="rail" aria-label="Steps">
+        {STEPS.map((s, i) => (
+          <button
+            key={s.id}
+            type="button"
+            className={`rail-dot ${i === active ? 'on' : ''} ${i < active ? 'past' : ''} k-${s.kind}`}
+            onClick={() => goStep(i)}
+            aria-label={`${s.chapter ? L.chapters[s.chapter] + ' · ' : ''}${typeof L.story[s.id].title === 'string' ? L.story[s.id].title : ''}`}
+            title={s.chapter ? L.chapters[s.chapter] : L.ui.siteTitle}
+          />
+        ))}
+      </nav>
 
       <main id="story" className="story">
         {STEPS.map((s, i) => {
           const t = L.story[s.id];
+          const pos = CHAPTER_POS[i];
           if (s.kind === 'hero')
             return (
-              <section key={s.id} className="step hero" data-step={i} id="top">
+              <section key={s.id} className={`step hero ${active === i ? 'is-active' : ''}`} data-step={i} id="top">
                 <div className="card hero-card">
                   <div className="kicker">{t.kicker}</div>
                   <h1 className="hero-title">{t.title}</h1>
                   {t.body}
-                  <div className="scroll-cue" aria-hidden="true">
-                    {L.ui.scrollCue} <span>↓</span>
-                  </div>
+                  <button type="button" className="scroll-cue" onClick={() => goStep(1)}>
+                    {L.ui.scrollCue} <span aria-hidden="true">↓</span>
+                  </button>
                 </div>
-              </section>
-            );
-          if (s.kind === 'map')
-            return (
-              <section key={s.id} className="full mapwrap" data-step={i} ref={mapRef} id={s.id}>
-                <DropMap visible={mapNear} />
               </section>
             );
           if (s.kind === 'full')
             return (
-              <section key={s.id} className={`full sec-${s.id}`} data-step={i} id={s.id}>
+              <section key={s.id} className={`full sec-${s.id} ${active === i ? 'is-active' : ''}`} data-step={i} id={s.id}>
                 <div className="full-inner">
-                  {t.kicker && <div className="kicker">{t.kicker}</div>}
-                  <h2 className="full-title">{t.title}</h2>
+                  <header className="full-head snap">
+                    {t.kicker && <div className="kicker">{t.kicker}</div>}
+                    <h2 className="full-title">{t.title}</h2>
+                  </header>
                   {t.body}
                   {t.more && (
                     <details className="more">
@@ -226,11 +295,20 @@ export default function StoryApp() {
               </section>
             );
           return (
-            <section key={s.id} className={`step ${s.id === 'size-compare' ? 'tall' : ''}`} data-step={i} id={s.id}>
+            <section key={s.id} className={`step ${s.kind === 'map' ? 'step-map' : ''} ${s.id === 'size-compare' ? 'tall' : ''} ${active === i ? 'is-active' : ''}`} data-step={i} id={s.id}>
               <div className={`card ${active === i ? 'active' : ''}`}>
+                {s.chapter && pos && (
+                  <div className="card-meta">
+                    <span className="card-chap">{L.chapters[s.chapter]}</span>
+                    <span className="card-count">{L.ui.stepOf(pos.k, pos.n)}</span>
+                  </div>
+                )}
                 {t.kicker && <div className="kicker">{t.kicker}</div>}
                 <h2 className="card-title">{t.title}</h2>
-                {t.body}
+                <div className="card-body">
+                  {t.body}
+                  {s.kind === 'map' && <DropControls />}
+                </div>
                 {t.more && (
                   <details className="more">
                     <summary>{L.ui.learnMore}</summary>

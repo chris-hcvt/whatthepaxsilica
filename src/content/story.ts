@@ -13,30 +13,33 @@ export interface StepDef {
   chapter: Chapter | null;
   kind: StepKind;
   scene: SceneState;
+  /** show the small Philippines inset map */
+  inset?: boolean;
 }
 
 const site = (s: Omit<Extract<SceneState, { kind: 'site' }>, 'kind'>): SceneState => ({ kind: 'site', ...s });
-const NONE: SceneState = { kind: 'none' };
+/** behind full-width reading sections: the zone, slowly turning, dimmed by the page */
+const AMBIENT: SceneState = site({ view: 'ambient', hub: true, wall: true, ncc: true, spin: true });
 
 export const STEPS: StepDef[] = [
   { id: 'hero', chapter: null, kind: 'hero', scene: site({ view: 'hero', hub: true, wall: true, spin: true }) },
-  { id: 'basics-1', chapter: 'basics', kind: 'card', scene: site({ view: 'overview', hub: true, wall: true }) },
-  { id: 'basics-2', chapter: 'basics', kind: 'card', scene: site({ view: 'overview', hub: true, wall: true, ncc: true }) },
-  { id: 'plan-where', chapter: 'plan', kind: 'card', scene: site({ view: 'overview', hub: true, wall: true, ncc: true }) },
-  { id: 'plan-what', chapter: 'plan', kind: 'card', scene: site({ view: 'hub', hub: true, wall: true }) },
-  { id: 'plan-land', chapter: 'plan', kind: 'card', scene: site({ view: 'hub', hub: true, wall: true, ncc: true }) },
-  { id: 'plan-status', chapter: 'plan', kind: 'card', scene: site({ view: 'top', hub: true, ncc: true, sitios: 'key' }) },
-  { id: 'size-number', chapter: 'size', kind: 'card', scene: site({ view: 'hub', hub: true, wall: true }) },
+  { id: 'basics-1', chapter: 'basics', kind: 'card', inset: true, scene: site({ view: 'overview', hub: true, wall: true }) },
+  { id: 'basics-2', chapter: 'basics', kind: 'card', inset: true, scene: site({ view: 'overview', hub: true, wall: true, fx: ['nccDraw'] }) },
+  { id: 'plan-where', chapter: 'plan', kind: 'card', scene: site({ view: 'overview', hub: true, wall: true, ncc: true, fx: ['manila'] }) },
+  { id: 'plan-what', chapter: 'plan', kind: 'card', scene: site({ view: 'hub', hub: true, wall: true, fx: ['icons'] }) },
+  { id: 'plan-land', chapter: 'plan', kind: 'card', scene: site({ view: 'hub', hub: true, wall: true, ncc: true, fx: ['lease'] }) },
+  { id: 'plan-status', chapter: 'plan', kind: 'card', scene: site({ view: 'hub', hub: true, wall: true, fx: ['unknowns'] }) },
+  { id: 'size-number', chapter: 'size', kind: 'card', scene: site({ view: 'hubClose', hub: true, wall: true, fx: ['pitches'] }) },
   { id: 'size-flat', chapter: 'size', kind: 'card', scene: site({ view: 'compare', hub: true, flat: true }) },
   { id: 'size-compare', chapter: 'size', kind: 'card', scene: site({ view: 'compare', hub: true, flat: true, ref: true }) },
-  { id: 'size-cities', chapter: 'size', kind: 'card', scene: site({ view: 'top', hub: true, flat: true }) },
-  { id: 'size-map', chapter: 'size', kind: 'map', scene: NONE },
-  { id: 'people-1', chapter: 'people', kind: 'card', scene: site({ view: 'communities', hub: true, wall: true, ncc: true, sitios: 'all' }) },
-  { id: 'people-2', chapter: 'people', kind: 'card', scene: site({ view: 'communities', hub: true, sitios: 'key' }) },
-  { id: 'people-numbers', chapter: 'people', kind: 'full', scene: NONE },
-  { id: 'proscons', chapter: 'proscons', kind: 'full', scene: NONE },
-  { id: 'benefit', chapter: 'benefit', kind: 'full', scene: NONE },
-  { id: 'next', chapter: 'next', kind: 'full', scene: NONE },
+  { id: 'size-cities', chapter: 'size', kind: 'card', scene: site({ view: 'top', hub: true, flat: true, fx: ['makati'] }) },
+  { id: 'size-map', chapter: 'size', kind: 'map', scene: site({ view: 'handoff', hub: true }) },
+  { id: 'people-1', chapter: 'people', kind: 'card', scene: site({ view: 'communities', hub: true, wall: true, ncc: true, sitios: 'all', fx: ['rings'] }) },
+  { id: 'people-2', chapter: 'people', kind: 'card', scene: site({ view: 'communities', hub: true, sitios: 'key', fx: ['river', 'farms'] }) },
+  { id: 'people-numbers', chapter: 'people', kind: 'full', scene: AMBIENT },
+  { id: 'proscons', chapter: 'proscons', kind: 'full', scene: AMBIENT },
+  { id: 'benefit', chapter: 'benefit', kind: 'full', scene: AMBIENT },
+  { id: 'next', chapter: 'next', kind: 'full', scene: AMBIENT },
 ];
 
 export type RefKey = 'moa' | 'glorietta' | 'northedsa' | 'megamall' | 'smpampanga' | 'smclark' | 'bgc' | 'makaticbd' | 'ortigas';

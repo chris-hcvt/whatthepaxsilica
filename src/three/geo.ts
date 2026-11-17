@@ -29,6 +29,11 @@ export interface SiteData {
   ncc: LL[];
   sitios: Sitio[];
   refs: Record<string, RefData>;
+  fx?: {
+    rivers: { name: string; kind: string; coords: number[][] }[];
+    farms: { ha: number; coords: number[][] }[];
+    makati: { name: string; area_ha: number; geom: RefData['geom'] };
+  };
   comparatorsHa: Record<string, number>;
 }
 

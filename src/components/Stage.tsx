@@ -8,11 +8,13 @@ interface Props {
   labels: SiteLabels;
   insets: Insets;
   reducedMotion: boolean;
+  /** hide the 3D labels (when a reading section or the 2D map covers the view) */
+  quiet?: boolean;
   ui: { loading3d: string; error3d: string; noWebgl: string; dragHint: string };
 }
 
 /** Full-screen, fixed 3D view behind the story. */
-export function Stage({ state, refKey, labels, insets, reducedMotion, ui }: Props) {
+export function Stage({ state, refKey, labels, insets, reducedMotion, quiet, ui }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const labelRef = useRef<HTMLDivElement>(null);
   const engineRef = useRef<Engine | null>(null);
@@ -67,7 +69,7 @@ export function Stage({ state, refKey, labels, insets, reducedMotion, ui }: Prop
 
   const on = state.kind === 'site';
   return (
-    <div className={`stage ${on ? 'on' : 'off'}`}>
+    <div className={`stage ${on ? 'on' : 'off'} ${quiet ? 'quiet' : ''}`}>
       <canvas ref={canvasRef} className="stage-canvas" aria-hidden="true" />
       <div ref={labelRef} className="label-layer" aria-hidden="true" />
       {on && siteState === 'loading' && <div className="stage-status">{ui.loading3d}</div>}
