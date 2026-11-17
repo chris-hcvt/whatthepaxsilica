@@ -21,6 +21,7 @@ export function usePresence(): number | null {
           body: JSON.stringify({ id }),
         });
         if (!(r.headers.get('content-type') || '').includes('application/json') || r.status === 503 || r.status === 404) {
+          r.body?.cancel().catch(() => undefined); // always release the response
           stopped = true; // not deployed or not configured: keep the counter hidden
           setCount(null);
           return;
