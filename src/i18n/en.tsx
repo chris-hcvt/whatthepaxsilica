@@ -53,6 +53,7 @@ export const en: Locale = {
     mapNotFound: 'Place not found. Try another spelling, or pick a town from the suggestions.',
     mapSearchBusy: 'Online search is busy right now. Pick a town from the suggestions, or tap the map.',
     mapHint: 'Tip: tap anywhere on the map to move the outline there.',
+    hectares: 'hectares',
     reportTitle: 'Full report',
     reportIntro: 'The detailed version: every claim, number and document, with sources. Official claims and their critics are shown side by side.',
     contents: 'Contents',
@@ -89,7 +90,7 @@ export const en: Locale = {
     ncc: 'New Clark City',
     inside: 'inside the mapped hub',
     outside: (km) => `${km} km outside the edge`,
-    refCount: (n, name, kind) => (kind === 'mall' ? `${n} whole ${name} sites, to scale` : `1 ${name}, to scale`),
+    refCount: (n, name, kind) => (kind === 'mall' ? `${n} whole ${name} sites, to scale` : n === 1 ? `1 whole ${name}, to scale` : `${n} whole ${name}s, to scale`),
     levelled: 'Leveled for comparison (illustration)',
     fx: {
       manila: 'Manila · about 75 km',
@@ -97,8 +98,10 @@ export const en: Locale = {
       noDataCentres: 'No data centers, says DTI',
       lease: 'BCDA owns the land · investors lease it up to 99 years',
       unknowns: ['No signed agreement yet', 'No environmental study yet', 'No official map yet'],
-      pitches: '≈ 2,270 football pitches',
-      makati: 'Makati City · 1,815 ha',
+      side: '100 meters',
+      court: '1 basketball court',
+      oneHectare: '1 hectare',
+      makati: 'Makati City · 1,815 hectares',
       families: '≈ 200 Aeta Hungey families',
       river: 'Bangot River',
       creek: 'Sapang Kawayan creek',
@@ -327,7 +330,7 @@ export const en: Locale = {
       body: (
         <>
           <StatGrid>
-            <Stat value={`${fmt(FACTS.hubHa)} ha`} label={`≈ ${FACTS.hubKm2} km² · 4,000 acres`} cite={['rfa', 'pna-signing']} tone="red" />
+            <Stat value={`${fmt(FACTS.hubHa)} hectares`} label={`≈ ${FACTS.hubKm2} square kilometers · 4,000 acres`} cite={['rfa', 'pna-signing']} tone="red" />
             <Stat value="US$40–70B" label="investment at full development (BCDA); US$10B initial target" cite={['pna-signing', 'gma-sovereignty']} />
             <Stat value="130k–190k" label="jobs at full development (BCDA). Another official estimate: up to 150k direct, 50k construction, 800k indirect" cite={['pna-signing', 'gma-sovereignty']} />
             <Stat value="~3 GW" label="electricity needed at full development (BCDA)" cite={['mongabay', 'cna']} tone="amber" />
@@ -363,8 +366,8 @@ export const en: Locale = {
             <Cite s={['countermapping', 'hrw']} />
           </p>
           <p>
-            We matched that map to satellite imagery to place it on real coordinates. Our outline encloses about <b>{fmt(FACTS.outlineHa)} ha</b>, close to
-            the official {fmt(FACTS.hubHa)} ha (+7%). Village positions agree with OpenStreetMap to within a few hundred meters.
+            We matched that map to satellite imagery to place it on real coordinates. Our outline encloses about <b>{fmt(FACTS.outlineHa)} hectares</b>, close to
+            the official {fmt(FACTS.hubHa)} hectares (+7%). Village positions agree with OpenStreetMap to within a few hundred meters.
             <Cite s={['copernicus', 'osm']} />
           </p>
           <Note>Treat the outline as approximate (±~0.5 km). If BCDA publishes the real boundary, we will replace it.</Note>
@@ -377,14 +380,14 @@ export const en: Locale = {
       body: (
         <>
           <p>
-            Using the official {fmt(FACTS.hubHa)} ha and the mall lots as mapped on OpenStreetMap, here is how many times each mall’s whole site fits in the
+            Using the official {fmt(FACTS.hubHa)} hectares and the mall lots as mapped on OpenStreetMap, here is how many times each mall’s whole site fits in the
             hub.
             <Cite s="osm" />
           </p>
           <MallPicker
             label={(n, name, ha, packed) => (
               <>
-                <b className="big">{n}×</b> {name} <span className="muted">({ha} ha each)</span>
+                <b className="big">{n}×</b> {name} <span className="muted">({ha} hectares each)</span>
                 <span className="packed">
                   That’s by area. Packed as whole buildings, with the gaps that leaves, <b>{packed}</b> copies fit inside the mapped outline (see the 3D view in the story).
                 </span>
@@ -392,8 +395,8 @@ export const en: Locale = {
             )}
           />
           <StatGrid>
-            <Stat value={`≈ ${fmt(Math.round(FACTS.hubHa / FACTS.footballPitchHa))}`} label="football pitches (105 × 68 m)" />
-            <Stat value={`${FACTS.hubKm2} km²`} label="about a 4 km × 4 km square" />
+            <Stat value={`≈ ${fmt(Math.round((FACTS.hubHa * 10000) / 420 / 100) * 100)}`} label="basketball courts (28 × 15 meters each)" cite="court" />
+            <Stat value={`${fmt(FACTS.hubHa * 10000)}`} label="square meters (1 hectare = 10,000 square meters)" />
           </StatGrid>
           
         </>
@@ -409,6 +412,7 @@ export const en: Locale = {
             <Cite s="osm" />
           </p>
           <CityBars
+            unit="hectares"
             hubLabel={<b>Pax Silica hub</b>}
             rows={[
               { name: 'Makati City', ha: FACTS.cities.makati },
@@ -503,7 +507,7 @@ export const en: Locale = {
               max={20000}
               rows={[
                 { value: 92, display: '92', who: 'BCDA letter, Jul 16', what: '“affected persons” in Brgy. O’Donnell, incl. Binyayan farmers', cite: 'hrw', side: 'gov' },
-                { value: 200, display: '~200', who: 'BCDA (Bingcang), Sep', what: 'people; ~10 ha of the site', cite: 'rfa', side: 'gov' },
+                { value: 200, display: '~200', who: 'BCDA (Bingcang), Sep', what: 'people; ~10 hectares of the site', cite: 'rfa', side: 'gov' },
                 { value: 1000, display: '~1,000', who: 'AFP report', what: 'Aetas concerned about displacement', cite: 'tribune-afp', side: 'media' },
                 { value: 20000, display: '~20,000', who: 'Kalikasan PNE', what: 'Aeta residents and farmers (disputed by the Palace)', cite: 'summit', side: 'critic' },
               ]}
@@ -528,8 +532,8 @@ export const en: Locale = {
       body: (
         <>
           <p>
-            <b>BCDA’s plan (Oct 19):</b> about <b>50 houses</b> on a 10-ha site elsewhere in New Clark City (₱25–30 million in total), <b>100 ha</b> of
-            alternative farmland inside a 3,000-ha no-build zone, and possible jobs on a BCDA farming project.
+            <b>BCDA’s plan (Oct 19):</b> about <b>50 houses</b> on a 10-hectare site elsewhere in New Clark City (₱25–30 million in total), <b>100 hectares</b> of
+            alternative farmland inside a 3,000-hectare no-build zone, and possible jobs on a BCDA farming project.
             <Cite s="gma-relocation" />
           </p>
           <p>
@@ -564,7 +568,7 @@ export const en: Locale = {
                 <Cite s={['techpolicy', 'mongabay']} />
               </li>
               <li>
-                It sits within a 3,500-ha “buildable zone” identified in 2019.
+                It sits within a 3,500-hectare “buildable zone” identified in 2019.
                 <Cite s="summit" />
               </li>
               <li>
@@ -790,7 +794,7 @@ export const en: Locale = {
             { date: 'Sep 10', text: 'Protests at the Luzon Economic Corridor investors’ forum; arrests.', cite: 'mongabay', tag: 'people' },
             { date: 'Sep 21', text: 'DTI: sovereignty clause, no diplomatic immunity, no data centers.', cite: 'gma-sovereignty', tag: 'gov' },
             { date: 'Oct 13', text: 'Marcos: no displacement. Palace: signing “before the end of 2026.”', cite: ['philstar-marcos', 'pna-signing'], tag: 'gov' },
-            { date: 'Oct 19', text: 'BCDA relocation plan: ~50 houses, 100 ha farmland.', cite: 'gma-relocation', tag: 'gov' },
+            { date: 'Oct 19', text: 'BCDA relocation plan: ~50 houses, 100 hectares of farmland.', cite: 'gma-relocation', tag: 'gov' },
             { date: 'Oct 26', text: 'House Bill 11758 filed for an Advanced Industries Zone.', cite: 'gma-hb11758', tag: 'gov' },
             { date: 'Nov 11', text: 'House told the relocation site is in Sitio Binyayan.', cite: 'hrw', tag: 'gov' },
             { date: 'Nov 16', text: 'HRW report; protests as Trump arrives for the ASEAN Summit.', cite: ['hrw', 'techpolicy'], tag: 'people' },
@@ -846,8 +850,8 @@ export const en: Locale = {
             <p>
               BCDA has not released the boundary. We took the map by A. Ortega / Countermapping PH (as published by Human Rights Watch), matched it to
               Esri and Copernicus satellite imagery with automated feature matching (26 matched points, ~1.5 px error), and converted its outlines to
-              coordinates. Checks: the outline encloses ~{fmt(FACTS.outlineHa)} ha vs. the official {fmt(FACTS.hubHa)} ha; New Clark City ~9,634 ha vs.
-              the official {fmt(FACTS.nccHa)} ha; sitio dots fall within ~120–420 m of the same villages in OpenStreetMap. The scripts are in the project’s
+              coordinates. Checks: the outline encloses ~{fmt(FACTS.outlineHa)} hectares vs. the official {fmt(FACTS.hubHa)} hectares; New Clark City ~9,634 hectares vs.
+              the official {fmt(FACTS.nccHa)} hectares; sitio dots fall within ~120–420 m of the same villages in OpenStreetMap. The scripts are in the project’s
               <code> data-prep/</code> folder.
             </p>
             <p>

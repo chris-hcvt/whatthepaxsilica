@@ -3,7 +3,7 @@ import { PH_CAPAS, PH_MANILA, PH_PATH, PH_VIEWBOX } from '../content/ph-outline'
 import type { ReactNode } from 'react';
 import { useDeck } from '../deck';
 import { Cite } from './bits';
-import { REFS, fitTimes, type RefKey } from '../content/story';
+import { HOME_KEYS, HOME_LOTS, REFS, fitTimes, type HomeKey, type RefKey } from '../content/story';
 
 const MALLS: RefKey[] = ['moa', 'glorietta', 'northedsa', 'megamall', 'smpampanga', 'smclark'];
 const DISTRICTS: RefKey[] = ['bgc', 'makaticbd', 'ortigas'];
@@ -32,6 +32,29 @@ export function RefPicker({ malls, districts, result }: { malls: ReactNode; dist
       <div className="ref-result" aria-live="polite">
         {result(refKey, fitTimes(refKey))}
       </div>
+    </div>
+  );
+}
+
+/** The four home sizes as a list; the chosen one fills the one-hectare square in 3D. */
+export function HomePicker({ names, lot, count }: { names: Record<HomeKey, ReactNode>; lot: (m2: number) => ReactNode; count: (n: number) => ReactNode }) {
+  const { homeKey, setHomeKey } = useDeck();
+  return (
+    <div className="homes" role="radiogroup">
+      {HOME_KEYS.map((k) => {
+        const h = HOME_LOTS[k];
+        const on = k === homeKey;
+        return (
+          <button key={k} type="button" role="radio" aria-checked={on} className={`home-row ${on ? 'on' : ''}`} onClick={() => setHomeKey(k)}>
+            <span className={`home-ico h-${k}`} aria-hidden="true" />
+            <span className="home-name">
+              <b>{names[k]}</b>
+              <small>{lot(h.lot)}</small>
+            </span>
+            <span className="home-n">{count(h.perHectare)}</span>
+          </button>
+        );
+      })}
     </div>
   );
 }

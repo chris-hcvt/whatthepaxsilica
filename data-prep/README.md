@@ -25,13 +25,13 @@ A cloud-masked Sentinel-2 L2A true-colour composite (Sep 13 – Oct 18, 2026; ti
 
 Copernicus DEM GLO-30 over the same box, averaged to a 257 × 204 grid and stored as little-endian `uint16` decimetres (`dem.bin`).
 
-## 4. Comparison places (`trace_districts.py`, `build_refs.py`, `pack_malls.py`)
+## 4. Comparison places (`trace_districts.py`, `build_refs.py`, `pack_malls.py`, `pack_districts.py`)
 
 - **Malls** (SM Mall of Asia, Glorietta, SM North EDSA, SM Megamall, SM City Pampanga, SM City Clark): lot or building polygons from OpenStreetMap via Nominatim (`refs/newmalls.json` and earlier lookups).
 - **Makati CBD** and **Ortigas Center**: no official polygon exists, so `trace_districts.py` follows their commonly cited bounding roads in OpenStreetMap data (Makati CBD: EDSA, Gil Puyat Ave, A. Arnaiz Ave, Chino Roces Ave → ~259 ha; Ortigas Center: Ortigas Ave, Meralco Ave, Shaw Blvd, EDSA → ~137 ha, vs ~108 ha cited by its association).
 - **BGC**: no published boundary, so it is a square of BCDA's 240 ha.
 
-`build_refs.py` merges them into `site.json`; `pack_malls.py` then packs whole copies inside the hub outline (10 m raster, 4 rotations, ~10 m gap). Area ratios (e.g. 82 × SM Mall of Asia) use the official 1,619 ha; the story shows one copy for each district.
+`build_refs.py` merges them into `site.json`; `pack_malls.py` then packs whole copies inside the hub outline (10 m raster, 4 rotations, ~10 m gap). The business districts are large next to the hub's long, narrow shape, so `pack_districts.py` repacks them with rotations every 10° and several fill directions (BGC 3, Makati CBD 4, Ortigas Center 8 whole copies; it takes several minutes). Area ratios (e.g. 82 × SM Mall of Asia) use the official 1,619 hectares; the story shows every whole copy and states both numbers.
 
 ## 5. Leveling
 

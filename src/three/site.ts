@@ -1,12 +1,13 @@
 import * as THREE from 'three';
 import { LocalProj, outerRing, pointInRing, ringCentroid, type LL, type SiteData, type Sitio } from './geo';
 import { SiteFx, type Fx, type FxLabels } from './fx';
+import type { HomeKey } from './hectare';
 
 export const EXAG = 2.4; // vertical exaggeration for readability
 const WALL_H = 0.32; // km, visual height of the boundary "curtain"
 const FLAT_BAND = 0.45; // km, width of the slope between the levelled pad and natural ground
 
-export type SiteView = 'hero' | 'overview' | 'hub' | 'hubClose' | 'top' | 'communities' | 'compare' | 'handoff' | 'ambient';
+export type SiteView = 'hero' | 'overview' | 'hub' | 'hubClose' | 'hectare' | 'top' | 'communities' | 'compare' | 'handoff' | 'ambient';
 
 export interface SiteLayers {
   ncc?: boolean;
@@ -16,6 +17,8 @@ export interface SiteLayers {
   ref?: string | null;
   flat?: boolean;
   fx?: Fx[];
+  /** home size shown in the one-hectare square */
+  home?: HomeKey | null;
 }
 
 export interface SiteLabels {
@@ -154,6 +157,11 @@ export class SiteScene {
     this.placeDynamic();
   }
 
+  /** 0 = natural ground, 1 = fully levelled */
+  get flatAmount() {
+    return this.flat;
+  }
+
   get halfWidth() {
     return this.widthKm / 2;
   }
@@ -218,7 +226,11 @@ export class SiteScene {
     const tx = fx - ix;
     const ty = fy - iy;
     const g = (i: number, j: number) => this.cur[j * this.nx + i];
-    return g(ix, iy) * (1 - tx) * (1 - ty) + g(ix + 1, iy) * tx * (1 - ty) + g(ix, iy + 1) * (1 - tx) * ty + g(ix + 1, iy + 1) * tx * ty;
+    // same two triangles per cell as the rendered PlaneGeometry (diagonal from (ix, iy+1) to (ix+1, iy)),
+    // so objects placed on the ground sit exactly on it
+    if (tx + ty <= 1) return g(ix, iy) + (g(ix + 1, iy) - g(ix, iy)) * tx + (g(ix, iy + 1) - g(ix, iy)) * ty;
+    const c = g(ix + 1, iy + 1);
+    return c + (g(ix, iy + 1) - c) * (1 - tx) + (g(ix + 1, iy) - c) * (1 - ty);
   }
 
   /** animate levelling and effects; returns true while something moves */
@@ -431,30 +443,26 @@ export class SiteScene {
       path(this.data.hub);
       ctx.fillStyle = flat ? 'rgba(196,178,146,0.86)' : 'rgba(255,59,59,0.30)';
       ctx.fill();
-      ctx.save();
-      ctx.clip();
-      ctx.strokeStyle = flat ? 'rgba(150,130,100,0.35)' : 'rgba(255,120,120,0.35)';
-      ctx.lineWidth = 2;
-      const stepPx = flat ? 26 : 18;
-      for (let k = -H; k < W; k += stepPx) {
-        ctx.beginPath();
-        ctx.moveTo(k, 0);
-        ctx.lineTo(k + H, H);
-        ctx.stroke();
+      if (!this.fx.has('grid')) {
+        ctx.save();
+        ctx.clip();
+        ctx.strokeStyle = flat ? 'rgba(150,130,100,0.35)' : 'rgba(255,120,120,0.35)';
+        ctx.lineWidth = 2;
+        const stepPx = flat ? 26 : 18;
+        for (let k = -H; k < W; k += stepPx) {
+          ctx.beginPath();
+          ctx.moveTo(k, 0);
+          ctx.lineTo(k + H, H);
+          ctx.stroke();
+        }
+        ctx.restore();
       }
-      ctx.restore();
       path(this.data.hub);
       ctx.lineWidth = 5;
       ctx.strokeStyle = 'rgba(255,80,80,1)';
       ctx.stroke();
     }
-    this.fx.drawOverlay(ctx, px, W, H, this.data.hub);
-    if (hub && this.fx.has('pitches')) {
-      path(this.data.hub);
-      ctx.lineWidth = 5;
-      ctx.strokeStyle = 'rgba(255,80,80,1)';
-      ctx.stroke();
-    }
+    this.fx.drawOverlay(ctx, px);
     this.overlayTex.needsUpdate = true;
   }
 
@@ -476,13 +484,8 @@ export class SiteScene {
     const district = ref.kind === 'district';
     const geo = new THREE.ExtrudeGeometry(new THREE.Shape(pts), { depth: district ? 0.035 : 0.07, bevelEnabled: false });
     geo.rotateX(-Math.PI / 2);
-    // districts: one copy only (the hub fits a few whole copies; the area ratio tells the rest)
-    const all = ref.placements ?? [];
-    let placements = all;
-    if (district && all.length) {
-      const hc = this.hubCenter;
-      placements = [all.reduce((a, b) => (Math.hypot(b[0] - hc.x, b[1] - hc.z) < Math.hypot(a[0] - hc.x, a[1] - hc.z) ? b : a))];
-    }
+    // every whole copy that fits inside the outline (data-prep/pack_malls.py, pack_districts.py)
+    const placements = ref.placements ?? [];
     const mat = district
       ? new THREE.MeshLambertMaterial({ color: '#9cc4ff', emissive: '#1d3a66', emissiveIntensity: 0.5, transparent: true, opacity: 0.88 })
       : new THREE.MeshLambertMaterial({ color: '#f4f1ea', emissive: '#3a3020', emissiveIntensity: 0.35 });
@@ -509,6 +512,7 @@ export class SiteScene {
     const key = JSON.stringify(layers);
     if (key !== this.layerKey) {
       this.layerKey = key;
+      if (layers.home) this.fx.setHome(layers.home);
       this.fx.set(layers.fx ?? [], instant);
       this.drawOverlay(!!layers.ncc, layers.hub !== false, !!layers.flat);
       this.wall.visible = !!layers.wall;
@@ -526,7 +530,7 @@ export class SiteScene {
     }
     const ref = layers.ref ? this.data.refs?.[layers.ref] : null;
     this.fx.setLabels(t.fx);
-    const busy = (layers.fx ?? []).some((f) => ['icons', 'lease', 'unknowns', 'pitches', 'makati'].includes(f));
+    const busy = (layers.fx ?? []).some((f) => ['icons', 'lease', 'unknowns', 'makati', 'hectare', 'homes', 'grid'].includes(f));
     this.hubLabel.el.textContent = t.hub;
     this.hubLabel.on = layers.hub !== false && !ref && !layers.flat && !busy;
     this.nccLabel.el.textContent = t.ncc;
@@ -562,6 +566,8 @@ export class SiteScene {
       overview: { target: this.nccCenter.clone().add(new THREE.Vector3(0.5, 0, 1)), offset: new THREE.Vector3(7, 19, 18) },
       hub: { target: hc.clone(), offset: new THREE.Vector3(5.5, 9, 10) },
       hubClose: { target: hc.clone(), offset: new THREE.Vector3(2.6, 6.2, 6.0) },
+      // close on the one-hectare square, from the same direction as hubClose so the zoom-out is a straight pull-back
+      hectare: { target: this.fx.hectareTarget(), offset: new THREE.Vector3(2.6, 6.2, 6.0).normalize().multiplyScalar(0.27) },
       ambient: { target: hc.clone(), offset: new THREE.Vector3(9, 15, 15) },
       handoff: { target: hc.clone(), offset: new THREE.Vector3(0, 1, 0) },
       compare: { target: new THREE.Vector3(hc.x, this.hFlat, hc.z), offset: new THREE.Vector3(2.2, 7.4, 5.6) },

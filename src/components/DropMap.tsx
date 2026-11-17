@@ -63,10 +63,17 @@ const my = (lat: number) => {
  * 3D top-down view underneath, fades in, and then carries the outline to the chosen city.
  */
 export function MapLayer({ prepare, active, insets }: { prepare: boolean; active: boolean; insets: Insets }) {
-  const { dropCenter, setDropCenter } = useDeck();
+  const { L, dropCenter, setDropCenter } = useDeck();
   const el = useRef<HTMLDivElement>(null);
+  const hubText = `≈ ${HUB_HA.toLocaleString('en-US')} ${L.ui.hectares}`;
+  const hubTextRef = useRef(hubText);
+  hubTextRef.current = hubText;
   const mapRef = useRef<MLMap | null>(null);
   const markerRef = useRef<Marker | null>(null);
+  useEffect(() => {
+    const m = markerRef.current?.getElement();
+    if (m) m.textContent = hubText;
+  }, [hubText]);
   const hubRef = useRef<LL[] | null>(null);
   const homeRef = useRef<LL>([120.4875, 15.3075]);
   const readyRef = useRef(false);
@@ -165,7 +172,7 @@ export function MapLayer({ prepare, active, insets }: { prepare: boolean; active
         map.addLayer({ id: 'hub-line', type: 'line', source: 'hub', paint: { 'line-color': '#e3262b', 'line-width': 3 } });
         const m = document.createElement('div');
         m.className = 'drop-label';
-        m.textContent = `≈ ${HUB_HA.toLocaleString('en-US')} ha`;
+        m.textContent = hubTextRef.current;
         markerRef.current = new maplibre.Marker({ element: m, anchor: 'center' }).setLngLat(homeRef.current).addTo(map);
         readyRef.current = true;
         goHome();

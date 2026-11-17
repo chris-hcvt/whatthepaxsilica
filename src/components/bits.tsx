@@ -187,7 +187,7 @@ export function TwoCol({ left, right, leftTitle, rightTitle }: { left: ReactNode
   );
 }
 
-export function CityBars({ rows, hubLabel }: { rows: { name: ReactNode; ha: number }[]; hubLabel: ReactNode }) {
+export function CityBars({ rows, hubLabel, unit }: { rows: { name: ReactNode; ha: number }[]; hubLabel: ReactNode; unit: string }) {
   const all = [{ name: hubLabel, ha: FACTS.hubHa, hub: true }, ...rows.map((r) => ({ ...r, hub: false }))].sort((a, b) => b.ha - a.ha);
   const max = Math.max(...all.map((r) => r.ha));
   return (
@@ -198,7 +198,7 @@ export function CityBars({ rows, hubLabel }: { rows: { name: ReactNode; ha: numb
           <div className="cbar-track">
             <span style={{ width: `${(r.ha / max) * 100}%` }} />
           </div>
-          <div className="cbar-val">{r.ha.toLocaleString('en-US', { maximumFractionDigits: 0 })} ha</div>
+          <div className="cbar-val">{r.ha.toLocaleString('en-US', { maximumFractionDigits: 0 })} {unit}</div>
         </div>
       ))}
     </div>

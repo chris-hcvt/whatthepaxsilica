@@ -25,6 +25,8 @@ export default function ReportApp() {
     setMall,
     refKey: 'moa',
     setRefKey: () => undefined,
+    homeKey: 'regular',
+    setHomeKey: () => undefined,
     dropCenter: [0, 0],
     setDropCenter: () => undefined,
     dropLabel: '',

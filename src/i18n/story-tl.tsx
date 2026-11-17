@@ -1,8 +1,8 @@
 import type { StoryStep } from './types';
 import type { Chapter } from '../content/story';
-import { REFS, CITY_STATS, HUB_HA } from '../content/story';
+import { REFS, CITY_STATS, HUB_HA, HUB_COURTS, COURTS_PER_HECTARE } from '../content/story';
 import { Cite, CityBars, Timeline } from '../components/bits';
-import { BigNumber, Bullets, DotChart, ProsCons, RefPicker, ScoreCard } from '../components/story-bits';
+import { BigNumber, Bullets, DotChart, HomePicker, ProsCons, RefPicker, ScoreCard } from '../components/story-bits';
 
 export const chaptersTl: Record<Chapter, string> = {
   basics: 'Ang basics',
@@ -131,13 +131,55 @@ export const storyTl: Record<string, StoryStep> = {
       </p>
     ),
   },
+  'size-hectare': {
+    title: 'Una, gaano kalaki ang 1 ektarya?',
+    body: (
+      <>
+        <p>
+          <b>1 ektarya = 10,000 metro kuwadrado.</b> Isang parisukat na 100 metro ang haba sa bawat gilid.
+        </p>
+        <p>
+          Kasinlaki ito ng mga <b>{Math.round(COURTS_PER_HECTARE)} basketball court</b>. Mga 5 minuto ang isang ikot na lakad sa paligid nito.
+          <Cite s="court" />
+        </p>
+      </>
+    ),
+    more: <p>Ang isang buong basketball court ay 28 × 15 metro, o 420 metro kuwadrado. 10,000 ÷ 420 ≈ 24. May isang court sa loob ng parisukat, ayon sa tunay na sukat.</p>,
+  },
+  'size-homes': {
+    title: 'Ilang bahay ang kasya sa 1 ektarya?',
+    body: (
+      <>
+        <p>Bawat bahay ay nakatayo sa isang lote. Pumili ng laki para punuin ang parisukat:</p>
+        <HomePicker
+          names={{ regular: 'Karaniwang bahay', medium: 'Katamtamang bahay', large: 'Malaking bahay', mansion: 'Mansyon' }}
+          lot={(m2) => `${m2.toLocaleString('en-US')} metro kuwadrado bawat lote`}
+          count={(n) => (
+            <>
+              <b>{n}</b> bahay
+            </>
+          )}
+        />
+      </>
+    ),
+    more: (
+      <p>
+        Karaniwan: ang pinakamaliit na loteng pinapayagan para sa bahay sa socialized housing (64 metro kuwadrado). Katamtaman: ang pinakamaliit na lote
+        para sa bahay sa open-market na subdivision (120 metro kuwadrado). Ang malaki (300 metro kuwadrado) at mansyon (1,000 metro kuwadrado) ay mga
+        halimbawang sukat. Ang bilang ay 10,000 ÷ laki ng lote, hindi kasama ang mga kalsada.
+        <Cite s={['bp220', 'pd957']} />
+      </p>
+    ),
+  },
   'size-number': {
     title: <BigNumber value="1,619" unit="ektarya" />,
     body: (
       <p>
-        Iyan ay <b>16 na kilometro kuwadrado</b> — mga <b>2,270 football field</b>.
+        Ngayon, lumayo tayo. Bawat maliit na parisukat sa zone ay 1 ektarya, at <b>1,619</b> ang mga ito: <b>16.19 milyong metro kuwadrado</b>, o
+        mga <b>{HUB_COURTS.toLocaleString('en-US')} basketball court</b>.
       </p>
     ),
+    more: <p>Ang 1,619 ektarya ay ang opisyal na laki (4,000 acre). Iginuhit ang grid sa aming tantiyang balangkas, kaya bahagyang mas marami ang parisukat.</p>,
   },
   'size-flat': {
     title: 'Isipin mong pinatag ito',
@@ -159,10 +201,12 @@ export const storyTl: Record<string, StoryStep> = {
               </div>
               <p className="muted">
                 {r.kind === 'mall'
-                  ? `Batay sa sukat (${r.ha} ha bawat isa). Sa 3D: ${r.packed} buong kopya, kasama ang mga puwang sa pagitan.`
-                  : r.basis === 'square'
-                    ? `Mga 240 ektarya ang BGC (BCDA). Walang inilathalang hangganan, kaya ipinakita ito bilang simpleng parisukat.`
-                    : `Balangkas na sinundan ang mga pangunahing kalsadang nakapaligid: mga ${Math.round(r.ha)} ha. Isang kopya ang nasa 3D.`}
+                  ? `Batay sa sukat (${r.ha} ektarya bawat isa). Sa 3D: ${r.packed} buong kopya, kasama ang mga puwang sa pagitan.`
+                  : `Sa sukat, katumbas ng zone ang mga ${times} na ${r.name}. Dahil mahaba at makitid ang zone, ${r.packed} buong kopya ang kasya nang magkakatabi (makikita sa 3D), at may sobra pang lupa. ${
+                      r.basis === 'square'
+                        ? 'Mga 240 ektarya ang BGC (BCDA); walang inilathalang hangganan, kaya parisukat ang ipinakita.'
+                        : `Sinusundan ng balangkas ang mga pangunahing kalsadang nakapaligid: mga ${Math.round(r.ha)} ektarya.`
+                    }`}
               </p>
             </>
           );
@@ -172,7 +216,7 @@ export const storyTl: Record<string, StoryStep> = {
     more: (
       <p>
         Ang sukat ng mga mall ay ang lote nila ayon sa OpenStreetMap. Makati CBD: EDSA, Gil Puyat, Chino Roces at Arnaiz. Ortigas Center: EDSA, Ortigas
-        Ave, Meralco Ave at Shaw Blvd (mga 108 ha ayon sa asosasyon nito).
+        Ave, Meralco Ave at Shaw Blvd (mga 108 ektarya ayon sa asosasyon nito).
         <Cite s="osm" />
       </p>
     ),
@@ -181,6 +225,7 @@ export const storyTl: Record<string, StoryStep> = {
     title: 'Mas malaki pa sa ilang buong lungsod',
     body: (
       <CityBars
+        unit="ektarya"
         hubLabel={<b>Pax Silica zone</b>}
         rows={[
           { name: 'Lungsod ng Makati', ha: CITY_STATS.makati },
@@ -248,7 +293,7 @@ export const storyTl: Record<string, StoryStep> = {
                 <Cite s="gma-relocation" />
               </>,
               <>
-                Ayon sa mga residente, <b>30 m²</b> ang bahay at <b>₱30 bawat m²</b> ang alok para sa lupa. Tumanggi sila.
+                Ayon sa mga residente, <b>30 metro kuwadrado</b> ang bahay at <b>₱30 bawat metro kuwadrado</b> ang alok para sa lupa. Tumanggi sila.
                 <Cite s={['hrw', 'afp']} />
               </>,
               <>

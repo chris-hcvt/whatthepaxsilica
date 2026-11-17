@@ -47,6 +47,8 @@ export interface UiStrings {
   mapNotFound: string;
   mapSearchBusy: string;
   mapHint: string;
+  /** the unit word, never abbreviated */
+  hectares: string;
   reportTitle: string;
   reportIntro: string;
   contents: string;

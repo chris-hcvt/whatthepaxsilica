@@ -1,6 +1,6 @@
 import { createContext, useContext } from 'react';
 import type { MallKey } from './content/slides';
-import type { RefKey } from './content/story';
+import type { HomeKey, RefKey } from './content/story';
 import type { LL } from './three/geo';
 import type { Locale } from './i18n/types';
 
@@ -13,6 +13,8 @@ export interface DeckState {
   // story: reference picker and city map
   refKey: RefKey;
   setRefKey: (k: RefKey) => void;
+  homeKey: HomeKey;
+  setHomeKey: (k: HomeKey) => void;
   dropCenter: LL;
   setDropCenter: (c: LL, label?: string) => void;
   dropLabel: string;

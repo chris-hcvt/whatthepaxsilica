@@ -1,8 +1,8 @@
 import type { StoryStep } from './types';
 import type { Chapter } from '../content/story';
-import { REFS, CITY_STATS, HUB_HA } from '../content/story';
+import { REFS, CITY_STATS, HUB_HA, HUB_COURTS, COURTS_PER_HECTARE } from '../content/story';
 import { Cite, CityBars, Timeline } from '../components/bits';
-import { BigNumber, Bullets, DotChart, ProsCons, RefPicker, ScoreCard } from '../components/story-bits';
+import { BigNumber, Bullets, DotChart, HomePicker, ProsCons, RefPicker, ScoreCard } from '../components/story-bits';
 
 export const chaptersEn: Record<Chapter, string> = {
   basics: 'The basics',
@@ -76,7 +76,7 @@ export const storyEn: Record<string, StoryStep> = {
         <Cite s={['rfa', 'gma-relocation']} />
       </p>
     ),
-    more: <p>Yellow dashes: New Clark City (about 9,450 ha). Red: the planned tech zone.</p>,
+    more: <p>Yellow dashes: New Clark City (about 9,450 hectares). Red: the planned tech zone.</p>,
   },
   'plan-what': {
     title: 'What: factories for chips and AI parts',
@@ -124,8 +124,48 @@ export const storyEn: Record<string, StoryStep> = {
     ),
     more: (
       <p>
-        We matched the Countermapping PH map (published by Human Rights Watch) to satellite images. Our outline covers about 1,738 ha, close to the
-        official 1,619 ha. Details are in the full report.
+        We matched the Countermapping PH map (published by Human Rights Watch) to satellite images. Our outline covers about 1,738 hectares, close to the
+        official 1,619 hectares. Details are in the full report.
+      </p>
+    ),
+  },
+  'size-hectare': {
+    title: 'First, how big is 1 hectare?',
+    body: (
+      <>
+        <p>
+          <b>1 hectare = 10,000 square meters.</b> That’s a square 100 meters long on each side.
+        </p>
+        <p>
+          It’s about the size of <b>{Math.round(COURTS_PER_HECTARE)} basketball courts</b>. Walking once around it takes about 5 minutes.
+          <Cite s="court" />
+        </p>
+      </>
+    ),
+    more: <p>A full-size basketball court is 28 × 15 meters, or 420 square meters. 10,000 ÷ 420 ≈ 24. One court is drawn in the square to scale.</p>,
+  },
+  'size-homes': {
+    title: 'How many homes fit in 1 hectare?',
+    body: (
+      <>
+        <p>Every house sits on a lot. Tap a size to fill the square:</p>
+        <HomePicker
+          names={{ regular: 'Regular home', medium: 'Medium home', large: 'Large home', mansion: 'Mansion' }}
+          lot={(m2) => `${m2.toLocaleString('en-US')} square meters per lot`}
+          count={(n) => (
+            <>
+              <b>{n}</b> homes
+            </>
+          )}
+        />
+      </>
+    ),
+    more: (
+      <p>
+        Regular: the smallest lot allowed for a house in socialized housing (64 square meters). Medium: the smallest lot for a house in an open-market
+        subdivision (120 square meters). Large (300 square meters) and mansion (1,000 square meters) are example sizes. Counts are 10,000 ÷ lot size,
+        leaving out roads.
+        <Cite s={['bp220', 'pd957']} />
       </p>
     ),
   },
@@ -133,9 +173,11 @@ export const storyEn: Record<string, StoryStep> = {
     title: <BigNumber value="1,619" unit="hectares" />,
     body: (
       <p>
-        That’s <b>16 square kilometers</b> — about <b>2,270 football fields</b>.
+        Now zoom out. Each small square on the zone is 1 hectare, and there are <b>1,619</b> of them: <b>16.19 million square meters</b>, or
+        about <b>{HUB_COURTS.toLocaleString('en-US')} basketball courts</b>.
       </p>
     ),
+    more: <p>1,619 hectares is the official size (4,000 acres). The grid is drawn on our approximate outline, so it shows a few more squares.</p>,
   },
   'size-flat': {
     title: 'Now imagine it leveled',
@@ -157,10 +199,12 @@ export const storyEn: Record<string, StoryStep> = {
               </div>
               <p className="muted">
                 {r.kind === 'mall'
-                  ? `Based on area (${r.ha} ha each). In 3D: ${r.packed} whole copies, packed with the gaps that leaves.`
-                  : r.basis === 'square'
-                    ? `BGC is about 240 ha (BCDA). It has no published boundary, so it’s shown as a simple square.`
-                    : `Outline traced along its main bounding roads: about ${Math.round(r.ha)} ha. One copy is shown in 3D.`}
+                  ? `Based on area (${r.ha} hectares each). In 3D: ${r.packed} whole copies, packed with the gaps that leaves.`
+                  : `By area, the zone equals about ${times} ${r.name}s. Because the zone is long and narrow, ${r.packed} whole copies fit inside it side by side (shown in 3D), with land to spare. ${
+                      r.basis === 'square'
+                        ? 'BGC is about 240 hectares (BCDA); it has no published boundary, so it’s shown as a square.'
+                        : `Its outline follows its main bounding roads: about ${Math.round(r.ha)} hectares.`
+                    }`}
               </p>
             </>
           );
@@ -170,7 +214,7 @@ export const storyEn: Record<string, StoryStep> = {
     more: (
       <p>
         Mall sizes are the mall lots mapped on OpenStreetMap. Makati CBD: EDSA, Gil Puyat, Chino Roces and Arnaiz avenues. Ortigas Center: EDSA, Ortigas
-        Ave, Meralco Ave and Shaw Blvd (its association lists about 108 ha).
+        Ave, Meralco Ave and Shaw Blvd (its association lists about 108 hectares).
         <Cite s="osm" />
       </p>
     ),
@@ -179,6 +223,7 @@ export const storyEn: Record<string, StoryStep> = {
     title: 'Bigger than some whole cities',
     body: (
       <CityBars
+        unit="hectares"
         hubLabel={<b>Pax Silica zone</b>}
         rows={[
           { name: 'Makati City', ha: CITY_STATS.makati },
@@ -191,7 +236,7 @@ export const storyEn: Record<string, StoryStep> = {
     ),
     more: (
       <p>
-        Areas from OpenStreetMap boundaries; the zone uses the official {HUB_HA.toLocaleString('en-US')} ha.
+        Areas from OpenStreetMap boundaries; the zone uses the official {HUB_HA.toLocaleString('en-US')} hectares.
         <Cite s="osm" />
       </p>
     ),
@@ -247,7 +292,7 @@ export const storyEn: Record<string, StoryStep> = {
                   <Cite s="gma-relocation" />
                 </>,
                 <>
-                  Residents say the houses are <b>30 m²</b> and the offer for land was <b>₱30 per m²</b>. They said no.
+                  Residents say the houses are <b>30 square meters</b> and the offer for land was <b>₱30 per square meter</b>. They said no.
                   <Cite s={['hrw', 'afp']} />
                 </>,
                 <>

@@ -1,9 +1,10 @@
 import * as THREE from 'three';
 import { outerRing, pointInRing, ringCentroid, type LL } from './geo';
 import type { SiteScene } from './site';
+import { HectareFx, type HomeKey } from './hectare';
 
 /** One extra visual per story step, added on top of the base scene. */
-export type Fx = 'nccDraw' | 'manila' | 'icons' | 'lease' | 'unknowns' | 'pitches' | 'makati' | 'rings' | 'river' | 'farms';
+export type Fx = 'nccDraw' | 'manila' | 'icons' | 'lease' | 'unknowns' | 'hectare' | 'court' | 'homes' | 'grid' | 'makati' | 'rings' | 'river' | 'farms';
 
 export interface FxLabels {
   manila: string;
@@ -11,7 +12,10 @@ export interface FxLabels {
   noDataCentres: string;
   lease: string;
   unknowns: [string, string, string];
-  pitches: string;
+  /** "100 m" side labels on the one-hectare square */
+  side: string;
+  court: string;
+  oneHectare: string;
   makati: string;
   families: string;
   river: string;
@@ -52,7 +56,17 @@ export class SiteFx {
   private rings: THREE.Mesh[] = [];
   private ringCentre: [number, number];
   private manilaEnd: [number, number];
-  lite = false;
+  readonly hectare: HectareFx;
+  private liteMode = false;
+
+  get lite() {
+    return this.liteMode;
+  }
+
+  set lite(v: boolean) {
+    this.liteMode = v;
+    this.hectare.lite = v;
+  }
 
   constructor(private site: SiteScene) {
     const sc = site.scene;
@@ -117,8 +131,19 @@ export class SiteFx {
       sc.add(r);
     }
 
+    this.hectare = new HectareFx(site);
+
     this.buildLabels();
     this.place();
+  }
+
+  hectareTarget() {
+    const { cx, cz } = this.hectare;
+    return new THREE.Vector3(cx, this.site.heightAt(cx, cz), cz);
+  }
+
+  setHome(k: HomeKey) {
+    this.hectare.setHome(k);
   }
 
   private densify(ring: [number, number][], step: number) {
@@ -206,7 +231,11 @@ export class SiteFx {
     this.addLabel('lease', this.hubPoint(0, 0), 0.45, 'fx-lease', '');
     const qs: [number, number][] = [this.hubPoint(-2.0, 0.6), this.hubPoint(0.4, -0.4), this.hubPoint(2.3, -1.1)];
     qs.forEach((p) => this.addLabel('unknowns', p, 0.45, 'fx-unknown', ''));
-    this.addLabel('pitches', this.hubPoint(0, 0), 0.3, 'fx-pitches', '');
+    const a = this.hectare.anchors();
+    this.addLabel('hectare', a.south, 0.002, 'fx-side', '');
+    this.addLabel('hectare', a.east, 0.002, 'fx-side', '');
+    this.addLabel('court', a.court, 0.004, 'fx-court', '');
+    this.addLabel('grid', a.centre, 0.6, 'fx-onehectare', '');
     this.addLabel('makati', this.hubPoint(0, -0.3), 0.45, 'fx-makati', '');
     this.addLabel('rings', this.ringCentre, 1.6, 'fx-families', '');
     // rivers and farms: label at a point along each named line / the largest farm
@@ -248,7 +277,9 @@ export class SiteFx {
     icons[3].el.innerHTML = `<span>${t.noDataCentres}</span>`;
     by('lease')[0].el.innerHTML = `${ICONS.key}<span>${t.lease}</span>`;
     by('unknowns').forEach((l, i) => (l.el.innerHTML = `${ICONS.q}<span>${t.unknowns[i]}</span>`));
-    by('pitches')[0].el.innerHTML = `<span>${t.pitches}</span>`;
+    by('hectare').forEach((l) => (l.el.innerHTML = `<span>${t.side}</span>`));
+    by('court')[0].el.innerHTML = `<span>${t.court}</span>`;
+    by('grid')[0].el.innerHTML = `<span>${t.oneHectare}</span>`;
     by('makati')[0].el.innerHTML = `<span>${t.makati}</span>`;
     by('rings')[0].el.innerHTML = `${ICONS.home}<span>${t.families}</span>`;
     const rl = by('river');
@@ -268,6 +299,10 @@ export class SiteFx {
     this.manilaGroup.visible = next.has('manila');
     this.makatiMesh.visible = next.has('makati');
     this.rings.forEach((r) => (r.visible = next.has('rings')));
+    this.hectare.set(
+      { plot: next.has('hectare') || next.has('homes') || next.has('grid'), court: next.has('court'), homes: next.has('homes'), grid: next.has('grid') },
+      instant,
+    );
     this.applyProgress();
   }
 
@@ -295,6 +330,7 @@ export class SiteFx {
     this.makatiMesh.position.set(hx, this.site.heightAt(hx, hz) + 0.006, hz);
     const [rx, rz] = this.ringCentre;
     this.rings.forEach((r) => r.position.set(rx, this.site.heightAt(rx, rz) + 0.05, rz));
+    this.hectare.place();
     for (const l of this.labels) l.pos.set(l.xz[0], this.site.heightAt(l.xz[0], l.xz[1]) + l.lift, l.xz[1]);
   }
 
@@ -311,6 +347,7 @@ export class SiteFx {
       moving = true;
     }
     if (moving) this.applyProgress();
+    if (this.hectare.update(dt)) moving = true;
     if (this.active.has('rings')) {
       this.rings.forEach((r, i) => {
         const ph = this.lite ? 0.35 + i * 0.25 : (this.t * 0.45 + i / 3) % 1;
@@ -355,7 +392,7 @@ export class SiteFx {
   }
 
   /** extra drawings on the ground overlay */
-  drawOverlay(ctx: CanvasRenderingContext2D, px: (p: LL) => readonly [number, number], W: number, H: number, hub: LL[]) {
+  drawOverlay(ctx: CanvasRenderingContext2D, px: (p: LL) => readonly [number, number]) {
     const s = this.site;
     if (this.active.has('farms')) {
       ctx.fillStyle = 'rgba(214, 232, 90, 0.38)';
@@ -391,35 +428,9 @@ export class SiteFx {
         ctx.stroke();
       }
     }
-    if (this.active.has('pitches')) {
-      // FIFA-size pitches (105 × 68 m), tiled inside the hub
-      const [w, , e] = s.data.scene.bbox;
-      const mPerPx = ((e - w) * 111320 * Math.cos((s.proj.lat0 * Math.PI) / 180)) / W;
-      const pw = 105 / mPerPx;
-      const ph = 68 / mPerPx;
-      ctx.save();
-      ctx.beginPath();
-      hub.forEach((p, i) => {
-        const [x, y] = px(p);
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      });
-      ctx.closePath();
-      ctx.clip();
-      ctx.fillStyle = 'rgba(70, 170, 90, 0.55)';
-      ctx.fillRect(0, 0, W, H);
-      ctx.strokeStyle = 'rgba(255,255,255,0.8)';
-      ctx.lineWidth = 1;
-      for (let y = 0; y < H; y += ph) {
-        for (let x = (Math.floor(y / ph) % 2) * (pw / 2); x < W; x += pw) {
-          ctx.strokeRect(x + 0.5, y + 0.5, pw - 1, ph - 1);
-        }
-      }
-      ctx.restore();
-    }
   }
 
   overlayKey() {
-    return ['farms', 'river', 'pitches'].filter((k) => this.active.has(k as Fx)).join(',');
+    return ['farms', 'river', 'grid'].filter((k) => this.active.has(k as Fx)).join(',');
   }
 }

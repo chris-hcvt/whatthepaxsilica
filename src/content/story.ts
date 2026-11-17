@@ -29,7 +29,9 @@ export const STEPS: StepDef[] = [
   { id: 'plan-what', chapter: 'plan', kind: 'card', scene: site({ view: 'hub', hub: true, wall: true, fx: ['icons'] }) },
   { id: 'plan-land', chapter: 'plan', kind: 'card', scene: site({ view: 'hub', hub: true, wall: true, ncc: true, fx: ['lease'] }) },
   { id: 'plan-status', chapter: 'plan', kind: 'card', scene: site({ view: 'hub', hub: true, wall: true, fx: ['unknowns'] }) },
-  { id: 'size-number', chapter: 'size', kind: 'card', scene: site({ view: 'hubClose', hub: true, wall: true, fx: ['pitches'] }) },
+  { id: 'size-hectare', chapter: 'size', kind: 'card', scene: site({ view: 'hectare', hub: false, fx: ['hectare', 'court'] }) },
+  { id: 'size-homes', chapter: 'size', kind: 'card', scene: site({ view: 'hectare', hub: false, fx: ['hectare', 'homes'] }) },
+  { id: 'size-number', chapter: 'size', kind: 'card', scene: site({ view: 'hub', hub: true, wall: true, fx: ['grid'] }) },
   { id: 'size-flat', chapter: 'size', kind: 'card', scene: site({ view: 'compare', hub: true, flat: true }) },
   { id: 'size-compare', chapter: 'size', kind: 'card', scene: site({ view: 'compare', hub: true, flat: true, ref: true }) },
   { id: 'size-cities', chapter: 'size', kind: 'card', scene: site({ view: 'top', hub: true, flat: true, fx: ['makati'] }) },
@@ -52,12 +54,34 @@ export const REFS: Record<RefKey, { name: string; kind: 'mall' | 'district'; ha:
   megamall: { name: 'SM Megamall', kind: 'mall', ha: 11.4, packed: 84, basis: 'osm' },
   smpampanga: { name: 'SM City Pampanga', kind: 'mall', ha: 24.7, packed: 35, basis: 'osm' },
   smclark: { name: 'SM City Clark', kind: 'mall', ha: 22.7, packed: 46, basis: 'osm' },
-  bgc: { name: 'BGC', kind: 'district', ha: 240, packed: 1, basis: 'square' },
-  makaticbd: { name: 'Makati CBD', kind: 'district', ha: 258.5, packed: 1, basis: 'roads' },
-  ortigas: { name: 'Ortigas Center', kind: 'district', ha: 136.8, packed: 1, basis: 'roads' },
+  bgc: { name: 'BGC', kind: 'district', ha: 240, packed: 3, basis: 'square' },
+  makaticbd: { name: 'Makati CBD', kind: 'district', ha: 258.5, packed: 4, basis: 'roads' },
+  ortigas: { name: 'Ortigas Center', kind: 'district', ha: 136.8, packed: 8, basis: 'roads' },
 };
 
 export const HUB_HA = 1619;
+
+/** one hectare = 10,000 square meters (a square 100 m on each side) */
+export const HECTARE_M2 = 10_000;
+/** a FIBA basketball court is 28 m × 15 m */
+export const COURT_M2 = 28 * 15;
+export const COURTS_PER_HECTARE = HECTARE_M2 / COURT_M2; // ≈ 23.8
+export const HUB_COURTS = Math.round((HUB_HA * HECTARE_M2) / COURT_M2 / 100) * 100; // ≈ 38,500
+
+export type HomeKey = 'regular' | 'medium' | 'large' | 'mansion';
+export const HOME_KEYS: HomeKey[] = ['regular', 'medium', 'large', 'mansion'];
+/**
+ * Lot (land) size per home, in square meters, and how many such lots fit in one hectare (10,000 ÷ lot, rounded
+ * down, not counting roads). Regular: minimum lot for a single-detached house in socialized housing (BP 220 rules).
+ * Medium: minimum lot for a single-detached house in an open-market subdivision (PD 957 rules). Large and mansion:
+ * round example sizes, not standards.
+ */
+export const HOME_LOTS: Record<HomeKey, { lot: number; perHectare: number; basis: 'bp220' | 'pd957' | 'example' }> = {
+  regular: { lot: 64, perHectare: Math.floor(HECTARE_M2 / 64), basis: 'bp220' },
+  medium: { lot: 120, perHectare: Math.floor(HECTARE_M2 / 120), basis: 'pd957' },
+  large: { lot: 300, perHectare: Math.floor(HECTARE_M2 / 300), basis: 'example' },
+  mansion: { lot: 1000, perHectare: Math.floor(HECTARE_M2 / 1000), basis: 'example' },
+};
 
 export const fitTimes = (k: RefKey) => {
   const r = FACT_RATIO(REFS[k].ha);

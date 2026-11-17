@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { SiteScene, type SiteLabels, type SiteView } from './site';
 import type { Fx } from './fx';
+import type { HomeKey } from './hectare';
 import { dataUrl } from '../content/data-url';
 import type { SiteData } from './geo';
 
@@ -27,6 +28,12 @@ export type SceneState =
     }
   | { kind: 'none' };
 
+export interface StateOpts {
+  refKey: string;
+  homeKey: HomeKey;
+  labels: SiteLabels;
+}
+
 const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 
 export class Engine {
@@ -40,7 +47,16 @@ export class Engine {
   private raf = 0;
   private last = performance.now();
   private dirty = true;
-  private fly: { from: THREE.Vector3; to: THREE.Vector3; tFrom: THREE.Vector3; tTo: THREE.Vector3; t: number; dur: number } | null = null;
+  private fly: {
+    tFrom: THREE.Vector3;
+    tTo: THREE.Vector3;
+    dFrom: THREE.Vector3; // unit direction target → camera
+    dTo: THREE.Vector3;
+    lnFrom: number; // log of the camera's distance from its target
+    lnTo: number;
+    t: number;
+    dur: number;
+  } | null = null;
   private insets: Insets = { left: 0, bottom: 0 };
   private w = 1;
   private h = 1;
@@ -66,7 +82,7 @@ export class Engine {
     this.controls.enableDamping = true;
     this.controls.dampingFactor = 0.08;
     this.controls.maxPolarAngle = Math.PI * 0.47;
-    this.controls.minDistance = 2;
+    this.controls.minDistance = 0.05; // km: the one-hectare close-up sits about 300 m away
     this.controls.maxDistance = 45;
     this.controls.autoRotateSpeed = 0.35;
     // the story is driven by scrolling, so the camera is not user-controlled:
@@ -141,11 +157,12 @@ export class Engine {
     return this.sitePromise;
   }
 
-  private layers(s: Extract<SceneState, { kind: 'site' }>, refKey: string) {
-    return { ncc: s.ncc, hub: s.hub, wall: s.wall, sitios: s.sitios, flat: s.flat, ref: s.ref ? refKey : null, fx: s.fx ?? [] };
+  private layers(s: Extract<SceneState, { kind: 'site' }>, opts: StateOpts) {
+    const fx = s.fx ?? [];
+    return { ncc: s.ncc, hub: s.hub, wall: s.wall, sitios: s.sitios, flat: s.flat, ref: s.ref ? opts.refKey : null, fx, home: fx.includes('homes') ? opts.homeKey : null };
   }
 
-  async setState(state: SceneState, opts: { refKey: string; labels: SiteLabels }) {
+  async setState(state: SceneState, opts: StateOpts) {
     if (state.kind === 'none') {
       this.mode = 'none';
       this.site?.hideLabels();
@@ -155,7 +172,7 @@ export class Engine {
     const wasSite = this.mode === 'site';
     this.mode = 'site';
     this.controls.autoRotate = !!state.spin && !this.reducedMotion && !this.lite;
-    site.setLayers(this.layers(state, opts.refKey), opts.labels, this.reducedMotion);
+    site.setLayers(this.layers(state, opts), opts.labels, this.reducedMotion);
     this.lastState = state;
     const { position, target } = site.view(state.view, this.visibleAspect(), this.visibleFrac());
     if (!this.flownIn) {
@@ -169,9 +186,9 @@ export class Engine {
     this.dirty = true;
   }
 
-  refresh(state: SceneState, opts: { refKey: string; labels: SiteLabels }) {
+  refresh(state: SceneState, opts: StateOpts) {
     if (this.site && state.kind === 'site') {
-      this.site.setLayers(this.layers(state, opts.refKey), opts.labels, this.reducedMotion);
+      this.site.setLayers(this.layers(state, opts), opts.labels, this.reducedMotion);
       this.dirty = true;
     }
   }
@@ -184,7 +201,15 @@ export class Engine {
       this.dirty = true;
       return;
     }
-    this.fly = { from: this.camera.position.clone(), to: position, tFrom: this.controls.target.clone(), tTo: target, t: 0, dur };
+    // fly along the view direction with the distance changing on a log scale, so a big zoom (one hectare →
+    // the whole zone) reads as one steady pull-back instead of a jump
+    const from = this.camera.position.clone().sub(this.controls.target);
+    const to = position.clone().sub(target);
+    const lnFrom = Math.log(Math.max(1e-4, from.length()));
+    const lnTo = Math.log(Math.max(1e-4, to.length()));
+    const zoom = Math.abs(lnTo - lnFrom);
+    if (zoom > 1.2) dur = Math.max(dur, Math.min(3.4, 1.3 + zoom * 0.55));
+    this.fly = { tFrom: this.controls.target.clone(), tTo: target.clone(), dFrom: from.normalize(), dTo: to.normalize(), lnFrom, lnTo, t: 0, dur };
   }
 
   private loop(now: number) {
@@ -197,8 +222,11 @@ export class Engine {
       const f = this.fly;
       f.t = Math.min(1, f.t + dt / f.dur);
       const k = ease(f.t);
-      this.camera.position.lerpVectors(f.from, f.to, k);
       this.controls.target.lerpVectors(f.tFrom, f.tTo, k);
+      const dir = new THREE.Vector3().lerpVectors(f.dFrom, f.dTo, k);
+      if (dir.lengthSq() < 1e-6) dir.copy(f.dTo);
+      dir.normalize().multiplyScalar(Math.exp(f.lnFrom + (f.lnTo - f.lnFrom) * k));
+      this.camera.position.copy(this.controls.target).add(dir);
       if (f.t >= 1) this.fly = null;
       active = true;
     }

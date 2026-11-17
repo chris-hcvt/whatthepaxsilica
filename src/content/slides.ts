@@ -68,7 +68,6 @@ export const FACTS = {
   hubKm2: 16.2,
   nccHa: 9450,
   outlineHa: 1738,
-  footballPitchHa: 0.714, // FIFA-recommended 105 m × 68 m
   malls: { moa: 19.7, megamall: 11.4, northedsa: 15.4, smclark: 22.7 } as Record<MallKey, number>,
   /** whole copies packed inside the mapped outline by data-prep/pack_malls.py */
   mallsPacked: { moa: 48, megamall: 84, northedsa: 52, smclark: 46 } as Record<MallKey, number>,

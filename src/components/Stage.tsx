@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { Engine, type Insets, type SceneState } from '../three/engine';
 import type { SiteLabels } from '../three/site';
+import type { HomeKey } from '../three/hectare';
 
 interface Props {
   state: SceneState;
   refKey: string;
+  homeKey: HomeKey;
   labels: SiteLabels;
   insets: Insets;
   reducedMotion: boolean;
@@ -14,7 +16,7 @@ interface Props {
 }
 
 /** Full-screen, fixed 3D view behind the story. */
-export function Stage({ state, refKey, labels, insets, reducedMotion, quiet, ui }: Props) {
+export function Stage({ state, refKey, homeKey, labels, insets, reducedMotion, quiet, ui }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const labelRef = useRef<HTMLDivElement>(null);
   const engineRef = useRef<Engine | null>(null);
@@ -60,12 +62,12 @@ export function Stage({ state, refKey, labels, insets, reducedMotion, quiet, ui 
 
   const stateKey = JSON.stringify(state);
   useEffect(() => {
-    engineRef.current?.setState(state, { refKey, labels }).catch(() => setSiteState('error'));
+    engineRef.current?.setState(state, { refKey, homeKey, labels }).catch(() => setSiteState('error'));
   }, [stateKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    engineRef.current?.refresh(state, { refKey, labels });
-  }, [labels, refKey]); // eslint-disable-line react-hooks/exhaustive-deps
+    engineRef.current?.refresh(state, { refKey, homeKey, labels });
+  }, [labels, refKey, homeKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const on = state.kind === 'site';
   return (

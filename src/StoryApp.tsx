@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { DeckContext, type DeckState } from './deck';
-import { STEPS, CHAPTERS, type RefKey, type Chapter } from './content/story';
+import { STEPS, CHAPTERS, type RefKey, type HomeKey, type Chapter } from './content/story';
 import { LOCALES, initialLang, saveLang, savedLang, urlLang, type LangCode } from './i18n';
 import { Stage } from './components/Stage';
 import { MapLayer, DropControls } from './components/DropMap';
@@ -46,6 +46,7 @@ export default function StoryApp() {
   const [langOpen, setLangOpen] = useState(() => !urlLang() && !savedLang());
   const [active, setActive] = useState(0);
   const [refKey, setRefKey] = useState<RefKey>('moa');
+  const [homeKey, setHomeKey] = useState<HomeKey>('regular');
   const [dropCenter, setDropCenterState] = useState<LL>([121.0239, 14.5556]);
   const [dropLabel, setDropLabel] = useState('makati');
   const [drawer, setDrawer] = useState<{ open: boolean; hl: string | null }>({ open: false, hl: null });
@@ -188,6 +189,8 @@ export default function StoryApp() {
     setMall: () => undefined,
     refKey,
     setRefKey,
+    homeKey,
+    setHomeKey,
     dropCenter,
     setDropCenter: (c, label) => {
       setDropCenterState(c);
@@ -206,7 +209,7 @@ export default function StoryApp() {
       <a className="skip" href="#story">
         {L.ui.skipTo}
       </a>
-      <Stage state={step.scene} refKey={refKey} labels={L.site} insets={insets} reducedMotion={reduced} ui={L.ui} quiet={step.kind === 'full' || step.kind === 'map'} />
+      <Stage state={step.scene} refKey={refKey} homeKey={homeKey} labels={L.site} insets={insets} reducedMotion={reduced} ui={L.ui} quiet={step.kind === 'full' || step.kind === 'map'} />
       <MapLayer prepare={active >= MAP_STEP - 3} active={step.kind === 'map'} insets={insets} />
       <PhInset visible={!!step.inset} place={L.ui.insetPlace} note={L.ui.insetNote} />
       <div className={`vignette ${step.kind === 'full' ? 'dim' : ''}`} aria-hidden="true" />

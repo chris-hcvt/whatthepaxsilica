@@ -53,6 +53,7 @@ export const tl: Locale = {
     mapNotFound: 'Hindi makita ang lugar. Subukan ang ibang baybay, o pumili ng bayan sa mga mungkahi.',
     mapSearchBusy: 'Abala ang online na paghahanap ngayon. Pumili ng bayan sa mga mungkahi, o mag-tap sa mapa.',
     mapHint: 'Tip: mag-tap kahit saan sa mapa para ilipat doon ang balangkas.',
+    hectares: 'ektarya',
     reportTitle: 'Buong ulat',
     reportIntro: 'Ang detalyadong bersyon: bawat pahayag, numero at dokumento, may sanggunian. Magkatabi ang opisyal na pahayag at ang mga kritiko.',
     contents: 'Nilalaman',
@@ -89,7 +90,7 @@ export const tl: Locale = {
     ncc: 'New Clark City',
     inside: 'nasa loob ng minapang hub',
     outside: (km) => `${km} km sa labas ng gilid`,
-    refCount: (n, name, kind) => (kind === 'mall' ? `${n} buong ${name}, ayon sa tunay na sukat` : `1 ${name}, ayon sa tunay na sukat`),
+    refCount: (n, name, kind) => (kind === 'mall' ? `${n} buong ${name}, ayon sa tunay na sukat` : `${n} buong ${name}, ayon sa tunay na sukat`),
     levelled: 'Pinatag para maikumpara (paglalarawan)',
     fx: {
       manila: 'Maynila · mga 75 km',
@@ -97,8 +98,10 @@ export const tl: Locale = {
       noDataCentres: 'Walang data center, ayon sa DTI',
       lease: 'Pag-aari ng BCDA · uupahan nang hanggang 99 taon',
       unknowns: ['Wala pang pirmadong kasunduan', 'Wala pang pag-aaral pangkalikasan', 'Wala pang opisyal na mapa'],
-      pitches: '≈ 2,270 football field',
-      makati: 'Lungsod ng Makati · 1,815 ha',
+      side: '100 metro',
+      court: '1 basketball court',
+      oneHectare: '1 ektarya',
+      makati: 'Lungsod ng Makati · 1,815 ektarya',
       families: '≈ 200 pamilyang Aeta Hungey',
       river: 'Ilog Bangot',
       creek: 'Sapa ng Sapang Kawayan',
@@ -326,7 +329,7 @@ export const tl: Locale = {
       body: (
         <>
           <StatGrid>
-            <Stat value={`${fmt(FACTS.hubHa)} ha`} label={`≈ ${FACTS.hubKm2} km² · 4,000 acre`} cite={['rfa', 'pna-signing']} tone="red" />
+            <Stat value={`${fmt(FACTS.hubHa)} ektarya`} label={`≈ ${FACTS.hubKm2} kilometro kuwadrado · 4,000 acre`} cite={['rfa', 'pna-signing']} tone="red" />
             <Stat value="US$40–70B" label="pamumuhunan kapag buo na (BCDA); US$10B na paunang target" cite={['pna-signing', 'gma-sovereignty']} />
             <Stat value="130k–190k" label="trabaho kapag buo na (BCDA). Isa pang opisyal na tantiya: hanggang 150k direkta, 50k sa konstruksyon, 800k hindi direkta" cite={['pna-signing', 'gma-sovereignty']} />
             <Stat value="~3 GW" label="kuryenteng kailangan kapag buo na (BCDA)" cite={['mongabay', 'cna']} tone="amber" />
@@ -363,7 +366,7 @@ export const tl: Locale = {
           </p>
           <p>
             Itinugma namin ang mapang iyon sa satellite imagery para mailagay sa totoong koordinado. Sumasaklaw ang aming balangkas ng mga{' '}
-            <b>{fmt(FACTS.outlineHa)} ha</b>, malapit sa opisyal na {fmt(FACTS.hubHa)} ha (+7%). Tugma ang lokasyon ng mga sitio sa OpenStreetMap nang
+            <b>{fmt(FACTS.outlineHa)} ektarya</b>, malapit sa opisyal na {fmt(FACTS.hubHa)} ektarya (+7%). Tugma ang lokasyon ng mga sitio sa OpenStreetMap nang
             ilang daang metro lang ang layo.
             <Cite s={['copernicus', 'osm']} />
           </p>
@@ -377,13 +380,13 @@ export const tl: Locale = {
       body: (
         <>
           <p>
-            Gamit ang opisyal na {fmt(FACTS.hubHa)} ha at ang lote ng bawat mall ayon sa OpenStreetMap, ilang beses kasya ang buong mall sa hub.
+            Gamit ang opisyal na {fmt(FACTS.hubHa)} ektarya at ang lote ng bawat mall ayon sa OpenStreetMap, ilang beses kasya ang buong mall sa hub.
             <Cite s="osm" />
           </p>
           <MallPicker
             label={(n, name, ha, packed) => (
               <>
-                <b className="big">{n}×</b> {name} <span className="muted">({ha} ha bawat isa)</span>
+                <b className="big">{n}×</b> {name} <span className="muted">({ha} ektarya bawat isa)</span>
                 <span className="packed">
                   Batay iyan sa sukat. Kung buong gusali ang isisiksik, kasama ang mga puwang, <b>{packed}</b> kopya ang kasya sa minapang balangkas (makikita sa 3D ng kuwento).
                 </span>
@@ -391,8 +394,8 @@ export const tl: Locale = {
             )}
           />
           <StatGrid>
-            <Stat value={`≈ ${fmt(Math.round(FACTS.hubHa / FACTS.footballPitchHa))}`} label="football field (105 × 68 m)" />
-            <Stat value={`${FACTS.hubKm2} km²`} label="parang parisukat na 4 km × 4 km" />
+            <Stat value={`≈ ${fmt(Math.round((FACTS.hubHa * 10000) / 420 / 100) * 100)}`} label="basketball court (28 × 15 metro bawat isa)" cite="court" />
+            <Stat value={`${fmt(FACTS.hubHa * 10000)}`} label="metro kuwadrado (1 ektarya = 10,000 metro kuwadrado)" />
           </StatGrid>
           
         </>
@@ -408,6 +411,7 @@ export const tl: Locale = {
             <Cite s="osm" />
           </p>
           <CityBars
+            unit="ektarya"
             hubLabel={<b>Pax Silica hub</b>}
             rows={[
               { name: 'Lungsod ng Makati', ha: FACTS.cities.makati },
@@ -498,7 +502,7 @@ export const tl: Locale = {
               max={20000}
               rows={[
                 { value: 92, display: '92', who: 'Liham ng BCDA, Hul 16', what: '“apektadong tao” sa Brgy. O’Donnell, kasama ang mga magsasaka ng Binyayan', cite: 'hrw', side: 'gov' },
-                { value: 200, display: '~200', who: 'BCDA (Bingcang), Set', what: 'tao; ~10 ha ng lugar', cite: 'rfa', side: 'gov' },
+                { value: 200, display: '~200', who: 'BCDA (Bingcang), Set', what: 'tao; ~10 ektarya ng lugar', cite: 'rfa', side: 'gov' },
                 { value: 1000, display: '~1,000', who: 'Ulat ng AFP', what: 'mga Aetang nangangamba sa paglikas', cite: 'tribune-afp', side: 'media' },
                 { value: 20000, display: '~20,000', who: 'Kalikasan PNE', what: 'mga Aeta at magsasaka (kinontra ng Palasyo)', cite: 'summit', side: 'critic' },
               ]}
@@ -786,7 +790,7 @@ export const tl: Locale = {
             { date: 'Set 10', text: 'Protesta sa investors’ forum ng Luzon Economic Corridor; may inaresto.', cite: 'mongabay', tag: 'people' },
             { date: 'Set 21', text: 'DTI: may sugnay sa soberanya, walang diplomatic immunity, walang data center.', cite: 'gma-sovereignty', tag: 'gov' },
             { date: 'Okt 13', text: 'Marcos: walang mapapaalis. Palasyo: pirmahan “bago matapos ang 2026.”', cite: ['philstar-marcos', 'pna-signing'], tag: 'gov' },
-            { date: 'Okt 19', text: 'Plano ng BCDA sa relokasyon: ~50 bahay, 100 ha sakahan.', cite: 'gma-relocation', tag: 'gov' },
+            { date: 'Okt 19', text: 'Plano ng BCDA sa relokasyon: ~50 bahay, 100 ektaryang sakahan.', cite: 'gma-relocation', tag: 'gov' },
             { date: 'Okt 26', text: 'Isinampa ang House Bill 11758 para sa Advanced Industries Zone.', cite: 'gma-hb11758', tag: 'gov' },
             { date: 'Nob 11', text: 'Sinabi sa Kamara na nasa Sitio Binyayan ang relocation site.', cite: 'hrw', tag: 'gov' },
             { date: 'Nob 16', text: 'Ulat ng HRW; mga protesta sa pagdating ni Trump para sa ASEAN Summit.', cite: ['hrw', 'techpolicy'], tag: 'people' },
@@ -842,8 +846,8 @@ export const tl: Locale = {
             <p>
               Hindi pa inilalabas ng BCDA ang hangganan. Kinuha namin ang mapa ni A. Ortega / Countermapping PH (ayon sa inilathala ng Human Rights Watch),
               itinugma ito sa satellite imagery sa pamamagitan ng automated feature matching (26 na tugmang punto, ~1.5 px na error), at ginawang
-              koordinado ang mga balangkas nito. Mga pagsusuri: ~{fmt(FACTS.outlineHa)} ha ang balangkas kumpara sa opisyal na {fmt(FACTS.hubHa)} ha; ~9,634
-              ha ang New Clark City kumpara sa opisyal na {fmt(FACTS.nccHa)} ha; nasa ~120–420 m ang layo ng mga sitio sa parehong baryo sa OpenStreetMap.
+              koordinado ang mga balangkas nito. Mga pagsusuri: ~{fmt(FACTS.outlineHa)} ektarya ang balangkas kumpara sa opisyal na {fmt(FACTS.hubHa)} ektarya; ~9,634
+              ektarya ang New Clark City kumpara sa opisyal na {fmt(FACTS.nccHa)} ektarya; nasa ~120–420 m ang layo ng mga sitio sa parehong baryo sa OpenStreetMap.
               Nasa folder na <code>data-prep/</code> ng proyekto ang mga script.
             </p>
             <p>3D na lupain: Copernicus GLO-30 elevation (pinalaki nang ×2.4 ang taas). Imahe: walang-ulap na Sentinel-2 composite, Set–Okt 2026 (10 m).</p>
