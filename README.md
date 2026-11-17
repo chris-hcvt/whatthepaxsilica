@@ -21,13 +21,7 @@ Import this repo in Vercel. It is a plain Vite app: build command `npm run build
 
 After the first deploy, change `og:image` in `index.html` to the full URL (e.g. `https://<your-domain>/og.jpg`) so Facebook/Messenger previews show the image.
 
-## Live "viewing now" counter
-
-The header shows roughly how many people have the site open (tabs active in the last 60 seconds). It needs **no setup and no outside service**: a tiny Vercel Function (`api/presence.js`, logic in `api/_presence-core.js`) keeps the list in Vercel's built-in Runtime Cache, which is included on every plan. Functions run in Singapore (`"regions": ["sin1"]` in `vercel.json`) so every visitor shares one cache.
-
-- Each tab sends an anonymous random id every 25 seconds and a "leaving" ping when it is hidden or closed. No personal data is stored.
-- The number is close but not exact at busy moments (the cache has no atomic counters), and it can reset to the true count after a quiet spell if Vercel clears the cache. Either fixes itself within about a minute.
-- Optional exact counts: if an Upstash Redis integration is ever connected to the project (it sets `KV_REST_API_URL` and `KV_REST_API_TOKEN`), the function uses it automatically. Nothing else to change.
+## Sharing preview
 
 After the first deploy, change `og:image` in `index.html` to the full URL (e.g. `https://<your-domain>/og.jpg`) so Facebook/Messenger previews show the image.
 

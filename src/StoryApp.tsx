@@ -6,7 +6,6 @@ import { Stage } from './components/Stage';
 import { MapLayer, DropControls } from './components/DropMap';
 import { PhInset } from './components/story-bits';
 import { LangButton, LangModal, SourcesDrawer } from './components/Chrome';
-import { LiveCount, usePresence } from './components/LiveCount';
 import type { LL } from './three/geo';
 import type { Insets } from './three/engine';
 
@@ -54,7 +53,6 @@ export default function StoryApp() {
   const insets = useInsets();
   const reduced = useMemo(prefersReduced, []);
   const L = LOCALES[lang];
-  const viewers = usePresence();
 
   useEffect(() => {
     document.documentElement.lang = lang;
@@ -227,7 +225,6 @@ export default function StoryApp() {
           ))}
         </nav>
         <div className="sbar-actions">
-          <LiveCount count={viewers} label={L.ui.viewingNow} />
           <LangButton lang={lang} label={L.ui.language} onClick={() => setLangOpen(true)} />
           <a className="tbtn report-btn" href={reportHref}>
             {L.ui.fullReport}

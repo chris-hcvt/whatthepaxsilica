@@ -58,7 +58,6 @@ export const tl: Locale = {
     contents: 'Nilalaman',
     reportError: 'Mag-ulat ng mali',
     insetPlace: 'Capas, Tarlac',
-    viewingNow: (n) => `${n} nanonood ngayon`,
     insetNote: 'Isa ang Pilipinas sa mga 25 bansa ng Pax Silica.',
     stepOf: (k, n) => `${k} sa ${n}`,
     credits: 'Balangkas ng mapa: A. Ortega / Countermapping PH (sa pamamagitan ng Human Rights Watch), inilagay sa koordinado. Imahe: Copernicus Sentinel-2 (2026). Lupain: Copernicus DEM. Mapa: © mga kontribyutor ng OpenStreetMap, OpenFreeMap. Paghahanap ng lugar: GeoNames.',
