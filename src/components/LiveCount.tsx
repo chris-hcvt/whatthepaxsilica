@@ -26,7 +26,12 @@ export function usePresence(): number | null {
           setCount(null);
           return;
         }
-        const js = (await r.json()) as { count: number | null };
+        const js = (await r.json()) as { count: number | null; configured?: boolean };
+        if (js.configured === false) {
+          stopped = true; // counter not set up yet
+          setCount(null);
+          return;
+        }
         if (typeof js.count === 'number') {
           failures = 0;
           setCount(Math.max(1, js.count));

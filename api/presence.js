@@ -5,8 +5,8 @@
  * per-tab value — no personal data. Tabs seen in the last 60 s are counted with a Redis sorted set.
  *
  * Storage: Upstash Redis via the Vercel Marketplace integration, which sets KV_REST_API_URL and
- * KV_REST_API_TOKEN (UPSTASH_REDIS_REST_URL / _TOKEN also work). Without them the endpoint returns
- * 503 and the site simply hides the counter.
+ * KV_REST_API_TOKEN (UPSTASH_REDIS_REST_URL / _TOKEN also work). Without them the endpoint answers
+ * { configured: false } and the site simply hides the counter.
  */
 export const config = { runtime: 'edge' };
 
@@ -22,7 +22,7 @@ const json = (body, status = 200) =>
 export default async function handler(req) {
   const url = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
   const token = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
-  if (!url || !token) return json({ count: null, configured: false }, 503);
+  if (!url || !token) return json({ count: null, configured: false });
   if (req.method !== 'POST') return json({ error: 'POST only' }, 405);
 
   let body;
