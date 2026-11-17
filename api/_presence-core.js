@@ -1,13 +1,13 @@
 /**
  * Live-viewer counting on top of a simple key/value cache with TTLs (Vercel Runtime Cache).
  *
- * The cache has no atomic counters, so tabs are spread over SHARDS small buckets ({ tabId: lastSeenMs }).
+ * The cache has no atomic counters, so tabs are spread over SHARDS (32) small buckets ({ tabId: lastSeenMs }).
  * Each ping rewrites only its own bucket, which keeps simultaneous writes from clobbering each other;
  * a rare lost update fixes itself on that tab's next ping (every ~25 s). The total is recomputed from
  * all buckets at most every TOTAL_EVERY_MS and cached, so most pings cost 3 cache operations.
  * (Files starting with "_" in api/ are not exposed as endpoints by Vercel.)
  */
-export const SHARDS = 8;
+export const SHARDS = 32;
 export const WINDOW_MS = 60_000;
 export const TOTAL_EVERY_MS = 8_000;
 
