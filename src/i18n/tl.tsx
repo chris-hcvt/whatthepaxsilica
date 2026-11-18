@@ -19,6 +19,8 @@ import {
 } from '../components/bits';
 import { FACTS, timesFit } from '../content/slides';
 import { MEMBERS } from '../content/members';
+import { ACWA_MW, BCDA_LNG_STUDY_MW, GAP_SHARE, LINED_UP_MW } from '../content/power';
+import { bigNum, homesNum, pctNum } from './fmt';
 import { powerSlidesTl } from './report-power';
 import { chaptersTl, storyTl } from './story-tl';
 
@@ -105,7 +107,29 @@ export const tl: Locale = {
       court: '1 basketball court',
       oneHectare: '1 ektarya',
       power: '≈ 3 gigawatt kapag buo na (tantiya ng BCDA)',
-      solar: ['Paglalarawan ng lupa para sa 2 GW na solar, hindi lugar ng proyekto', 'Buo ≈ 11,100–11,700 ektarya · putol-putol 20,000 ektarya (isang pagsusuri)'],
+      bill: {
+        title: 'Singil sa kuryente · presyong pambahay',
+        names: {
+          regular: 'Karaniwang bahay',
+          medium: 'Katamtamang bahay',
+          large: 'Malaking bahay',
+          mansion: 'Mansyon',
+          office: 'Office tower',
+          mall: 'Malaking mall',
+          fab: 'Pabrika ng chips',
+          hub: 'Ang zone (3 GW)',
+        },
+        kwh: (n) => `${bigNum(n, 'milyon', 'bilyon')} kWh`,
+        peso: (n) => `₱${bigNum(n, 'milyon', 'bilyon')}`,
+        homes: (n) => (n < 1.5 ? 'Isang karaniwang bahay' : `= ${homesNum(n, 'milyong')} karaniwang bahay`),
+        zoneNote: '*Paglalarawan lang, hindi tunay na singil ng zone',
+      },
+      gauge: {
+        need: '3 GW ang kailangan kapag buo na (tantiya ng BCDA)',
+        peak: `${ACWA_MW} MW: panel ng ACWA, sa tirik na araw lang`,
+        lined: `≈ ${Math.round(LINED_UP_MW[1] / 10) * 10} MW ang nakalinya, sa karaniwan (solar ng ACWA + pinag-aaralang ${BCDA_LNG_STUDY_MW} MW na gas)`,
+        gap: `≈ ${pctNum(GAP_SHARE[0])}: wala pang inilalabas na plano`,
+      },
       reservoir: 'Konseptong laki: 390–780 ektaryang imbakan (isang pagsusuri), hindi lugar ng proyekto',
       odonnell: 'Ilog O’Donnell',
       waterDay: (day, m, mld) => `Araw ${day} · ${m} metro · ${mld} milyong litro bawat araw`,

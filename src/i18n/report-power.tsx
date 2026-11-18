@@ -6,11 +6,15 @@ import {
   ACWA_MW,
   BCDA_LNG_STUDY_MW,
   BENCH_SOLAR_HA,
+  BENCH_SOLAR_TIMES_ZONE,
   DAYS_MONTH,
   DAYS_WEEK,
   ENERGY,
   ENERGY_KEYS,
+  GAP_SHARE,
+  HUB_MW,
   HUB_SHARE_OF_LUZON_PEAK,
+  LINED_UP_MW,
   HUB_TWH_YEAR,
   NCC_WATER_NOW_MLD,
   NCC_WATER_PLANNED_MLD,
@@ -166,6 +170,20 @@ export const powerSlidesEn: Record<string, SlideText> = {
     title: 'How could they power it?',
     body: (
       <>
+        <p>
+          <b>What is lined up against 3 gigawatts, averaged over day and night</b>
+        </p>
+        <DataTable
+          head={['', 'Average power', 'Share of 3 GW']}
+          num={[1, 2]}
+          emphasis={2}
+          rows={[
+            ['ACWA Power solar + batteries (lease signed, not built)', `${range(ACWA_AVG_MW, 1)} MW`, `${(ACWA_AVG_MW[0] / HUB_MW * 100).toFixed(1)}–${(ACWA_AVG_MW[1] / HUB_MW * 100).toFixed(1)}%`],
+            ['Gas (LNG) plant for New Clark City (under study)', `${BCDA_LNG_STUDY_MW} MW`, `${(BCDA_LNG_STUDY_MW / HUB_MW * 100).toFixed(1)}%`],
+            ['No published plan yet', `≈ ${range([HUB_MW - LINED_UP_MW[1], HUB_MW - LINED_UP_MW[0]], 10)} MW`, `≈ ${pct(GAP_SHARE[0])}`],
+          ]}
+          caption={`ACWA: ${ACWA_MW} MW peak × capacity factor 17.1–18.0%. The gas plant is counted as if it ran nonstop. The story shows this as a glass gauge rising from the zone.`}
+        />
         <DataTable
           head={['Option', 'Size', 'Status', 'Kind']}
           rows={[
@@ -257,7 +275,10 @@ export const powerSlidesEn: Record<string, SlideText> = {
             Land per MW: MTerra Solar has 3,500 MW of panels on about 3,500 hectares; ACWA leases 500 hectares for up to 500 MW → about 1 hectare per MW.
             <Cite s={['mterra', 'acwa-lease']} />
           </li>
-          <li>The story’s 3D map draws these areas as squares around the zone only to show their size. They are not proposed or selected sites.</li>
+          <li>
+            2 GW of round-the-clock solar is about {Math.round(BENCH_SOLAR_TIMES_ZONE[0])} times the zone’s 1,619 hectares, spread over Central Luzon. No
+            sites have been chosen; these are size comparisons, not proposed locations.
+          </li>
         </ul>
         <Note>No published plan yet covers the full 3 gigawatts.</Note>
       </>
@@ -433,6 +454,20 @@ export const powerSlidesTl: Record<string, SlideText> = {
     title: 'Paano nila ito papailawin?',
     body: (
       <>
+        <p>
+          <b>Ang nakalinya laban sa 3 gigawatt, sa karaniwan sa araw at gabi</b>
+        </p>
+        <DataTable
+          head={['', 'Karaniwang kuryente', 'Bahagi ng 3 GW']}
+          num={[1, 2]}
+          emphasis={2}
+          rows={[
+            ['Solar + baterya ng ACWA Power (napirmahang upa, hindi pa naitatayo)', `${range(ACWA_AVG_MW, 1)} MW`, `${(ACWA_AVG_MW[0] / HUB_MW * 100).toFixed(1)}–${(ACWA_AVG_MW[1] / HUB_MW * 100).toFixed(1)}%`],
+            ['Planta ng gas (LNG) para sa New Clark City (pinag-aaralan)', `${BCDA_LNG_STUDY_MW} MW`, `${(BCDA_LNG_STUDY_MW / HUB_MW * 100).toFixed(1)}%`],
+            ['Wala pang inilalabas na plano', `≈ ${range([HUB_MW - LINED_UP_MW[1], HUB_MW - LINED_UP_MW[0]], 10)} MW`, `≈ ${pct(GAP_SHARE[0])}`],
+          ]}
+          caption={`ACWA: ${ACWA_MW} MW sa peak × capacity factor 17.1–18.0%. Binilang ang planta ng gas na parang tuloy-tuloy ang takbo. Sa kuwento, ipinapakita ito bilang basong panukat sa gitna ng zone.`}
+        />
         <DataTable
           head={['Opsyon', 'Laki', 'Kalagayan', 'Uri']}
           rows={[
@@ -525,7 +560,10 @@ export const powerSlidesTl: Record<string, SlideText> = {
             ektarya bawat MW.
             <Cite s={['mterra', 'acwa-lease']} />
           </li>
-          <li>Iginuhit sa 3D na mapa ng kuwento ang mga ito bilang parisukat sa paligid ng zone para makita ang laki. Hindi ito mga napiling lugar.</li>
+          <li>
+            Mga {Math.round(BENCH_SOLAR_TIMES_ZONE[0])} beses ng 1,619 ektarya ng zone ang 2 GW na solar araw at gabi, nakakalat sa Gitnang Luzon. Wala pang
+            napiling lugar; paghahambing lang ito ng laki, hindi mungkahing lokasyon.
+          </li>
         </ul>
         <Note>Wala pang inilalabas na plano para sa buong 3 gigawatt.</Note>
       </>

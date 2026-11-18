@@ -46,6 +46,10 @@ eq('solar land for 2 GW round-the-clock (ha) = 2,000 ÷ CF × 1 ha/MW', P.BENCH_
 eq('  …which is about 11,100–11,700 ha', P.BENCH_SOLAR_HA.map((x) => Math.round(x / 100) * 100), [11100, 11700]);
 eq('solar land for 3 GW round-the-clock (ha)', P.solarLandHa(3000).map(Math.round), [Math.round(3000 / cfF), Math.round(3000 / cfM)]);
 
+eq('solar land as a multiple of the 1,619-ha zone (≈7×)', P.BENCH_SOLAR_TIMES_ZONE.map((x) => Math.round(x * 10) / 10), [6.9, 7.2]);
+eq('lined up, averaged (MW) = ACWA average + 40 MW gas study', P.LINED_UP_MW.map(Math.round), [126, 130]);
+eq('share of 3 GW with no published plan (≈96%)', P.GAP_SHARE.map((x) => Math.round(x * 1000) / 10), [95.7, 95.8]);
+
 // water
 eq('depth per day on 1 ha (m): 65 / 90 / 130', [65, 90, 130].map(P.depthPerDay), [6.5, 9, 13]);
 eq('week depth (m) at 90', P.depthPerDay(90) * P.DAYS_WEEK, 63);

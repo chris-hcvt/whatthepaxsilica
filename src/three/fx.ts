@@ -2,7 +2,10 @@ import * as THREE from 'three';
 import { outerRing, pointInRing, ringCentroid, type LL } from './geo';
 import type { SiteScene } from './site';
 import { HectareFx, type HomeKey } from './hectare';
-import { ANALYSIS_SOLAR_HA, BENCH_SOLAR_HA, RESERVOIR_HA } from '../content/story';
+import { LineupFx, type BillLabels } from './lineup';
+import { GaugeFx, type GaugeLabels } from './gauge';
+import type { EnergyKey } from '../content/power';
+import { RESERVOIR_HA } from '../content/story';
 
 /** One extra visual per story step, added on top of the base scene. */
 export type Fx =
@@ -20,7 +23,8 @@ export type Fx =
   | 'river'
   | 'farms'
   | 'power'
-  | 'solar'
+  | 'lineup'
+  | 'gauge'
   | 'water'
   | 'reservoir';
 
@@ -35,8 +39,9 @@ export interface FxLabels {
   court: string;
   oneHectare: string;
   power: string;
-  /** solar land squares: title and the two sizes */
-  solar: [string, string];
+  /** the electricity lineup's bill cards, and the power-gap gauge */
+  bill: BillLabels;
+  gauge: GaugeLabels;
   reservoir: string;
   odonnell: string;
   /** the rising water column: day counter, and marks at 1 day, 1 week, 1 month */
@@ -86,8 +91,8 @@ export class SiteFx {
   private ringCentre: [number, number];
   private manilaEnd: [number, number];
   readonly hectare: HectareFx;
-  /** illustrative solar land, as squares centred on the zone (lon/lat corners): [benchmark estimate, one analysis] */
-  private solarSquares: [LL[], LL[]];
+  readonly lineup: LineupFx;
+  readonly gauge: GaugeFx;
   private reservoirParts: LL[][];
   private liteMode = false;
 
@@ -98,6 +103,9 @@ export class SiteFx {
   set lite(v: boolean) {
     this.liteMode = v;
     this.hectare.lite = v;
+    this.lineup.lite = v;
+    this.gauge.lite = v;
+    this.updateSun();
   }
 
   constructor(private site: SiteScene) {
@@ -165,20 +173,8 @@ export class SiteFx {
 
     this.hectare = new HectareFx(site);
 
-    // power & water: the land a 2-gigawatt solar farm would need, as a square centred on the zone
-    const [hlon, hlat] = ringCentroid(site.data.hub as [number, number][]);
-    const square = (ha: number): LL[] => {
-      const half = Math.sqrt(ha / 100) / 2; // km
-      const dlon = half / (111.32 * Math.cos((hlat * Math.PI) / 180));
-      const dlat = half / 110.574;
-      return [
-        [hlon - dlon, hlat + dlat],
-        [hlon + dlon, hlat + dlat],
-        [hlon + dlon, hlat - dlat],
-        [hlon - dlon, hlat - dlat],
-      ];
-    };
-    this.solarSquares = [square(BENCH_SOLAR_HA[1]), square(ANALYSIS_SOLAR_HA)];
+    this.lineup = new LineupFx(site);
+    this.gauge = new GaugeFx(site);
     // reservoirs: the northern part of the zone with the same area as 390 and 780 hectares
     this.reservoirParts = RESERVOIR_HA.map((ha) => this.northPart(ha / 100));
 
@@ -193,6 +189,33 @@ export class SiteFx {
 
   setHome(k: HomeKey) {
     this.hectare.setHome(k);
+  }
+
+  private energy: EnergyKey = 'regular';
+
+  get lineupKey() {
+    return this.energy;
+  }
+
+  setEnergy(k: EnergyKey) {
+    this.energy = k;
+    this.lineup.setKey(k);
+    this.updateSun();
+  }
+
+  /** one place decides where the sun's shadow box goes: the lineup close-up, the one-hectare close-up, or nowhere */
+  private updateSun() {
+    if (!this.lineup || !this.hectare) return;
+    if (this.active.has('lineup') && !this.lineup.zoneShown) {
+      const [x, z] = this.lineup.centre();
+      this.hectare.aimSun(x, z, this.lineup.shadowHalf);
+    } else if (this.hectare.closeUp) {
+      const [x, z] = this.hectare.centreXZ;
+      this.hectare.aimSun(x, z, 0.3);
+    } else {
+      const [x, z] = this.hectare.centreXZ;
+      this.hectare.aimSun(x, z, null);
+    }
   }
 
   /** the part of the zone north of a line, with the given area (km²), as lon/lat */
@@ -325,8 +348,6 @@ export class SiteFx {
     this.addLabel('court', a.court, 0.004, 'fx-court', '');
     this.addLabel('grid', a.centre, 0.6, 'fx-onehectare', '');
     this.addLabel('power', this.hubPoint(0.2, -0.4), 0.55, 'fx-power', '');
-    const [sw, se] = [this.solarSquares[1][3], this.solarSquares[1][2]];
-    this.addLabel('solar', s.proj.xz([(sw[0] + se[0]) / 2, sw[1]]), 0.35, 'fx-solar', '');
     const rp = this.reservoirParts[1].map((q) => s.proj.xz(q));
     this.addLabel('reservoir', ringCentroid(rp), 0.35, 'fx-reservoir', '');
     this.addLabel('makati', this.hubPoint(0, -0.3), 0.45, 'fx-makati', '');
@@ -379,7 +400,8 @@ export class SiteFx {
     by('court')[0].el.innerHTML = `<span>${t.court}</span>`;
     by('grid')[0].el.innerHTML = `<span>${t.oneHectare}</span>`;
     by('power')[0].el.innerHTML = `${ICONS.bolt}<span>${t.power}</span>`;
-    by('solar')[0].el.innerHTML = `${ICONS.sun}<span><b>${t.solar[0]}</b><br>${t.solar[1]}</span>`;
+    this.lineup.setLabels(t.bill);
+    this.gauge.setLabels(t.gauge);
     by('reservoir')[0].el.innerHTML = `${ICONS.drop}<span>${t.reservoir}</span>`;
     this.hectare.setWaterLabels(t.waterDay, t.waterTick);
     by('makati')[0].el.innerHTML = `<span>${t.makati}</span>`;
@@ -411,6 +433,9 @@ export class SiteFx {
       },
       instant,
     );
+    this.lineup.setVisible(next.has('lineup'));
+    this.gauge.setVisible(next.has('gauge'), instant);
+    this.updateSun();
     this.applyProgress();
   }
 
@@ -439,6 +464,8 @@ export class SiteFx {
     const [rx, rz] = this.ringCentre;
     this.rings.forEach((r) => r.position.set(rx, this.site.heightAt(rx, rz) + 0.05, rz));
     this.hectare.place();
+    this.lineup.place();
+    this.gauge.place();
     for (const l of this.labels) l.pos.set(l.xz[0], this.site.heightAt(l.xz[0], l.xz[1]) + l.lift, l.xz[1]);
   }
 
@@ -456,6 +483,8 @@ export class SiteFx {
     }
     if (moving) this.applyProgress();
     if (this.hectare.update(dt)) moving = true;
+    if (this.lineup.update(dt)) moving = true;
+    if (this.gauge.update(dt)) moving = true;
     if (this.active.has('rings')) {
       this.rings.forEach((r, i) => {
         const ph = this.lite ? 0.35 + i * 0.25 : (this.t * 0.45 + i / 3) % 1;
@@ -465,20 +494,27 @@ export class SiteFx {
       });
       if (!this.lite) moving = true;
     }
-    if ((this.active.has('unknowns') || this.active.has('power')) && !this.lite) moving = true; // the wall pulses
+    if ((this.active.has('unknowns') || this.amber()) && !this.lite) moving = true; // the wall pulses
     return moving;
+  }
+
+  /** the zone glows amber while its electricity is on screen */
+  amber() {
+    return this.active.has('power') || this.active.has('gauge') || (this.active.has('lineup') && this.lineup.zoneShown);
   }
 
   /** pulse factor for the boundary wall (1 = normal) */
   wallPulse() {
     if (this.lite) return 1;
     if (this.active.has('unknowns')) return 0.55 + 0.45 * Math.sin(this.t * 3.2);
-    if (this.active.has('power')) return 1.1 + 0.45 * Math.sin(this.t * 4.2);
+    if (this.amber()) return 1.1 + 0.45 * Math.sin(this.t * 4.2);
     return 1;
   }
 
   updateLabels(camera: THREE.Camera, w: number, h: number) {
     this.hectare.updateLabels(camera, w, h);
+    this.lineup.updateLabels(camera, w, h);
+    this.gauge.updateLabels(camera, w, h);
     const v = new THREE.Vector3();
     for (const l of this.labels) {
       if (!this.active.has(l.key)) {
@@ -502,6 +538,8 @@ export class SiteFx {
   hideLabels() {
     for (const l of this.labels) l.el.style.display = 'none';
     this.hectare.hideLabels();
+    this.lineup.hideLabels();
+    this.gauge.hideLabels();
   }
 
   /** extra drawings on the ground overlay */
@@ -516,46 +554,6 @@ export class SiteFx {
       });
       ctx.closePath();
     };
-    if (this.active.has('solar')) {
-      // illustrative only: the analysis's 20,000 ha as a light dashed square, the benchmark estimate as solid panels
-      const [bench, analysis] = this.solarSquares;
-      poly(analysis);
-      ctx.fillStyle = 'rgba(30, 60, 105, 0.42)';
-      ctx.fill();
-      ctx.setLineDash([18, 12]);
-      ctx.lineWidth = 3;
-      ctx.strokeStyle = 'rgba(160, 200, 255, 0.95)';
-      ctx.stroke();
-      ctx.setLineDash([]);
-      poly(bench);
-      ctx.save();
-      ctx.fillStyle = 'rgba(18, 44, 82, 0.88)';
-      ctx.fill();
-      ctx.clip();
-      const [x0, y0] = px(bench[0]);
-      const [x1, y1] = px(bench[2]);
-      ctx.strokeStyle = 'rgba(120, 175, 240, 0.32)';
-      ctx.lineWidth = 1;
-      for (let y = y0; y < y1; y += 3) {
-        ctx.beginPath();
-        ctx.moveTo(x0, y);
-        ctx.lineTo(x1, y);
-        ctx.stroke();
-      }
-      ctx.strokeStyle = 'rgba(10, 20, 40, 0.55)';
-      ctx.lineWidth = 2;
-      for (let x = x0; x < x1; x += 28) {
-        ctx.beginPath();
-        ctx.moveTo(x, y0);
-        ctx.lineTo(x, y1);
-        ctx.stroke();
-      }
-      ctx.restore();
-      poly(bench);
-      ctx.lineWidth = 4;
-      ctx.strokeStyle = '#8fc0ff';
-      ctx.stroke();
-    }
     if (this.active.has('reservoir')) {
       const [big, small] = [this.reservoirParts[1], this.reservoirParts[0]];
       poly(big);
@@ -607,6 +605,6 @@ export class SiteFx {
   }
 
   overlayKey() {
-    return ['farms', 'river', 'grid', 'solar', 'reservoir'].filter((k) => this.active.has(k as Fx)).join(',');
+    return ['farms', 'river', 'grid', 'reservoir'].filter((k) => this.active.has(k as Fx)).join(',');
   }
 }

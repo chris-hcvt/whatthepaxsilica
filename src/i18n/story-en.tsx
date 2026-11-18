@@ -4,9 +4,12 @@ import { REFS, CITY_STATS, HUB_HA, HUB_COURTS, COURTS_PER_HECTARE } from '../con
 import {
   ACWA_AVG_MW,
   ACWA_MW,
-  ACWA_SHARE,
   BCDA_LNG_STUDY_MW,
   BENCH_SOLAR_HA,
+  BENCH_SOLAR_TIMES_ZONE,
+  GAP_SHARE,
+  HUB_MW,
+  LINED_UP_MW,
   DAYS_MONTH,
   DAYS_WEEK,
   ENERGY,
@@ -16,11 +19,10 @@ import {
   householdsOf,
   poolsOf,
   shortfall,
-  solarLandHa,
   solarPanelsMW,
 } from '../content/power';
 import { Cite, CityBars, Timeline } from '../components/bits';
-import { Assumption, BigNumber, Bullets, DotChart, EnergyPicker, HomePicker, ProsCons, RefPicker, ScoreCard, WaterPicker } from '../components/story-bits';
+import { Assumption, BigNumber, Bullets, DotChart, EnergyPicker, FillOptions, GapBar, HomePicker, ProsCons, RefPicker, ScoreCard, WaterPicker } from '../components/story-bits';
 
 export const chaptersEn: Record<Chapter, string> = {
   basics: 'The basics',
@@ -348,7 +350,7 @@ export const storyEn: Record<string, StoryStep> = {
     body: (
       <>
         <p>
-          BCDA estimates about <b>3 gigawatts</b> at full development. Compare a month of use and bills:
+          BCDA estimates about <b>3 gigawatts</b> at full development. Tap a row to add that building beside the others, with its bill:
           <Cite s="gma-3gw" />
         </p>
         <EnergyPicker
@@ -406,49 +408,84 @@ export const storyEn: Record<string, StoryStep> = {
     title: 'How could they power it?',
     body: (
       <>
-        <Bullets
+        <p>
+          Against the 3 gigawatts BCDA expects, this is what is lined up, averaged over day and night:
+          <Cite s="gma-3gw" />
+        </p>
+        <GapBar
+          parts={[
+            {
+              share: ACWA_AVG_MW[1] / HUB_MW,
+              color: '#36d39a',
+              label: (
+                <>
+                  <b>≈ {rangeEn(ACWA_AVG_MW, 1)} MW</b> ACWA Power solar + batteries: lease signed June 2026, not built ({ACWA_MW} MW at full sun only)
+                  <Cite s={['acwa-lease', 'moa-solar', 'sm-fairview']} />
+                </>
+              ),
+            },
+            {
+              share: BCDA_LNG_STUDY_MW / HUB_MW,
+              color: '#ffb020',
+              striped: true,
+              label: (
+                <>
+                  <b>{BCDA_LNG_STUDY_MW} MW</b> gas (LNG) plant for New Clark City: under study
+                  <Cite s="lng-40mw" />
+                </>
+              ),
+            },
+          ]}
+          rest={
+            <>
+              <b>≈ {pct(GAP_SHARE[0])}</b> no published plan yet
+            </>
+          }
+        />
+        <p className="fill-head">
+          <b>Ways to fill the gap</b> (none chosen):
+        </p>
+        <FillOptions
           items={[
-            <>
-              <b>Signed so far:</b> a land lease for ACWA Power’s solar-and-battery project, up to {ACWA_MW} MW at full build-out (June 2026). No
-              construction has been reported.
-              <Cite s={['acwa-lease', 'gma-dedicated']} />
-            </>,
-            <>
-              <b>Peak isn’t all day:</b> {ACWA_MW} MW is the panels’ peak rating. Averaged over day and night it gives about {rangeEn(ACWA_AVG_MW, 5)} MW,
-              roughly {pct(ACWA_SHARE[1])} of 3 gigawatts. Batteries move power to the night; they don’t add more.
-              <Cite s={['moa-solar', 'sm-fairview']} />
-            </>,
-            <>
-              <b>Being studied:</b> a dedicated power plant (the project’s proponents) and a {BCDA_LNG_STUDY_MW} MW gas (LNG) plant for New Clark City
-              (BCDA).
-              <Cite s={['gma-dedicated', 'lng-40mw']} />
-            </>,
-            <>
-              <b>Independent scenarios, not BCDA plans:</b> 2 GW of solar plus a 1 GW LNG plant in one analysis; nuclear, at about US$6–10 billion per
-              GW, in another.
-              <Cite s={['mendoza', 'scienceph']} />
-            </>,
+            {
+              icon: 'sun',
+              title: 'Solar + batteries',
+              zones: Math.round(BENCH_SOLAR_TIMES_ZONE[0]),
+              land: <>≈ {Math.round(BENCH_SOLAR_TIMES_ZONE[0])}× the zone’s land for 2 GW, spread over Central Luzon</>,
+              fuel: 'No fuel; batteries for the night',
+            },
+            { icon: 'flame', title: 'Gas (LNG)', land: 'A plant site: far less land than solar', fuel: <>Imported fuel; prices follow world markets<Cite s="mendoza" /></> },
+            {
+              icon: 'grid',
+              title: 'Luzon grid',
+              land: 'No new land at the zone',
+              fuel: (
+                <>
+                  3 GW ≈ {pct(HUB_SHARE_OF_LUZON_PEAK)} of Luzon’s forecast peak: new plants needed somewhere
+                  <Cite s="iemop" />
+                </>
+              ),
+            },
+            { icon: 'atom', title: 'Nuclear', land: 'A plant site', fuel: <>≈ US$6–10 billion per GW; no permanent waste site<Cite s="scienceph" /></> },
           ]}
         />
-        <Assumption title="Map: illustrative land, not a site.">
-          Solid: about {rangeEn(BENCH_SOLAR_HA, 100)} hectares of panels for 2 GW of round-the-clock solar, by Philippine benchmarks. Dashed: 20,000
-          hectares, one analysis’s figure.
-        </Assumption>
       </>
     ),
     more: (
       <ul className="calc">
         <li>
-          Panels needed = average power ÷ capacity factor. Capacity factor 17.1–18.0%: SM Mall of Asia’s rooftop solar (3,000 MWh a year from 2 MW)
-          and SM City Fairview’s (5,960 MWh from 3,785 kW). 2,000 MW ÷ 0.180–0.171 = {rangeEn(solarPanelsMW(2000), 100)} MW of panels.
+          ACWA averaged: {ACWA_MW} MW × capacity factor 17.1–18.0% (SM Mall of Asia’s and SM City Fairview’s rooftop solar) = {rangeEn(ACWA_AVG_MW, 1)} MW.
+          Batteries move solar power to the night; they add no energy. The gas plant counts at {BCDA_LNG_STUDY_MW} MW if it ran nonstop.
+        </li>
+        <li>No plan yet: 1 − (≈ {Math.round(LINED_UP_MW[1])} ÷ 3,000) ≈ {pct(GAP_SHARE[0])}. A dedicated plant is being studied by the project’s proponents.</li>
+        <li>
+          Solar land for 2 GW round-the-clock: 2,000 MW ÷ 0.180–0.171 = {rangeEn(solarPanelsMW(2000), 100)} MW of panels × ≈ 1 hectare per MW (MTerra
+          Solar, ACWA) = {rangeEn(BENCH_SOLAR_HA, 100)} hectares ≈ {Math.round(BENCH_SOLAR_TIMES_ZONE[0])}× the zone’s 1,619 hectares. One analysis says
+          20,000 hectares. No sites have been chosen.
         </li>
         <li>
-          Land ≈ 1 hectare per MW (MTerra Solar: 3,500 MW of panels on about 3,500 hectares; ACWA: up to 500 MW on 500 hectares) → about{' '}
-          {rangeEn(BENCH_SOLAR_HA, 100)} hectares. Battery losses and battery land would add some. Covering all 3 GW with solar: about{' '}
-          {rangeEn(solarLandHa(3000), 100)} hectares.
-        </li>
-        <li>The analysis’s 20,000 hectares is higher; it doesn’t publish how it was calculated. No full power plan for the 3 GW has been published.
-          <Cite s={['moa-solar', 'sm-fairview', 'mterra', 'acwa-lease', 'mendoza']} />
+          The gas and nuclear lines describe independent scenarios (an Inquirer analysis, Science.ph), not BCDA plans.
+          <Cite s={['gma-dedicated', 'mterra', 'mendoza', 'scienceph']} />
         </li>
       </ul>
     ),

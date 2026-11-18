@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { PH_CAPAS, PH_MANILA, PH_PATH, PH_VIEWBOX } from '../content/ph-outline';
 import type { ReactNode } from 'react';
 import { useDeck } from '../deck';
@@ -77,11 +77,20 @@ export function EnergyPicker({
   /** footnote mark on the zone's bill: it is an illustration at household rates */
   mark?: string;
 }) {
-  const [on, setOn] = useState<EnergyKey>('regular');
+  const { energyKey: on, setEnergyKey: setOn } = useDeck();
   const max = ENERGY.hub;
+  const rowsRef = useRef<HTMLDivElement>(null);
+  // phones show the rows as a sideways strip: keep the chosen one in view (without moving the page)
+  useEffect(() => {
+    const box = rowsRef.current;
+    const btn = box?.querySelector<HTMLElement>('.energy-row.on');
+    if (!box || !btn || box.scrollWidth <= box.clientWidth) return;
+    const left = btn.offsetLeft - (box.clientWidth - btn.offsetWidth) / 2;
+    box.scrollTo({ left: Math.max(0, left), behavior: 'smooth' });
+  }, [on]);
   return (
     <div className="energy">
-      <div className="energy-rows" role="radiogroup">
+      <div className="energy-rows" role="radiogroup" ref={rowsRef}>
         {ENERGY_KEYS.map((k) => {
           const v = ENERGY[k];
           return (
@@ -106,6 +115,58 @@ export function EnergyPicker({
         {detail(on, homesOf(ENERGY[on]))}
       </div>
     </div>
+  );
+}
+
+/** What is lined up against what is needed: a to-scale bar with a legend. */
+export function GapBar({ parts, rest }: { parts: { share: number; color: string; striped?: boolean; label: ReactNode }[]; rest: ReactNode }) {
+  return (
+    <div className="gapbar">
+      <div className="gap-track" aria-hidden="true">
+        {parts.map((p, i) => (
+          <span key={i} className={p.striped ? 'striped' : ''} style={{ width: `max(4px, ${p.share * 100}%)`, background: p.striped ? undefined : p.color, color: p.color }} />
+        ))}
+      </div>
+      <ul className="gap-legend">
+        {parts.map((p, i) => (
+          <li key={i}>
+            <i className={p.striped ? 'striped' : ''} style={{ background: p.striped ? undefined : p.color, color: p.color }} />
+            <span>{p.label}</span>
+          </li>
+        ))}
+        <li>
+          <i className="empty" />
+          <span>{rest}</span>
+        </li>
+      </ul>
+    </div>
+  );
+}
+
+/** Ways a gap could be filled, with land and fuel side by side; `zones` draws that many zone-sized tiles. */
+export function FillOptions({ items }: { items: { icon: 'sun' | 'flame' | 'grid' | 'atom'; title: ReactNode; land: ReactNode; fuel: ReactNode; zones?: number }[] }) {
+  return (
+    <ul className="fillopts">
+      {items.map((it, i) => (
+        <li key={i}>
+          <span className={`fill-ico i-${it.icon}`} aria-hidden="true" />
+          <div>
+            <b>{it.title}</b>
+            <span className="fill-row">
+              {it.zones ? (
+                <span className="zone-tiles" aria-hidden="true">
+                  {Array.from({ length: it.zones }, (_, k) => (
+                    <i key={k} />
+                  ))}
+                </span>
+              ) : null}
+              {it.land}
+            </span>
+            <span className="fill-row fuel">{it.fuel}</span>
+          </div>
+        </li>
+      ))}
+    </ul>
   );
 }
 

@@ -29,6 +29,8 @@ export default function ReportApp() {
     setHomeKey: () => undefined,
     waterKey: 'high',
     setWaterKey: () => undefined,
+    energyKey: 'regular',
+    setEnergyKey: () => undefined,
     dropCenter: [0, 0],
     setDropCenter: () => undefined,
     dropLabel: '',

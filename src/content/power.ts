@@ -88,6 +88,13 @@ export const SCENARIO_LNG_MW = 1_000;
 export const ANALYSIS_SOLAR_HA = 20_000;
 /** our benchmark estimate for the same 2 GW of round-the-clock solar (batteries' own losses and land not included) */
 export const BENCH_SOLAR_HA = solarLandHa(SCENARIO_SOLAR_MW);
+/** …as a multiple of the zone's official 1,619 hectares */
+export const ZONE_HA = 1_619;
+export const BENCH_SOLAR_TIMES_ZONE: [number, number] = [BENCH_SOLAR_HA[0] / ZONE_HA, BENCH_SOLAR_HA[1] / ZONE_HA];
+
+/** the gap: what is lined up, averaged over day and night, against the 3 GW BCDA expects */
+export const LINED_UP_MW: [number, number] = [ACWA_AVG_MW[0] + BCDA_LNG_STUDY_MW, ACWA_AVG_MW[1] + BCDA_LNG_STUDY_MW];
+export const GAP_SHARE: [number, number] = [1 - LINED_UP_MW[1] / HUB_MW, 1 - LINED_UP_MW[0] / HUB_MW];
 
 /* ---------- water ---------- */
 

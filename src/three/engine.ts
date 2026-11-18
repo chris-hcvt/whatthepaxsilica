@@ -3,7 +3,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { SiteScene, type SiteLabels, type SiteView } from './site';
 import type { Fx } from './fx';
 import type { HomeKey } from './hectare';
-import type { WaterKey } from '../content/power';
+import type { EnergyKey, WaterKey } from '../content/power';
 import { dataUrl } from '../content/data-url';
 import type { SiteData } from './geo';
 
@@ -33,6 +33,7 @@ export interface StateOpts {
   refKey: string;
   homeKey: HomeKey;
   waterKey: WaterKey;
+  energyKey: EnergyKey;
   labels: SiteLabels;
 }
 
@@ -174,6 +175,7 @@ export class Engine {
       fx,
       home: fx.includes('homes') ? opts.homeKey : null,
       water: fx.includes('water') ? opts.waterKey : null,
+      energy: fx.includes('lineup') ? opts.energyKey : null,
     };
   }
 
@@ -204,6 +206,11 @@ export class Engine {
   refresh(state: SceneState, opts: StateOpts) {
     if (this.site && state.kind === 'site') {
       this.site.setLayers(this.layers(state, opts), opts.labels, this.reducedMotion);
+      // the lineup's framing follows the chosen row: re-aim the camera when it changes
+      if (state.view === 'lineup' && this.mode === 'site') {
+        const { position, target } = this.site.view(state.view, this.visibleAspect(), this.visibleFrac());
+        this.flyTo(position, target, 1.6);
+      }
       this.dirty = true;
     }
   }

@@ -4,9 +4,12 @@ import { REFS, CITY_STATS, HUB_HA, HUB_COURTS, COURTS_PER_HECTARE } from '../con
 import {
   ACWA_AVG_MW,
   ACWA_MW,
-  ACWA_SHARE,
   BCDA_LNG_STUDY_MW,
   BENCH_SOLAR_HA,
+  BENCH_SOLAR_TIMES_ZONE,
+  GAP_SHARE,
+  HUB_MW,
+  LINED_UP_MW,
   DAYS_MONTH,
   DAYS_WEEK,
   ENERGY,
@@ -16,11 +19,10 @@ import {
   householdsOf,
   poolsOf,
   shortfall,
-  solarLandHa,
   solarPanelsMW,
 } from '../content/power';
 import { Cite, CityBars, Timeline } from '../components/bits';
-import { Assumption, BigNumber, Bullets, DotChart, EnergyPicker, HomePicker, ProsCons, RefPicker, ScoreCard, WaterPicker } from '../components/story-bits';
+import { Assumption, BigNumber, Bullets, DotChart, EnergyPicker, FillOptions, GapBar, HomePicker, ProsCons, RefPicker, ScoreCard, WaterPicker } from '../components/story-bits';
 
 export const chaptersTl: Record<Chapter, string> = {
   basics: 'Ang basics',
@@ -346,7 +348,7 @@ export const storyTl: Record<string, StoryStep> = {
     body: (
       <>
         <p>
-          Tantiya ng BCDA: mga <b>3 gigawatt</b> kapag buo na. Ikumpara ang gamit at singil sa isang buwan:
+          Tantiya ng BCDA: mga <b>3 gigawatt</b> kapag buo na. Pindutin ang hanay para idagdag ang gusali katabi ng iba, kasama ang singil:
           <Cite s="gma-3gw" />
         </p>
         <EnergyPicker
@@ -405,51 +407,88 @@ export const storyTl: Record<string, StoryStep> = {
     title: 'Paano nila ito papailawin?',
     body: (
       <>
-        <Bullets
+        <p>
+          Laban sa 3 gigawatt na inaasahan ng BCDA, ito ang nakalinya, sa karaniwan sa araw at gabi:
+          <Cite s="gma-3gw" />
+        </p>
+        <GapBar
+          parts={[
+            {
+              share: ACWA_AVG_MW[1] / HUB_MW,
+              color: '#36d39a',
+              label: (
+                <>
+                  <b>≈ {rangeEn(ACWA_AVG_MW, 1)} MW</b> solar + baterya ng ACWA Power: napirmahan ang upa noong Hunyo 2026, hindi pa naitatayo ({ACWA_MW} MW
+                  sa tirik na araw lang)
+                  <Cite s={['acwa-lease', 'moa-solar', 'sm-fairview']} />
+                </>
+              ),
+            },
+            {
+              share: BCDA_LNG_STUDY_MW / HUB_MW,
+              color: '#ffb020',
+              striped: true,
+              label: (
+                <>
+                  <b>{BCDA_LNG_STUDY_MW} MW</b> planta ng gas (LNG) para sa New Clark City: pinag-aaralan
+                  <Cite s="lng-40mw" />
+                </>
+              ),
+            },
+          ]}
+          rest={
+            <>
+              <b>≈ {pct(GAP_SHARE[0])}</b> wala pang inilalabas na plano
+            </>
+          }
+        />
+        <p className="fill-head">
+          <b>Mga paraan para punan ang kulang</b> (wala pang napili):
+        </p>
+        <FillOptions
           items={[
-            <>
-              <b>Napirmahan na:</b> pag-upa ng lupa para sa solar-at-baterya ng ACWA Power, hanggang {ACWA_MW} MW kapag buo na (Hunyo 2026). Wala pang
-              naiulat na konstruksyon.
-              <Cite s={['acwa-lease', 'gma-dedicated']} />
-            </>,
-            <>
-              <b>Hindi buong araw ang peak:</b> {ACWA_MW} MW ang pinakamataas na kaya ng panel; kung aaraw-gabihin, mga {rangeEn(ACWA_AVG_MW, 5)} MW lang,
-              mga {pct(ACWA_SHARE[1])} ng 3 GW. Inililipat lang ng baterya ang kuryente sa gabi.
-              <Cite s={['moa-solar', 'sm-fairview']} />
-            </>,
-            <>
-              <b>Pinag-aaralan:</b> isang sariling planta ng kuryente (ng mga proponent ng proyekto) at isang {BCDA_LNG_STUDY_MW} MW na planta ng gas (LNG)
-              para sa New Clark City (BCDA).
-              <Cite s={['gma-dedicated', 'lng-40mw']} />
-            </>,
-            <>
-              <b>Senaryo ng ibang nagsuri, hindi plano ng BCDA:</b> 2 GW na solar at 1 GW na LNG sa isang pagsusuri; nukleyar (mga US$6–10 bilyon bawat
-              GW) sa isa pa.
-              <Cite s={['mendoza', 'scienceph']} />
-            </>,
+            {
+              icon: 'sun',
+              title: 'Solar + baterya',
+              zones: Math.round(BENCH_SOLAR_TIMES_ZONE[0]),
+              land: <>≈ {Math.round(BENCH_SOLAR_TIMES_ZONE[0])}× ng lupa ng zone para sa 2 GW, nakakalat sa Gitnang Luzon</>,
+              fuel: 'Walang gasolina; baterya para sa gabi',
+            },
+            { icon: 'flame', title: 'Gas (LNG)', land: 'Lugar ng planta: mas kaunting lupa kaysa solar', fuel: <>Inangkat na gasolina; sumusunod sa presyo sa mundo<Cite s="mendoza" /></> },
+            {
+              icon: 'grid',
+              title: 'Grid ng Luzon',
+              land: 'Walang bagong lupa sa zone',
+              fuel: (
+                <>
+                  3 GW ≈ {pct(HUB_SHARE_OF_LUZON_PEAK)} ng pinakamataas na gamit ng Luzon: kailangan pa rin ng bagong planta sa kung saan
+                  <Cite s="iemop" />
+                </>
+              ),
+            },
+            { icon: 'atom', title: 'Nukleyar', land: 'Lugar ng planta', fuel: <>≈ US$6–10 bilyon bawat GW; walang permanenteng tapunan ng waste<Cite s="scienceph" /></> },
           ]}
         />
-        <Assumption title="Mapa: paglalarawan ng laki ng lupa, hindi lugar ng proyekto.">
-          Buo: mga {rangeEn(BENCH_SOLAR_HA, 100)} ektarya ng panel para sa 2 GW na solar araw at gabi, batay sa mga proyekto sa Pilipinas. Putol-putol:
-          20,000 ektarya, bilang ng isang pagsusuri.
-        </Assumption>
       </>
     ),
     more: (
       <ul className="calc">
         <li>
-          Kailangang panel = karaniwang kuryente ÷ capacity factor. Capacity factor 17.1–18.0%: solar sa bubong ng SM Mall of Asia (3,000 MWh bawat
-          taon mula sa 2 MW) at ng SM City Fairview (5,960 MWh mula sa 3,785 kW). 2,000 MW ÷ 0.180–0.171 = {rangeEn(solarPanelsMW(2000), 100)} MW na
-          panel.
+          ACWA sa karaniwan: {ACWA_MW} MW × capacity factor 17.1–18.0% (solar sa bubong ng SM Mall of Asia at SM City Fairview) = {rangeEn(ACWA_AVG_MW, 1)}{' '}
+          MW. Inililipat lang ng baterya ang kuryente sa gabi; hindi ito nagdadagdag. Binilang ang planta ng gas sa {BCDA_LNG_STUDY_MW} MW kung tuloy-tuloy
+          ang takbo.
         </li>
         <li>
-          Lupa ≈ 1 ektarya bawat MW (MTerra Solar: 3,500 MW ng panel sa mga 3,500 ektarya; ACWA: hanggang 500 MW sa 500 ektarya) → mga{' '}
-          {rangeEn(BENCH_SOLAR_HA, 100)} ektarya. May dagdag pa para sa baterya. Kung solar lahat ng 3 GW: mga {rangeEn(solarLandHa(3000), 100)} ektarya.
+          Walang plano: 1 − (≈ {Math.round(LINED_UP_MW[1])} ÷ 3,000) ≈ {pct(GAP_SHARE[0])}. Pinag-aaralan ng mga proponent ng proyekto ang sariling planta.
         </li>
         <li>
-          Mas mataas ang 20,000 ektarya ng pagsusuri; hindi nito inilathala kung paano ito kinuwenta. Wala pang inilalabas na buong plano sa kuryente
-          para sa 3 GW.
-          <Cite s={['moa-solar', 'sm-fairview', 'mterra', 'acwa-lease', 'mendoza']} />
+          Lupa para sa 2 GW na solar araw at gabi: 2,000 MW ÷ 0.180–0.171 = {rangeEn(solarPanelsMW(2000), 100)} MW na panel × ≈ 1 ektarya bawat MW
+          (MTerra Solar, ACWA) = {rangeEn(BENCH_SOLAR_HA, 100)} ektarya ≈ {Math.round(BENCH_SOLAR_TIMES_ZONE[0])}× ng 1,619 ektarya ng zone. 20,000
+          ektarya ayon sa isang pagsusuri. Wala pang napiling lugar.
+        </li>
+        <li>
+          Mga senaryo ng ibang nagsuri ang gas at nukleyar (isang pagsusuri sa Inquirer, Science.ph), hindi plano ng BCDA.
+          <Cite s={['gma-dedicated', 'mterra', 'mendoza', 'scienceph']} />
         </li>
       </ul>
     ),

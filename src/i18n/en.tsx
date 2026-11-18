@@ -19,6 +19,8 @@ import {
 } from '../components/bits';
 import { FACTS, timesFit } from '../content/slides';
 import { MEMBERS } from '../content/members';
+import { ACWA_MW, BCDA_LNG_STUDY_MW, GAP_SHARE, LINED_UP_MW } from '../content/power';
+import { bigNum, homesNum, pctNum } from './fmt';
 import { powerSlidesEn } from './report-power';
 import { chaptersEn, storyEn } from './story-en';
 
@@ -105,7 +107,29 @@ export const en: Locale = {
       court: '1 basketball court',
       oneHectare: '1 hectare',
       power: '≈ 3 gigawatts at full development (BCDA estimate)',
-      solar: ['Illustrative land for 2 GW of solar, not a site', 'Solid ≈ 11,100–11,700 ha (benchmarks) · dashed 20,000 ha (one analysis)'],
+      bill: {
+        title: 'Electric bill · household rate',
+        names: {
+          regular: 'Regular home',
+          medium: 'Medium home',
+          large: 'Large home',
+          mansion: 'Mansion',
+          office: 'Office tower',
+          mall: 'Big mall',
+          fab: 'Chip factory',
+          hub: 'The zone (3 GW)',
+        },
+        kwh: (n) => `${bigNum(n)} kWh`,
+        peso: (n) => `₱${bigNum(n)}`,
+        homes: (n) => (n < 1.5 ? 'One typical home' : `= ${homesNum(n)} typical homes`),
+        zoneNote: '*Illustration only, not the zone’s real bill',
+      },
+      gauge: {
+        need: '3 GW needed at full development (BCDA estimate)',
+        peak: `${ACWA_MW} MW: ACWA’s panels, at full sun only`,
+        lined: `≈ ${Math.round(LINED_UP_MW[1] / 10) * 10} MW lined up, averaged (ACWA solar + ${BCDA_LNG_STUDY_MW} MW gas study)`,
+        gap: `≈ ${pctNum(GAP_SHARE[0])}: no published plan yet`,
+      },
       reservoir: 'Conceptual area: 390–780 ha of reservoirs (one analysis), not a site',
       odonnell: 'O’Donnell River',
       waterDay: (day, m, mld) => `Day ${day} · ${m} m deep · ${mld} million liters a day`,

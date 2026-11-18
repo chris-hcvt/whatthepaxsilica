@@ -17,9 +17,9 @@ export interface HouseParts {
 
 const PLAIN_UV: [number, number] = [0.04, 0.97]; // a window-free patch of the facade texture
 
-type Geo = THREE.BufferGeometry;
+export type Geo = THREE.BufferGeometry;
 
-function paint(g: Geo, color: THREE.ColorRepresentation) {
+export function paint(g: Geo, color: THREE.ColorRepresentation) {
   const c = new THREE.Color(color);
   const n = g.attributes.position.count;
   const arr = new Float32Array(n * 3);
@@ -32,7 +32,7 @@ function paint(g: Geo, color: THREE.ColorRepresentation) {
  * A box standing on y = base. With `storeys`, side faces get facade UVs: one window per bay and storey,
  * bays spread evenly along each face; top and bottom faces map to a plain patch.
  */
-function box(w: number, h: number, d: number, x: number, base: number, z: number, color: THREE.ColorRepresentation, storeys = 0): Geo {
+export function box(w: number, h: number, d: number, x: number, base: number, z: number, color: THREE.ColorRepresentation, storeys = 0): Geo {
   const g = new THREE.BoxGeometry(w, h, d).toNonIndexed();
   g.translate(x, base + h / 2, z);
   const pos = g.attributes.position;
@@ -122,7 +122,7 @@ function hip(w: number, d: number, x: number, z: number, h: number, rise: number
   return tris(placed, uvs, '#ffffff');
 }
 
-function tree(x: number, z: number, s: number, color = '#4f8a3a'): Geo[] {
+export function tree(x: number, z: number, s: number, color = "#4f8a3a"): Geo[] {
   const trunk = new THREE.CylinderGeometry(0.14 * s, 0.2 * s, 2.2 * s, 6).toNonIndexed();
   trunk.translate(x, 1.1 * s, z);
   const top = new THREE.IcosahedronGeometry(1.9 * s, 0).toNonIndexed();
@@ -131,7 +131,7 @@ function tree(x: number, z: number, s: number, color = '#4f8a3a'): Geo[] {
   return [paint(trunk, '#6b4e33'), paint(top, color)];
 }
 
-function car(x: number, z: number, color: THREE.ColorRepresentation, alongZ = true): Geo[] {
+export function car(x: number, z: number, color: THREE.ColorRepresentation, alongZ = true): Geo[] {
   const [l, wd] = alongZ ? [1.75, 4.3] : [4.3, 1.75];
   const [cl, cw] = alongZ ? [1.55, 2.3] : [2.3, 1.55];
   return [box(l, 0.75, wd, x, 0.25, z, color), box(cl, 0.6, cw, x, 1.0, z + (alongZ ? -0.2 : 0), '#2b3440')];
@@ -148,7 +148,7 @@ function fence(lotW: number, lotD: number, h: number, x0: number, x1: number, co
   return out;
 }
 
-const merge = (parts: Geo[]) => {
+export const merge = (parts: Geo[]) => {
   const g = mergeGeometries(parts.map((p) => (p.index ? p.toNonIndexed() : p)));
   g.computeBoundingSphere();
   return g;

@@ -437,12 +437,36 @@ export class HectareFx {
     this.gridMat.uniforms.uReveal.value = this.reveal;
     this.water.visible = this.show.water;
     this.placeWater();
-    // sun shadows only in the close-up (and not on slow devices)
-    const shadows = close && !this.liteMode;
+  }
+
+  /** true while the one-hectare close-up is on screen (it wants sun shadows) */
+  get closeUp() {
+    return this.show.plot && !this.show.grid;
+  }
+
+  /**
+   * Point the sun at a spot. With `half` (km), shadows are cast in a box of that half-size around it,
+   * lit from the south-west; without, the sun goes back to its normal direction and shadows are off.
+   */
+  aimSun(x: number, z: number, half: number | null) {
     const sun = this.site.sun;
+    sun.target.position.set(x, this.site.heightAt(x, z), z);
+    const shadows = half !== null && !this.liteMode;
     sun.castShadow = shadows;
     this.site.terrain.receiveShadow = shadows;
-    sun.position.copy(sun.target.position).addScaledVector(close ? CLOSE_SUN : this.sunDir, 2.5);
+    if (half !== null) {
+      const cam = sun.shadow.camera;
+      cam.left = cam.bottom = -half;
+      cam.right = cam.top = half;
+      cam.far = Math.max(4, half * 6);
+      cam.updateProjectionMatrix();
+    }
+    sun.position.copy(sun.target.position).addScaledVector(half !== null ? CLOSE_SUN : this.sunDir, Math.max(2.5, (half ?? 0) * 4));
+  }
+
+  /** the square's centre (scene x/z) */
+  get centreXZ(): [number, number] {
+    return [this.cx, this.cz];
   }
 
   private buildHomes() {

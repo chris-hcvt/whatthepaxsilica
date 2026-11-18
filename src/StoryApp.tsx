@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { DeckContext, type DeckState } from './deck';
-import { STEPS, CHAPTERS, type RefKey, type HomeKey, type WaterKey, type Chapter } from './content/story';
+import { STEPS, CHAPTERS, type RefKey, type HomeKey, type WaterKey, type EnergyKey, type Chapter } from './content/story';
 import { LOCALES, initialLang, saveLang, savedLang, urlLang, type LangCode } from './i18n';
 import { Stage } from './components/Stage';
 import { MapLayer, DropControls } from './components/DropMap';
@@ -12,14 +12,25 @@ import type { Insets } from './three/engine';
 const prefersReduced = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
 const MAP_STEP = STEPS.findIndex((s) => s.kind === 'map');
 
-function useInsets(): Insets {
+function useInsets(active: number): Insets {
   const calc = () => {
     const w = window.innerWidth;
     const h = window.innerHeight;
     if (w >= 900) return { left: Math.round(Math.min(520, w * 0.4) + 40), bottom: 0, top: 60 };
-    return { left: 0, bottom: Math.round(h * 0.46), top: 56 };
+    // phones: the card covers the bottom; frame the 3D in what is left above it (tall cards leave less)
+    let bottom = h * 0.46;
+    const step = STEPS[active];
+    if (step?.kind === 'card') {
+      const card = document.getElementById(step.id)?.querySelector<HTMLElement>('.card');
+      if (card) bottom = Math.min(h * 0.74, Math.max(bottom, card.offsetHeight + h * 0.05 + 8));
+    }
+    return { left: 0, bottom: Math.round(bottom), top: 56 };
   };
   const [ins, setIns] = useState<Insets>(calc);
+  useEffect(() => {
+    const next = calc();
+    setIns((cur) => (cur.left === next.left && cur.bottom === next.bottom && cur.top === next.top ? cur : next));
+  }, [active]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     let lastW = window.innerWidth;
     const onR = () => {
@@ -30,7 +41,7 @@ function useInsets(): Insets {
     };
     window.addEventListener('resize', onR);
     return () => window.removeEventListener('resize', onR);
-  }, []);
+  }, [active]); // eslint-disable-line react-hooks/exhaustive-deps
   return ins;
 }
 
@@ -48,11 +59,12 @@ export default function StoryApp() {
   const [refKey, setRefKey] = useState<RefKey>('moa');
   const [homeKey, setHomeKey] = useState<HomeKey>('regular');
   const [waterKey, setWaterKey] = useState<WaterKey>('high');
+  const [energyKey, setEnergyKey] = useState<EnergyKey>('regular');
   const [dropCenter, setDropCenterState] = useState<LL>([121.0239, 14.5556]);
   const [dropLabel, setDropLabel] = useState('makati');
   const [drawer, setDrawer] = useState<{ open: boolean; hl: string | null }>({ open: false, hl: null });
   const [copied, setCopied] = useState(false);
-  const insets = useInsets();
+  const insets = useInsets(active);
   const reduced = useMemo(prefersReduced, []);
   const L = LOCALES[lang];
 
@@ -194,6 +206,8 @@ export default function StoryApp() {
     setHomeKey,
     waterKey,
     setWaterKey,
+    energyKey,
+    setEnergyKey,
     dropCenter,
     setDropCenter: (c, label) => {
       setDropCenterState(c);
@@ -212,7 +226,7 @@ export default function StoryApp() {
       <a className="skip" href="#story">
         {L.ui.skipTo}
       </a>
-      <Stage state={step.scene} refKey={refKey} homeKey={homeKey} waterKey={waterKey} labels={L.site} insets={insets} reducedMotion={reduced} ui={L.ui} quiet={step.kind === 'full' || step.kind === 'map'} />
+      <Stage state={step.scene} refKey={refKey} homeKey={homeKey} waterKey={waterKey} energyKey={energyKey} labels={L.site} insets={insets} reducedMotion={reduced} ui={L.ui} quiet={step.kind === 'full' || step.kind === 'map'} />
       <MapLayer prepare={active >= MAP_STEP - 3} active={step.kind === 'map'} insets={insets} />
       <PhInset visible={!!step.inset} place={L.ui.insetPlace} note={L.ui.insetNote} />
       <div className={`vignette ${step.kind === 'full' ? 'dim' : ''}`} aria-hidden="true" />
