@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { pointInRing, ringCentroid } from './geo';
 import type { SiteScene } from './site';
-import { HOME_LOTS, WATER_DAY_M, type HomeKey } from '../content/story';
+import { DAYS_MONTH, DAYS_WEEK, HOME_LOTS, WATER_MLD, depthPerDay, type HomeKey } from '../content/story';
 import { buildHouse, facadeTexture, roofTexture } from './houses';
 
 /**
@@ -69,7 +69,16 @@ export class HectareFx {
   /** seconds to wait before the water starts rising (lets the camera arrive first) */
   private waterWait = 0;
   private waterLabels: { el: HTMLDivElement; day: number; pos: THREE.Vector3 }[] = [];
-  private waterDayText: (day: number, meters: number) => string = (d, m) => `${d} · ${m} m`;
+  private waterDayText: (day: number, meters: number, mld: number) => string = (d, m) => `${d} · ${m} m`;
+  private waterTickText: (days: number, meters: number) => string = (d, m) => `${d} · ${m} m`;
+  /** liters a day (millions) being shown, and the value the column is easing towards */
+  private rate = WATER_MLD.high;
+  private rateShown = WATER_MLD.high;
+
+  /** the tallest scenario's month of water, in km: the camera frames this so the scenarios compare by height */
+  get waterMonthKm() {
+    return (depthPerDay(Math.max(...Object.values(WATER_MLD))) * DAYS_MONTH) / 1000;
+  }
   private grid: THREE.LineSegments;
   private gridMat: THREE.ShaderMaterial;
   private home: HomeKey = 'regular';
@@ -200,7 +209,7 @@ export class HectareFx {
     this.water.renderOrder = 8;
     this.waterSides.renderOrder = 8;
     this.waterTop.renderOrder = 9;
-    for (const day of [0, 1, 7, 30]) {
+    for (const day of [0, 1, DAYS_WEEK, DAYS_MONTH]) {
       const el = document.createElement('div');
       el.className = `label3d fx ${day === 0 ? 'fx-waterday' : 'fx-watertick'}`;
       el.style.display = 'none';
@@ -591,11 +600,17 @@ export class HectareFx {
   }
 
   /** text for the water labels: a day counter and the 1 day / 1 week / 1 month marks */
-  setWaterLabels(day: (day: number, meters: number) => string, ticks: [string, string, string]) {
+  setWaterLabels(day: (day: number, meters: number, mld: number) => string, tick: (days: number, meters: number) => string) {
     this.waterDayText = day;
-    this.waterLabels.forEach((l, i) => {
-      if (i > 0) l.el.innerHTML = `<span>${ticks[i - 1]}</span>`;
-    });
+    this.waterTickText = tick;
+    this.placeWater();
+  }
+
+  /** switch the daily amount (million liters); the column eases to the new height */
+  setWaterRate(mld: number) {
+    if (mld === this.rate) return;
+    this.rate = mld;
+    if (!this.show.water) this.rateShown = mld;
     this.placeWater();
   }
 
@@ -603,7 +618,8 @@ export class HectareFx {
     if (!this.show.water) return;
     const base = this.padTop || this.site.heightAt(this.cx, this.cz);
     const shown = Math.max(0.02, this.days);
-    const h = (shown * WATER_DAY_M) / 1000;
+    const perDay = depthPerDay(this.rateShown);
+    const h = (shown * perDay) / 1000;
     this.water.position.set(this.cx, base, this.cz);
     this.waterSides.scale.set(1, h, 1);
     this.waterTop.position.y = h;
@@ -611,10 +627,12 @@ export class HectareFx {
     this.waterTex.offset.set(0, (1 - (shown % 1)) % 1);
     const whole = Math.floor(this.days + 1e-6);
     const day = this.waterLabels[0];
-    day.el.innerHTML = `<span>${this.waterDayText(Math.max(1, Math.ceil(this.days - 1e-6)), Math.round(Math.max(1, Math.ceil(this.days - 1e-6)) * WATER_DAY_M))}</span>`;
+    const dayNo = Math.max(1, Math.ceil(this.days - 1e-6));
+    day.el.innerHTML = `<span>${this.waterDayText(dayNo, Math.round(dayNo * depthPerDay(this.rate) * 10) / 10, this.rate)}</span>`;
     day.pos.set(this.cx, base + h + 0.012, this.cz);
     for (const l of this.waterLabels.slice(1)) {
-      l.pos.set(this.x0 + SIDE + 0.004, base + (l.day * WATER_DAY_M) / 1000, this.z0 + SIDE);
+      l.pos.set(this.x0 + SIDE + 0.004, base + (l.day * perDay) / 1000, this.z0 + SIDE);
+      l.el.innerHTML = `<span>${this.waterTickText(l.day, Math.round(l.day * depthPerDay(this.rate) * 10) / 10)}</span>`;
       l.el.dataset.on = whole >= l.day ? '1' : '';
     }
   }
@@ -645,6 +663,13 @@ export class HectareFx {
   /** returns true while animating */
   update(dt: number) {
     let moving = false;
+    if (this.show.water && Math.abs(this.rateShown - this.rate) > 0.01) {
+      // a new scenario: ease the column to its height
+      this.rateShown += (this.rate - this.rateShown) * Math.min(1, dt * 4);
+      if (Math.abs(this.rateShown - this.rate) < 0.05) this.rateShown = this.rate;
+      this.placeWater();
+      moving = true;
+    }
     if (this.show.water && this.days < 30) {
       // wait for the camera, then a month in about 6 seconds (slow at first, faster as it piles up)
       if (this.waterWait > 0) this.waterWait -= dt;

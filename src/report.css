@@ -389,3 +389,109 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* data tables (power & water) */
+.dtable-wrap {
+  overflow-x: auto;
+  margin: 14px 0;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.dtable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  line-height: 1.4;
+}
+.dtable caption {
+  caption-side: bottom;
+  text-align: left;
+  padding: 8px 12px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.dtable th,
+.dtable td {
+  padding: 9px 12px;
+  text-align: left;
+  vertical-align: top;
+  border-top: 1px solid var(--line);
+}
+.dtable thead th {
+  border-top: 0;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  background: var(--surface-2);
+  white-space: nowrap;
+}
+.dtable tbody th {
+  font-weight: 700;
+}
+.dtable .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.dtable tr.em th,
+.dtable tr.em td {
+  background: rgba(255, 77, 77, 0.08);
+}
+.calc {
+  margin: 10px 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 6px;
+  font-size: 14px;
+  line-height: 1.55;
+}
+.defs {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0;
+}
+.defs div {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+.defs b {
+  display: block;
+  margin-bottom: 2px;
+}
+.tag {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.tag.official {
+  background: rgba(51, 195, 174, 0.15);
+  color: #8ff0de;
+}
+.tag.study {
+  background: rgba(255, 201, 77, 0.15);
+  color: #ffe1a0;
+}
+.tag.scenario {
+  background: rgba(116, 169, 255, 0.15);
+  color: #bcd5ff;
+}
+.tag.ours {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text);
+}
+@media (max-width: 700px) {
+  /* keep table rows readable; the box scrolls sideways instead of squeezing the first column */
+  .dtable {
+    min-width: 600px;
+    font-size: 13px;
+  }
+  .dtable tbody th {
+    min-width: 170px;
+  }
+}

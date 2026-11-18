@@ -3,6 +3,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { SiteScene, type SiteLabels, type SiteView } from './site';
 import type { Fx } from './fx';
 import type { HomeKey } from './hectare';
+import type { WaterKey } from '../content/power';
 import { dataUrl } from '../content/data-url';
 import type { SiteData } from './geo';
 
@@ -31,6 +32,7 @@ export type SceneState =
 export interface StateOpts {
   refKey: string;
   homeKey: HomeKey;
+  waterKey: WaterKey;
   labels: SiteLabels;
 }
 
@@ -162,7 +164,17 @@ export class Engine {
 
   private layers(s: Extract<SceneState, { kind: 'site' }>, opts: StateOpts) {
     const fx = s.fx ?? [];
-    return { ncc: s.ncc, hub: s.hub, wall: s.wall, sitios: s.sitios, flat: s.flat, ref: s.ref ? opts.refKey : null, fx, home: fx.includes('homes') ? opts.homeKey : null };
+    return {
+      ncc: s.ncc,
+      hub: s.hub,
+      wall: s.wall,
+      sitios: s.sitios,
+      flat: s.flat,
+      ref: s.ref ? opts.refKey : null,
+      fx,
+      home: fx.includes('homes') ? opts.homeKey : null,
+      water: fx.includes('water') ? opts.waterKey : null,
+    };
   }
 
   async setState(state: SceneState, opts: StateOpts) {

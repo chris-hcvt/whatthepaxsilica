@@ -1,8 +1,26 @@
 import type { StoryStep } from './types';
 import type { Chapter } from '../content/story';
 import { REFS, CITY_STATS, HUB_HA, HUB_COURTS, COURTS_PER_HECTARE } from '../content/story';
+import {
+  ACWA_AVG_MW,
+  ACWA_MW,
+  ACWA_SHARE,
+  BCDA_LNG_STUDY_MW,
+  BENCH_SOLAR_HA,
+  DAYS_MONTH,
+  DAYS_WEEK,
+  ENERGY,
+  HUB_SHARE_OF_LUZON_PEAK,
+  billOf,
+  depthPerDay,
+  householdsOf,
+  poolsOf,
+  shortfall,
+  solarLandHa,
+  solarPanelsMW,
+} from '../content/power';
 import { Cite, CityBars, Timeline } from '../components/bits';
-import { BigNumber, Bullets, DotChart, EnergyPicker, HomePicker, ProsCons, RefPicker, ScoreCard } from '../components/story-bits';
+import { Assumption, BigNumber, Bullets, DotChart, EnergyPicker, HomePicker, ProsCons, RefPicker, ScoreCard, WaterPicker } from '../components/story-bits';
 
 export const chaptersEn: Record<Chapter, string> = {
   basics: 'The basics',
@@ -32,6 +50,10 @@ const bigEn = (n: number) => {
   if (n >= 1e6) return `${trim((n / 1e6).toFixed(n >= 1e8 ? 0 : 1))} million`;
   return (n >= 1e5 ? Math.round(n / 1000) * 1000 : Math.round(n)).toLocaleString('en-US');
 };
+/** a range rounded to a step: [11126, 11680] → "11,100–11,700" */
+const rangeEn = ([a, b]: [number, number] | number[], step: number) =>
+  `${(Math.round(a / step) * step).toLocaleString('en-US')}–${(Math.round(b / step) * step).toLocaleString('en-US')}`;
+const pct = (x: number) => `${Math.round(x * 100)}%`;
 /** homes, rounded the way people say them: 2 · 3,300 · 22,600 · 730,000 · 11 million */
 const homesEn = (n: number) => {
   if (n >= 1e6) return `${Math.round(n / 1e6)} million`;
@@ -326,8 +348,8 @@ export const storyEn: Record<string, StoryStep> = {
     body: (
       <>
         <p>
-          BCDA expects about <b>3 gigawatts</b> at full development. Monthly use and bill at Meralco’s household rate (₱15.55 per kWh):
-          <Cite s={['gma-3gw', 'meralco-nov']} />
+          BCDA estimates about <b>3 gigawatts</b> at full development. Compare a month of use and bills:
+          <Cite s="gma-3gw" />
         </p>
         <EnergyPicker
           names={{
@@ -345,12 +367,12 @@ export const storyEn: Record<string, StoryStep> = {
           detail={(k, homes) =>
             k === 'regular' ? (
               <>
-                <b>Meralco’s typical household:</b> 200 kWh a month, about ₱3,110 at November 2026 rates.
+                <b>Meralco’s typical household</b>, about ₱3,110 at November 2026 rates.
               </>
             ) : k === 'hub' ? (
               <>
-                As much as <b>about {homesEn(homes)} typical homes</b>, and about <b>a fifth of Luzon’s peak demand</b>. BCDA calls 3 gigawatts a
-                conservative first estimate.
+                As much as <b>about {homesEn(homes)} typical homes</b>, about <b>{pct(HUB_SHARE_OF_LUZON_PEAK)} of Luzon’s forecast 2026 peak</b>. BCDA
+                calls 3 GW a conservative first estimate.
               </>
             ) : (
               <>
@@ -360,50 +382,75 @@ export const storyEn: Record<string, StoryStep> = {
             )
           }
         />
+        <Assumption title="Read with care:">
+          3 GW is a demand estimate, not measured use; the zone’s row assumes 3 GW nonstop (× 730 hours). *Bills use Meralco’s November 2026 household
+          rate, ₱15.5510 per kWh, only to compare: ₱{bigEn(billOf(ENERGY.hub))} is not the zone’s real industrial bill.
+          <Cite s="meralco-nov" />
+        </Assumption>
       </>
     ),
     more: (
-      <p>
-        The same household rate is used for everything so the bills compare directly; big users usually pay less per kWh. Medium, large and mansion
-        homes are example amounts. Office tower: 50,000 square meters at Ayala Land’s 2024 office average (157 kWh per square
-        meter a year). Mall: SM City Fairview’s rooftop solar makes 5,960 MWh a year, which SM says is 11% of the mall’s use. Chip factory: about 200
-        megawatts for each advanced wafer factory (Taipower). The zone: 3 gigawatts running all month (730 hours). Luzon’s forecast peak for 2026: about
-        14,600 megawatts.
-        <Cite s={['ayala-offices', 'sm-fairview', 'fab-power', 'iemop']} />
-      </p>
+      <ul className="calc">
+        <li>Zone: 3,000,000 kW × 730 hours = 2.19 billion kWh a month; × ₱15.5510 = ₱34.1 billion (illustration only).</li>
+        <li>Office tower: 50,000 square meters of leased offices × 157 kWh per square meter a year (Ayala Land’s 2024 office average) ÷ 12 = 654,000 kWh.</li>
+        <li>Mall: SM City Fairview’s rooftop solar makes 5,960 MWh a year, which SM says is 11% of the mall’s use: 5,960 ÷ 0.11 ÷ 12 ≈ 4.5 million kWh.</li>
+        <li>Chip factory: about 200 megawatts per advanced wafer factory (Taipower) × 730 hours = 146 million kWh.</li>
+        <li>Homes: 200 kWh is Meralco’s typical household; 400, 800 and 2,000 kWh are examples.</li>
+        <li>Luzon: 3,000 ÷ 14,600 megawatts (IEMOP’s 2026 peak forecast) ≈ 21%.
+          <Cite s={['ayala-offices', 'sm-fairview', 'fab-power', 'iemop']} />
+        </li>
+      </ul>
     ),
   },
   'power-supply': {
     title: 'How could they power it?',
     body: (
-      <Bullets
-        items={[
-          <>
-            <b>BCDA’s plan: mostly solar.</b> It says 500 megawatts is already available, a sixth of the need.
-            <Cite s="gma-3gw" />
-          </>,
-          <>
-            <b>Solar stops at night,</b> so one analysis adds a 1-gigawatt gas (LNG) plant in New Clark City, on imported fuel.
-            <Cite s="mendoza" />
-          </>,
-          <>
-            <b>The solar farms would need about 20,000 hectares</b>, 12 times the zone (the blue square), mostly elsewhere in Central Luzon.
-            <Cite s="mendoza" />
-          </>,
-          <>
-            <b>Nuclear has been raised too,</b> at about US$6–10 billion for 1 gigawatt.
-            <Cite s="scienceph" />
-          </>,
-        ]}
-      />
+      <>
+        <Bullets
+          items={[
+            <>
+              <b>Signed so far:</b> a land lease for ACWA Power’s solar-and-battery project, up to {ACWA_MW} MW at full build-out (June 2026). No
+              construction has been reported.
+              <Cite s={['acwa-lease', 'gma-dedicated']} />
+            </>,
+            <>
+              <b>Peak isn’t all day:</b> {ACWA_MW} MW is the panels’ peak rating. Averaged over day and night it gives about {rangeEn(ACWA_AVG_MW, 5)} MW,
+              roughly {pct(ACWA_SHARE[1])} of 3 gigawatts. Batteries move power to the night; they don’t add more.
+              <Cite s={['moa-solar', 'sm-fairview']} />
+            </>,
+            <>
+              <b>Being studied:</b> a dedicated power plant (the project’s proponents) and a {BCDA_LNG_STUDY_MW} MW gas (LNG) plant for New Clark City
+              (BCDA).
+              <Cite s={['gma-dedicated', 'lng-40mw']} />
+            </>,
+            <>
+              <b>Independent scenarios, not BCDA plans:</b> 2 GW of solar plus a 1 GW LNG plant in one analysis; nuclear, at about US$6–10 billion per
+              GW, in another.
+              <Cite s={['mendoza', 'scienceph']} />
+            </>,
+          ]}
+        />
+        <Assumption title="Map: illustrative land, not a site.">
+          Solid: about {rangeEn(BENCH_SOLAR_HA, 100)} hectares of panels for 2 GW of round-the-clock solar, by Philippine benchmarks. Dashed: 20,000
+          hectares, one analysis’s figure.
+        </Assumption>
+      </>
     ),
     more: (
-      <p>
-        The analysis pairs about 2 gigawatts of solar with the gas plant, and puts the energy and water setup at ₱301–424 billion up front, plus about
-        50 kilometers of power lines to the solar farms. BCDA says it is studying solar with battery storage. For nuclear, the country has no permanent
-        site for nuclear waste. No final power plan has been published.
-        <Cite s={['mendoza', 'tribune-water']} />
-      </p>
+      <ul className="calc">
+        <li>
+          Panels needed = average power ÷ capacity factor. Capacity factor 17.1–18.0%: SM Mall of Asia’s rooftop solar (3,000 MWh a year from 2 MW)
+          and SM City Fairview’s (5,960 MWh from 3,785 kW). 2,000 MW ÷ 0.180–0.171 = {rangeEn(solarPanelsMW(2000), 100)} MW of panels.
+        </li>
+        <li>
+          Land ≈ 1 hectare per MW (MTerra Solar: 3,500 MW of panels on about 3,500 hectares; ACWA: up to 500 MW on 500 hectares) → about{' '}
+          {rangeEn(BENCH_SOLAR_HA, 100)} hectares. Battery losses and battery land would add some. Covering all 3 GW with solar: about{' '}
+          {rangeEn(solarLandHa(3000), 100)} hectares.
+        </li>
+        <li>The analysis’s 20,000 hectares is higher; it doesn’t publish how it was calculated. No full power plan for the 3 GW has been published.
+          <Cite s={['moa-solar', 'sm-fairview', 'mterra', 'acwa-lease', 'mendoza']} />
+        </li>
+      </ul>
     ),
   },
   'water-volume': {
@@ -411,20 +458,32 @@ export const storyEn: Record<string, StoryStep> = {
     body: (
       <>
         <p>
-          That’s BCDA’s own estimate: up to <b>36 Olympic-size pools every day</b>.
-          <Cite s="tribune-water" />
+          That’s BCDA’s estimate for the zone. Pick a daily amount to see it as a column on the 1-hectare square:
+          <Cite s={['tribune-water', 'scienceph']} />
         </p>
-        <p>
-          Pour one day of it on the 1-hectare square and it stands <b>9 meters deep</b>. In a week, 63 meters. In a month, <b>270 meters</b>, as tall
-          as a 90-storey building.
-        </p>
-        <p className="muted small">
-          The highest estimate reported is 130 million liters a day, about what 600,000 households use.
-          <Cite s="scienceph" />
-        </p>
+        <WaterPicker
+          names={{ low: '65 million', high: '90 million', max: '130 million' }}
+          tags={{ low: 'BCDA, low end', high: 'BCDA, high end', max: 'Highest estimate (Science.ph)' }}
+          result={(k, mld) => (
+            <>
+              <b>{mld} million liters a day</b> = {poolsOf(mld)} Olympic pools. On 1 hectare: <b>{depthPerDay(mld)} m</b> deep after a day,{' '}
+              {depthPerDay(mld) * DAYS_WEEK} m after a week, <b>{depthPerDay(mld) * DAYS_MONTH} m</b> after a month (30 days)
+              {k === 'max' ? <>, about what {householdsOf(mld).toLocaleString('en-US')} households use at 200 liters each.</> : '.'}
+            </>
+          )}
+        />
+        <Assumption title="The column shows volume only.">It is not a planned reservoir or its height.</Assumption>
       </>
     ),
-    more: <p>90 million liters is 90,000 cubic meters. Spread over 1 hectare (10,000 square meters), that is 9 meters deep. A storey is about 3 meters.</p>,
+    more: (
+      <ul className="calc">
+        <li>Depth = million liters × 1,000 cubic meters ÷ 10,000 square meters. 90 million liters: 90 × 1,000 ÷ 10,000 = 9 m. A week is 7 days, a month 30.</li>
+        <li>An Olympic pool holds 2.5 million liters (50 × 25 × 2 m); BCDA itself compares 90 million liters to 36 pools.</li>
+        <li>65 and 90 million: BCDA’s initial assessment, told to the Senate in August 2026. 130 million: Science.ph, an independent higher-end figure.
+          <Cite s={['tribune-water', 'scienceph']} />
+        </li>
+      </ul>
+    ),
   },
   'water-supply': {
     title: 'Where would the water come from?',
@@ -433,33 +492,51 @@ export const storyEn: Record<string, StoryStep> = {
         <Bullets
           items={[
             <>
-              <b>Rivers, not groundwater, says BCDA:</b> the Bangut, O’Donnell and Abacan, stored in tanks. It says the Bangut alone gives 130–200
-              million liters a day.
+              <b>BCDA’s plan (preliminary):</b> the Bangut, O’Donnell and Abacan rivers, stored in tanks, not groundwater. It says the Bangut alone could
+              give 130–200 million liters a day, from an initial dry-season assessment, not a published hydrological study.
+              <Cite s={['tribune-water', 'gma-water']} />
+            </>,
+            <>
+              <b>Also explored by BCDA:</b> desalinated seawater, piped along SCTEX.
               <Cite s="tribune-water" />
             </>,
             <>
-              <b>Desalinated seawater</b>, piped along SCTEX, is also being studied.
-              <Cite s="tribune-water" />
+              <b>Critics’ dry-season math:</b> at 130 million liters a day with reservoirs giving 65–120 million, the zone would be 10–65 million short. At
+              BCDA’s 90 million, the same math gives {shortfall(90)[0]}–{shortfall(90)[1]} million.
+              <Cite s="scienceph" />
             </>,
             <>
-              <b>Dry years are the worry:</b> in El Niño years the reservoirs could run 10–65 million liters a day short.
-              <Cite s={['mendoza', 'scienceph']} />
-            </>,
-            <>
-              <b>Recycling</b> could cut new water to 6–20 million liters a day, for ₱10–20 billion. Without it, the zone may lean on wells families use.
+              <b>Recycling</b> 85–95% of used water would cut new water to 5–15% of demand, says one analysis, which warns that without it the zone may
+              draw on wells families use.
               <Cite s="mendoza" />
             </>,
           ]}
         />
-        <p className="muted small">Blue: 390–780 hectares of reservoirs (one analysis), drawn in the zone for size.</p>
+        <Assumption title="Map: conceptual area, not a site.">
+          Blue: 390–780 hectares of reservoirs from one analysis. Area isn’t storage volume or daily supply.
+        </Assumption>
       </>
     ),
     more: (
-      <p>
-        BCDA’s river figure comes from a dry-season study, and it expects more water in the rainy season. Critics note that rain falls 40–60% in El
-        Niño years. The Bangut is the river labelled “Bangot” on the map. The analysis adds that recycling would cost ₱0.8–2 billion a year to run.
-        <Cite s={['tribune-water', 'mendoza']} />
-      </p>
+      <ul className="calc">
+        <li>
+          Reservoir area vs. volume vs. supply: area is the land a reservoir covers; volume is how much it stores (area × average depth); supply is what
+          it can deliver each day. The 390–780 hectares has no published method; it matches storing half a year of the analysis’s 39 billion liters a
+          year (19.5 million cubic meters) 5 m or 2.5 m deep (our reconstruction).
+        </li>
+        <li>The shortfall is subtraction: 130 − 120 = 10 and 130 − 65 = 65 million liters a day (Science.ph, citing a 2026 report by Magno).</li>
+        <li>
+          Rivers: the Bangut is “Bangot” on OpenStreetMap; GeoNames lists “Bangut River”. The O’Donnell River is drawn from OpenStreetMap. The Abacan
+          River is in Angeles City, off this map. The analysis says El Niño cuts rainfall by 40–60%.
+        </li>
+        <li>
+          Separately, BCDA is set to award New Clark City’s ₱14.8-billion water and wastewater project to Maynilad and K-Water after no rival bid
+          (award hoped for by December). It would raise the city’s supply from about 20 to 150–200 million liters a day, for the whole city; BCDA
+          hasn’t said how much would go to Pax Silica.
+        
+          <Cite s={['mendoza', 'scienceph', 'osm', 'geonames', 'ncc-water']} />
+        </li>
+      </ul>
     ),
   },
   proscons: {
@@ -478,7 +555,7 @@ export const storyEn: Record<string, StoryStep> = {
         ]}
         cons={[
           { title: 'Families could lose their land', text: 'Aeta ancestral land, farms and burial grounds are at risk.', cite: 'hrw' },
-          { title: 'Huge power and water needs', text: 'About 3 GW of power and 60–90 million liters of water a day.', cite: 'cna' },
+          { title: 'Huge power and water needs', text: 'About 3 GW of power and 65–90 million liters of water a day, by BCDA’s estimates.', cite: ['gma-3gw', 'tribune-water'] },
           { title: 'No study, little consultation', text: 'No environmental impact assessment yet. Communities say they weren’t consulted.', cite: ['gma-denr', 'hrw'] },
           { title: 'Generous terms for investors', text: 'Leases of up to 99 years; a bill proposes 7-year tax holidays.', cite: ['mongabay', 'gma-hb11758'] },
           { title: 'Jobs may not be good jobs', text: 'Unions warn of minimum-wage work and little technology transfer.', cite: ['techpolicy', 'cna'] },
@@ -520,7 +597,7 @@ export const storyEn: Record<string, StoryStep> = {
             {
               topic: 'Power & water',
               ph: { text: 'Investors must build their own power and water systems.', tag: 'promised', cite: 'afp' },
-              foreign: { text: 'Factories would use about 3 GW and 60–90 million liters a day.', tag: 'planned', cite: 'cna' },
+              foreign: { text: 'Factories would use about 3 GW and 65–90 million liters a day (BCDA estimates).', tag: 'planned', cite: ['gma-3gw', 'tribune-water'] },
             },
             {
               topic: 'Who pays the price',

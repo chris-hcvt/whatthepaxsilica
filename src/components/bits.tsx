@@ -302,3 +302,40 @@ export function DocList({ items }: { items: { date: string; title: ReactNode; te
     </ul>
   );
 }
+
+/** A plain data table that scrolls sideways on narrow screens. `num` marks columns to right-align. */
+export function DataTable({ head, rows, num = [], caption, emphasis }: { head: ReactNode[]; rows: ReactNode[][]; num?: number[]; caption?: ReactNode; emphasis?: number }) {
+  return (
+    <div className="dtable-wrap">
+      <table className="dtable">
+        {caption && <caption>{caption}</caption>}
+        <thead>
+          <tr>
+            {head.map((h, i) => (
+              <th key={i} scope="col" className={num.includes(i) ? 'num' : ''}>
+                {h}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r, j) => (
+            <tr key={j} className={emphasis === j ? 'em' : ''}>
+              {r.map((c, i) =>
+                i === 0 ? (
+                  <th key={i} scope="row">
+                    {c}
+                  </th>
+                ) : (
+                  <td key={i} className={num.includes(i) ? 'num' : ''}>
+                    {c}
+                  </td>
+                ),
+              )}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}

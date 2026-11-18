@@ -46,5 +46,7 @@ The map's search box suggests Philippine city and town centres from a local list
 ## 7. Map annotations (`refs/fx-osm.json`, `refs/makati-city.json`, `src/content/ph-outline.ts`)
 
 - Bangot River and Sapang Kawayan creek lines, and 34 farmland polygons near Binyayan, from the OpenStreetMap API (bbox 120.455–120.53°E, 15.29–15.35°N). A mapped cemetery in the same area is deliberately **not** shown.
+- `add_rivers.py`: the rivers BCDA names as water sources, straight from OpenStreetMap ways and clipped to the 3D area: the Bangut (OSM “Bangot River”, ways 135629603 and 135629605; GeoNames “Bangut River”) and the O’Donnell (OSM “O' Donnel River”, way 52502498; GeoNames “O’Donnell River”, alternate name Patlin River). The Abacan River is in Angeles City, outside the 3D area, so it is not drawn.
+- Power & water figures live in `src/content/power.ts` with their sources and formulas; `npm run check:numbers` re-computes every derived value.
 - Makati City's boundary (OSM relation 103716), laid onto the leveled zone for comparison.
 - The Philippines inset outline is Natural Earth 1:110m (public domain).

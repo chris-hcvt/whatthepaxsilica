@@ -613,17 +613,132 @@ details.more p {
   color: var(--muted);
   margin-bottom: 2px;
 }
-/* phones: one line per row (name + bill); the selected row's kWh shows in the box below */
+/* phones: one line per row (name + bill, no bar); the selected row's kWh shows in the box below */
 @media (max-width: 899px) {
-  .energy-name small {
+  .energy-name small,
+  .energy-bar {
     display: none;
   }
   .energy-detail-kwh {
-    display: block;
+    display: inline;
+    margin-right: 6px;
+  }
+  .energy-rows {
+    gap: 3px;
   }
   .energy-row {
-    padding: 5px 10px;
+    padding: 3px 9px;
+    border-radius: 8px;
   }
+  .energy-name b {
+    font-size: 13px;
+  }
+  .energy-bill {
+    font-size: 12.5px;
+  }
+  .energy-detail {
+    padding: 7px 10px;
+    font-size: 13px;
+    line-height: 1.4;
+  }
+  .assume {
+    margin-top: 8px;
+    padding: 7px 9px;
+    font-size: 12px;
+    line-height: 1.42;
+  }
+  .card-body .bullets li {
+    margin-bottom: 5px;
+    font-size: 14px;
+    line-height: 1.45;
+  }
+}
+
+.energy-mark {
+  margin-left: 2px;
+  color: #ffb4b4;
+  font-size: 11px;
+}
+/* "how to read this" notes */
+.assume {
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+  margin-top: 10px;
+  padding: 9px 11px;
+  border-radius: 10px;
+  border: 1px solid rgba(116, 169, 255, 0.4);
+  background: rgba(116, 169, 255, 0.08);
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: #d5e3f7;
+}
+.assume b {
+  color: #e9f1ff;
+}
+.assume-ico {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  border-radius: 50%;
+  background: var(--blue);
+  color: #06101f;
+  font: 800 12px/1 var(--display);
+}
+/* water scenarios */
+.waterpick {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+.water-chips {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+.water-chip {
+  display: grid;
+  gap: 2px;
+  padding: 7px 8px;
+  border-radius: 10px;
+  border: 1px solid var(--line-2);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+.water-chip b {
+  font-size: 13.5px;
+}
+.water-chip small {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.3;
+}
+.water-chip.on {
+  border-color: #58b4ff;
+  background: rgba(88, 180, 255, 0.14);
+}
+.water-chip.w-max.on {
+  border-color: #ff9b6b;
+  background: rgba(255, 155, 107, 0.12);
+}
+.water-result {
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* "Learn more" calculations */
+.calc {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 /* home sizes in one hectare */
@@ -1482,7 +1597,7 @@ details.more p {
     min-height: 105vh;
     align-items: flex-end;
     /* cards sit at the bottom; a tall card grows upward (over the 3D) instead of off the bottom of the screen */
-    padding: calc(var(--bar) + 14px) var(--gutter) 6vh;
+    padding: calc(var(--bar) + 10px) var(--gutter) 5vh;
   }
   .step.tall {
     min-height: 105vh;
@@ -2060,6 +2175,23 @@ html.snap-page {
   background: rgba(8, 40, 70, 0.88);
   border-color: rgba(95, 183, 255, 0.85) !important;
   color: #cfe8ff;
+}
+.fx-solar span {
+  font-weight: 500;
+  font-size: 11.5px;
+  line-height: 1.35;
+}
+.fx-solar b {
+  font-size: 12.5px;
+}
+.label3d.fx.fx-solar {
+  border-radius: 12px;
+  max-width: 300px;
+  white-space: normal;
+}
+.fx-river.odonnell {
+  font-size: 11px;
+  opacity: 0.9;
 }
 .fx-river.creek {
   font-size: 11px;

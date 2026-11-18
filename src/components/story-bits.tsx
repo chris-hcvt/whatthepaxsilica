@@ -3,7 +3,7 @@ import { PH_CAPAS, PH_MANILA, PH_PATH, PH_VIEWBOX } from '../content/ph-outline'
 import type { ReactNode } from 'react';
 import { useDeck } from '../deck';
 import { Cite } from './bits';
-import { ENERGY, ENERGY_KEYS, HOME_KEYS, HOME_LOTS, REFS, billOf, fitTimes, homesOf, type EnergyKey, type HomeKey, type RefKey } from '../content/story';
+import { ENERGY, ENERGY_KEYS, HOME_KEYS, HOME_LOTS, REFS, WATER_KEYS, WATER_MLD, billOf, fitTimes, homesOf, type EnergyKey, type HomeKey, type RefKey, type WaterKey } from '../content/story';
 
 const MALLS: RefKey[] = ['moa', 'glorietta', 'northedsa', 'megamall', 'smpampanga', 'smclark'];
 const DISTRICTS: RefKey[] = ['bgc', 'makaticbd', 'ortigas'];
@@ -68,11 +68,14 @@ export function EnergyPicker({
   kwh,
   peso,
   detail,
+  mark = '*',
 }: {
   names: Record<EnergyKey, ReactNode>;
   kwh: (n: number) => ReactNode;
   peso: (n: number) => ReactNode;
   detail: (k: EnergyKey, homes: number) => ReactNode;
+  /** footnote mark on the zone's bill: it is an illustration at household rates */
+  mark?: string;
 }) {
   const [on, setOn] = useState<EnergyKey>('regular');
   const max = ENERGY.hub;
@@ -87,7 +90,10 @@ export function EnergyPicker({
                 <b>{names[k]}</b>
                 <small>{kwh(v)}</small>
               </span>
-              <span className="energy-bill">{peso(billOf(v))}</span>
+              <span className="energy-bill">
+                {peso(billOf(v))}
+                {k === 'hub' && <sup className="energy-mark">{mark}</sup>}
+              </span>
               <span className="energy-bar" aria-hidden="true">
                 <span style={{ width: `max(3px, ${(v / max) * 100}%)` }} />
               </span>
@@ -98,6 +104,40 @@ export function EnergyPicker({
       <div className="energy-detail" aria-live="polite">
         <div className="energy-detail-kwh">{kwh(ENERGY[on])}</div>
         {detail(on, homesOf(ENERGY[on]))}
+      </div>
+    </div>
+  );
+}
+
+/** A clearly marked note on how to read a comparison (assumptions, illustration only, etc.). */
+export function Assumption({ title, children }: { title: ReactNode; children: ReactNode }) {
+  return (
+    <div className="assume" role="note">
+      <span className="assume-ico" aria-hidden="true">
+        i
+      </span>
+      <div>
+        <b>{title}</b> {children}
+      </div>
+    </div>
+  );
+}
+
+/** The daily water scenarios; the chosen one sets the height of the 3D column. */
+export function WaterPicker({ names, tags, result }: { names: Record<WaterKey, ReactNode>; tags: Record<WaterKey, ReactNode>; result: (k: WaterKey, mld: number) => ReactNode }) {
+  const { waterKey, setWaterKey } = useDeck();
+  return (
+    <div className="waterpick">
+      <div className="water-chips" role="radiogroup">
+        {WATER_KEYS.map((k) => (
+          <button key={k} type="button" role="radio" aria-checked={waterKey === k} className={`water-chip w-${k} ${waterKey === k ? 'on' : ''}`} onClick={() => setWaterKey(k)}>
+            <b>{names[k]}</b>
+            <small>{tags[k]}</small>
+          </button>
+        ))}
+      </div>
+      <div className="water-result" aria-live="polite">
+        {result(waterKey, WATER_MLD[waterKey])}
       </div>
     </div>
   );

@@ -3,6 +3,7 @@ import { LocalProj, outerRing, pointInRing, ringCentroid, type LL, type SiteData
 import { SiteFx, type Fx, type FxLabels } from './fx';
 import type { HomeKey } from './hectare';
 import { addGroundDetail } from './ground';
+import { WATER_MLD, type WaterKey } from '../content/power';
 
 export const EXAG = 2.4; // vertical exaggeration for readability
 const WALL_H = 0.32; // km, visual height of the boundary "curtain"
@@ -20,6 +21,8 @@ export interface SiteLayers {
   fx?: Fx[];
   /** home size shown in the one-hectare square */
   home?: HomeKey | null;
+  /** daily water scenario shown as the rising column */
+  water?: WaterKey | null;
 }
 
 export interface SiteLabels {
@@ -530,6 +533,7 @@ export class SiteScene {
     if (key !== this.layerKey) {
       this.layerKey = key;
       if (layers.home) this.fx.setHome(layers.home);
+      if (layers.water) this.fx.hectare.setWaterRate(WATER_MLD[layers.water]);
       this.fx.set(layers.fx ?? [], instant);
       this.drawOverlay(!!layers.ncc, layers.hub !== false, !!layers.flat);
       this.wall.visible = !!layers.wall;
@@ -588,7 +592,10 @@ export class SiteScene {
       // close on the one-hectare square, from the same direction as hubClose so the zoom-out is a straight pull-back
       hectare: { target: this.fx.hectareTarget(), offset: new THREE.Vector3(2.6, 6.2, 6.0).normalize().multiplyScalar(aspect < 0.9 ? 0.25 : 0.215) },
       // lower and further back, so a month of water (270 m) fits above the square
-      water: { target: this.fx.hectareTarget().add(new THREE.Vector3(0, 0.13, 0)), offset: new THREE.Vector3(0.62, 0.36, 0.78).normalize().multiplyScalar(0.62) },
+      water: {
+        target: this.fx.hectareTarget().add(new THREE.Vector3(0, this.fx.hectare.waterMonthKm * 0.48, 0)),
+        offset: new THREE.Vector3(0.62, 0.36, 0.78).normalize().multiplyScalar(Math.max(0.45, this.fx.hectare.waterMonthKm * 2.3)),
+      },
       // high enough to see the 14 km solar square around the zone
       solar: { target: hc.clone().add(new THREE.Vector3(0, 0, 1)), offset: new THREE.Vector3(3, 22, 15) },
       ambient: { target: hc.clone(), offset: new THREE.Vector3(9, 15, 15) },

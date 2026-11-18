@@ -1,6 +1,6 @@
 import { createContext, useContext } from 'react';
 import type { MallKey } from './content/slides';
-import type { HomeKey, RefKey } from './content/story';
+import type { HomeKey, RefKey, WaterKey } from './content/story';
 import type { LL } from './three/geo';
 import type { Locale } from './i18n/types';
 
@@ -15,6 +15,8 @@ export interface DeckState {
   setRefKey: (k: RefKey) => void;
   homeKey: HomeKey;
   setHomeKey: (k: HomeKey) => void;
+  waterKey: WaterKey;
+  setWaterKey: (k: WaterKey) => void;
   dropCenter: LL;
   setDropCenter: (c: LL, label?: string) => void;
   dropLabel: string;

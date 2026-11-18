@@ -19,6 +19,7 @@ import {
 } from '../components/bits';
 import { FACTS, timesFit } from '../content/slides';
 import { MEMBERS } from '../content/members';
+import { powerSlidesTl } from './report-power';
 import { chaptersTl, storyTl } from './story-tl';
 
 const fmt = (n: number) => n.toLocaleString('en-US');
@@ -72,6 +73,7 @@ export const tl: Locale = {
     ph: 'Ang papel ng Pilipinas',
     size: 'Gaano ito kalaki?',
     people: 'Sino ang nakatira roon?',
+    power: 'Kuryente at tubig',
     who: 'Sino ang sangkot',
     next: 'Ano ang susunod',
   },
@@ -102,15 +104,15 @@ export const tl: Locale = {
       side: '100 metro',
       court: '1 basketball court',
       oneHectare: '1 ektarya',
-      power: '≈ 3 gigawatt kapag buo na (BCDA)',
-      solar: 'Solar para sa 2 gigawatt ≈ 20,000 ektarya (pagsusuri)',
-      lng: '1-gigawatt na planta ng gas (LNG), sa isang pagsusuri',
-      reservoir: 'Imbakan ng tubig: 390–780 ektarya (pagsusuri, laki lang)',
-      waterDay: (day, m) => `Araw ${day} · ${m} metro ang lalim`,
-      waterTicks: ['1 araw · 9 metro', '1 linggo · 63 metro', '1 buwan · 270 metro'],
+      power: '≈ 3 gigawatt kapag buo na (tantiya ng BCDA)',
+      solar: ['Paglalarawan ng lupa para sa 2 GW na solar, hindi lugar ng proyekto', 'Buo ≈ 11,100–11,700 ektarya · putol-putol 20,000 ektarya (isang pagsusuri)'],
+      reservoir: 'Konseptong laki: 390–780 ektaryang imbakan (isang pagsusuri), hindi lugar ng proyekto',
+      odonnell: 'Ilog O’Donnell',
+      waterDay: (day, m, mld) => `Araw ${day} · ${m} metro · ${mld} milyong litro bawat araw`,
+      waterTick: (days, m) => `${days === 1 ? '1 araw' : days === 7 ? '1 linggo' : '1 buwan'} · ${m} m`,
       makati: 'Lungsod ng Makati · 1,815 ektarya',
       families: '≈ 200 pamilyang Aeta Hungey',
-      river: 'Ilog Bangot',
+      river: 'Ilog Bangut (OpenStreetMap: Bangot)',
       creek: 'Sapa ng Sapang Kawayan',
       farms: 'Sakahan (OpenStreetMap)',
     },
@@ -134,6 +136,7 @@ export const tl: Locale = {
   chapters: chaptersTl,
   story: storyTl,
   slides: {
+    ...powerSlidesTl,
     intro: {
       title: 'What the Pax Silica?',
       body: (
@@ -754,29 +757,6 @@ export const tl: Locale = {
             },
           ]}
         />
-      ),
-    },
-    resources: {
-      kicker: 'Kuryente at tubig',
-      title: 'Ganang kasinlaki ng isang lungsod',
-      body: (
-        <>
-          <StatGrid>
-            <Stat value="~3 GW" label="≈ output ng tatlong coal plant" cite={['techpolicy', 'mongabay']} tone="amber" />
-            <Stat value="26.3 TWh" label="kada taon kung tuloy-tuloy — kumpara sa 28 TWh ng buong service sector ng PH noong 2024" cite="mongabay" tone="amber" />
-            <Stat value="60–90M L" label="tubig bawat araw ≈ 600,000 kabahayan" cite={['cna', 'techpolicy']} tone="amber" />
-          </StatGrid>
-          <p>
-            <b>Ang plano:</b> mag-ipon at mag-recycle ng tubig mula sa ilog at sapa, kontratang 500 MW solar, usapan para sa planta ng gas (LNG); ang mga
-            mamumuhunan ang magtatayo ng sarili nilang sistema ng kuryente at tubig.
-            <Cite s={['techpolicy', 'afp']} />
-          </p>
-          <p>
-            <b>Ang pangamba:</b> ang tag-araw (Disyembre–Mayo) ay panahon din na kailangan ng mga magsasaka ang tubig para sa irigasyon.
-            <Cite s={['mongabay', 'cna']} />
-          </p>
-          <Note>Mga tantiya ito sa pagpaplano para sa buong proyekto, hindi aktuwal na nasukat na paggamit.</Note>
-        </>
       ),
     },
     timeline: {

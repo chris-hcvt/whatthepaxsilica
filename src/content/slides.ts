@@ -22,7 +22,7 @@ export type SitePreset = {
 
 export type ScenePreset = GlobePreset | SitePreset | { kind: 'map' } | { kind: 'plain' };
 
-export type Act = 'intro' | 'what' | 'ph' | 'size' | 'people' | 'who' | 'next';
+export type Act = 'intro' | 'what' | 'ph' | 'size' | 'people' | 'power' | 'who' | 'next';
 
 export interface SlideDef {
   id: string;
@@ -53,9 +53,12 @@ export const SLIDES: SlideDef[] = [
   { id: 'numbers', act: 'people', layout: 'wide', scene: { kind: 'plain' } },
   { id: 'offer', act: 'people', layout: 'side', scene: { kind: 'site', view: 'communities', hub: true, sitios: 'key' } },
   { id: 'two-sides', act: 'people', layout: 'wide', scene: { kind: 'plain' } },
+  { id: 'electricity', act: 'power', layout: 'wide', scene: { kind: 'plain' } },
+  { id: 'power-sources', act: 'power', layout: 'wide', scene: { kind: 'plain' } },
+  { id: 'water-amount', act: 'power', layout: 'wide', scene: { kind: 'plain' } },
+  { id: 'water-sources', act: 'power', layout: 'wide', scene: { kind: 'plain' } },
   { id: 'actors', act: 'who', layout: 'wide', scene: { kind: 'plain' } },
   { id: 'gains', act: 'who', layout: 'wide', scene: { kind: 'plain' } },
-  { id: 'resources', act: 'who', layout: 'side', scene: { kind: 'site', view: 'overview', ncc: true, hub: true, wall: true } },
   { id: 'timeline', act: 'next', layout: 'wide', scene: { kind: 'plain' } },
   { id: 'unknowns', act: 'next', layout: 'side', scene: { kind: 'site', view: 'top', hub: true, ncc: true } },
   { id: 'sources', act: 'next', layout: 'wide', scene: { kind: 'plain' } },

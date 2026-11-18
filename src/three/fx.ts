@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { outerRing, pointInRing, ringCentroid, type LL } from './geo';
 import type { SiteScene } from './site';
 import { HectareFx, type HomeKey } from './hectare';
-import { RESERVOIR_HA, SOLAR_HA } from '../content/story';
+import { ANALYSIS_SOLAR_HA, BENCH_SOLAR_HA, RESERVOIR_HA } from '../content/story';
 
 /** One extra visual per story step, added on top of the base scene. */
 export type Fx =
@@ -35,12 +35,13 @@ export interface FxLabels {
   court: string;
   oneHectare: string;
   power: string;
-  solar: string;
-  lng: string;
+  /** solar land squares: title and the two sizes */
+  solar: [string, string];
   reservoir: string;
+  odonnell: string;
   /** the rising water column: day counter, and marks at 1 day, 1 week, 1 month */
-  waterDay: (day: number, meters: number) => string;
-  waterTicks: [string, string, string];
+  waterDay: (day: number, meters: number, mld: number) => string;
+  waterTick: (days: number, meters: number) => string;
   makati: string;
   families: string;
   river: string;
@@ -85,8 +86,8 @@ export class SiteFx {
   private ringCentre: [number, number];
   private manilaEnd: [number, number];
   readonly hectare: HectareFx;
-  /** 20,000-hectare solar square around the zone (lon/lat corners) and the reservoir parts of the zone */
-  private solarSquare: LL[];
+  /** illustrative solar land, as squares centred on the zone (lon/lat corners): [benchmark estimate, one analysis] */
+  private solarSquares: [LL[], LL[]];
   private reservoirParts: LL[][];
   private liteMode = false;
 
@@ -166,15 +167,18 @@ export class SiteFx {
 
     // power & water: the land a 2-gigawatt solar farm would need, as a square centred on the zone
     const [hlon, hlat] = ringCentroid(site.data.hub as [number, number][]);
-    const half = Math.sqrt(SOLAR_HA / 100) / 2; // km
-    const dlon = half / (111.32 * Math.cos((hlat * Math.PI) / 180));
-    const dlat = half / 110.574;
-    this.solarSquare = [
-      [hlon - dlon, hlat + dlat],
-      [hlon + dlon, hlat + dlat],
-      [hlon + dlon, hlat - dlat],
-      [hlon - dlon, hlat - dlat],
-    ];
+    const square = (ha: number): LL[] => {
+      const half = Math.sqrt(ha / 100) / 2; // km
+      const dlon = half / (111.32 * Math.cos((hlat * Math.PI) / 180));
+      const dlat = half / 110.574;
+      return [
+        [hlon - dlon, hlat + dlat],
+        [hlon + dlon, hlat + dlat],
+        [hlon + dlon, hlat - dlat],
+        [hlon - dlon, hlat - dlat],
+      ];
+    };
+    this.solarSquares = [square(BENCH_SOLAR_HA[1]), square(ANALYSIS_SOLAR_HA)];
     // reservoirs: the northern part of the zone with the same area as 390 and 780 hectares
     this.reservoirParts = RESERVOIR_HA.map((ha) => this.northPart(ha / 100));
 
@@ -321,9 +325,8 @@ export class SiteFx {
     this.addLabel('court', a.court, 0.004, 'fx-court', '');
     this.addLabel('grid', a.centre, 0.6, 'fx-onehectare', '');
     this.addLabel('power', this.hubPoint(0.2, -0.4), 0.55, 'fx-power', '');
-    const [sw, se] = [this.solarSquare[3], this.solarSquare[2]];
+    const [sw, se] = [this.solarSquares[1][3], this.solarSquares[1][2]];
     this.addLabel('solar', s.proj.xz([(sw[0] + se[0]) / 2, sw[1]]), 0.35, 'fx-solar', '');
-    this.addLabel('solar', [s.nccCenter.x, s.nccCenter.z], 0.6, 'fx-lng', '');
     const rp = this.reservoirParts[1].map((q) => s.proj.xz(q));
     this.addLabel('reservoir', ringCentroid(rp), 0.35, 'fx-reservoir', '');
     this.addLabel('makati', this.hubPoint(0, -0.3), 0.45, 'fx-makati', '');
@@ -334,6 +337,11 @@ export class SiteFx {
     if (bangot) {
       const mid = bangot.coords[Math.floor(bangot.coords.length * 0.55)] as LL;
       this.addLabel('river', s.proj.xz(mid), 0.2, 'fx-river', '');
+    }
+    const odonnell = rivers.find((r) => r.name === "O'Donnell River");
+    if (odonnell) {
+      const mid = odonnell.coords[Math.floor(odonnell.coords.length * 0.62)] as LL;
+      this.addLabel('river', s.proj.xz(mid), 0.2, 'fx-river odonnell', '');
     }
     const creek = rivers.filter((r) => r.name === 'Sapang Kawayan').sort((a, b) => b.coords.length - a.coords.length)[0];
     if (creek) {
@@ -371,16 +379,14 @@ export class SiteFx {
     by('court')[0].el.innerHTML = `<span>${t.court}</span>`;
     by('grid')[0].el.innerHTML = `<span>${t.oneHectare}</span>`;
     by('power')[0].el.innerHTML = `${ICONS.bolt}<span>${t.power}</span>`;
-    const sl = by('solar');
-    sl[0].el.innerHTML = `${ICONS.sun}<span>${t.solar}</span>`;
-    sl[1].el.innerHTML = `${ICONS.flame}<span>${t.lng}</span>`;
+    by('solar')[0].el.innerHTML = `${ICONS.sun}<span><b>${t.solar[0]}</b><br>${t.solar[1]}</span>`;
     by('reservoir')[0].el.innerHTML = `${ICONS.drop}<span>${t.reservoir}</span>`;
-    this.hectare.setWaterLabels(t.waterDay, t.waterTicks);
+    this.hectare.setWaterLabels(t.waterDay, t.waterTick);
     by('makati')[0].el.innerHTML = `<span>${t.makati}</span>`;
     by('rings')[0].el.innerHTML = `${ICONS.home}<span>${t.families}</span>`;
     const rl = by('river');
     if (rl[0]) rl[0].el.innerHTML = `${ICONS.drop}<span>${t.river}</span>`;
-    if (rl[1]) rl[1].el.innerHTML = `<span>${t.creek}</span>`;
+    for (const l of rl.slice(1)) l.el.innerHTML = `<span>${l.el.classList.contains('odonnell') ? t.odonnell : t.creek}</span>`;
     const fl = by('farms')[0];
     if (fl) fl.el.innerHTML = `<span>${t.farms}</span>`;
   }
@@ -511,14 +517,23 @@ export class SiteFx {
       ctx.closePath();
     };
     if (this.active.has('solar')) {
-      // rows of panels: dark blue with fine lighter lines, a bright border
-      poly(this.solarSquare);
+      // illustrative only: the analysis's 20,000 ha as a light dashed square, the benchmark estimate as solid panels
+      const [bench, analysis] = this.solarSquares;
+      poly(analysis);
+      ctx.fillStyle = 'rgba(30, 60, 105, 0.42)';
+      ctx.fill();
+      ctx.setLineDash([18, 12]);
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = 'rgba(160, 200, 255, 0.95)';
+      ctx.stroke();
+      ctx.setLineDash([]);
+      poly(bench);
       ctx.save();
-      ctx.fillStyle = 'rgba(18, 44, 82, 0.86)';
+      ctx.fillStyle = 'rgba(18, 44, 82, 0.88)';
       ctx.fill();
       ctx.clip();
-      const [x0, y0] = px(this.solarSquare[0]);
-      const [x1, y1] = px(this.solarSquare[2]);
+      const [x0, y0] = px(bench[0]);
+      const [x1, y1] = px(bench[2]);
       ctx.strokeStyle = 'rgba(120, 175, 240, 0.32)';
       ctx.lineWidth = 1;
       for (let y = y0; y < y1; y += 3) {
@@ -536,7 +551,7 @@ export class SiteFx {
         ctx.stroke();
       }
       ctx.restore();
-      poly(this.solarSquare);
+      poly(bench);
       ctx.lineWidth = 4;
       ctx.strokeStyle = '#8fc0ff';
       ctx.stroke();

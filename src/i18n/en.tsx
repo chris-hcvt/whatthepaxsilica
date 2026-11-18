@@ -19,6 +19,7 @@ import {
 } from '../components/bits';
 import { FACTS, timesFit } from '../content/slides';
 import { MEMBERS } from '../content/members';
+import { powerSlidesEn } from './report-power';
 import { chaptersEn, storyEn } from './story-en';
 
 const fmt = (n: number) => n.toLocaleString('en-US');
@@ -72,6 +73,7 @@ export const en: Locale = {
     ph: 'The Philippines’ part',
     size: 'How big is it?',
     people: 'Who lives there?',
+    power: 'Power and water',
     who: 'Who’s involved',
     next: 'What happens next',
   },
@@ -102,15 +104,15 @@ export const en: Locale = {
       side: '100 meters',
       court: '1 basketball court',
       oneHectare: '1 hectare',
-      power: '≈ 3 gigawatts at full development (BCDA)',
-      solar: 'Solar for 2 gigawatts ≈ 20,000 hectares (analysis)',
-      lng: '1-gigawatt gas (LNG) plant, in one analysis',
-      reservoir: 'Reservoirs: 390–780 hectares (analysis, size only)',
-      waterDay: (day, m) => `Day ${day} · ${m} meters deep`,
-      waterTicks: ['1 day · 9 meters', '1 week · 63 meters', '1 month · 270 meters'],
+      power: '≈ 3 gigawatts at full development (BCDA estimate)',
+      solar: ['Illustrative land for 2 GW of solar, not a site', 'Solid ≈ 11,100–11,700 ha (benchmarks) · dashed 20,000 ha (one analysis)'],
+      reservoir: 'Conceptual area: 390–780 ha of reservoirs (one analysis), not a site',
+      odonnell: 'O’Donnell River',
+      waterDay: (day, m, mld) => `Day ${day} · ${m} m deep · ${mld} million liters a day`,
+      waterTick: (days, m) => `${days === 1 ? '1 day' : days === 7 ? '1 week' : '1 month'} · ${m} m`,
       makati: 'Makati City · 1,815 hectares',
       families: '≈ 200 Aeta Hungey families',
-      river: 'Bangot River',
+      river: 'Bangut River (OpenStreetMap: Bangot)',
       creek: 'Sapang Kawayan creek',
       farms: 'Farmland (OpenStreetMap)',
     },
@@ -134,6 +136,7 @@ export const en: Locale = {
   chapters: chaptersEn,
   story: storyEn,
   slides: {
+    ...powerSlidesEn,
     intro: {
       title: 'What the Pax Silica?',
       body: (
@@ -758,29 +761,6 @@ export const en: Locale = {
             },
           ]}
         />
-      ),
-    },
-    resources: {
-      kicker: 'Power and water',
-      title: 'A city-sized appetite',
-      body: (
-        <>
-          <StatGrid>
-            <Stat value="~3 GW" label="≈ the output of three coal plants" cite={['techpolicy', 'mongabay']} tone="amber" />
-            <Stat value="26.3 TWh" label="a year if run nonstop — vs. 28 TWh used by the whole PH services sector in 2024" cite="mongabay" tone="amber" />
-            <Stat value="60–90M L" label="water a day ≈ 600,000 households" cite={['cna', 'techpolicy']} tone="amber" />
-          </StatGrid>
-          <p>
-            <b>The plan:</b> harvest and recycle surface water, a 500 MW solar contract, talks on a gas (LNG) plant; investors to build their own power
-            and water systems.
-            <Cite s={['techpolicy', 'afp']} />
-          </p>
-          <p>
-            <b>The worry:</b> the dry season (December–May) is also when farmers need water for irrigation.
-            <Cite s={['mongabay', 'cna']} />
-          </p>
-          <Note>These are planning estimates for full development, not measured use.</Note>
-        </>
       ),
     },
     timeline: {
