@@ -3,7 +3,7 @@ import { pointInRing, ringCentroid } from './geo';
 import type { SiteScene } from './site';
 import { buildHouse, facadeTexture, roofTexture, type Geo } from './houses';
 import { buildFab, buildMall, buildOffice, glassTexture, panelTexture } from './buildings';
-import { ENERGY, ENERGY_KEYS, billOf, homesOf, type EnergyKey } from '../content/power';
+import { ENERGY, ENERGY_EVENT, ENERGY_KEYS, billOf, homesOf, type EnergyKey } from '../content/power';
 
 /**
  * "How much electricity is 3 gigawatts?" in 3D: the buildings from the ladder, side by side at true scale on the
@@ -18,7 +18,10 @@ export interface BillLabels {
   peso: (n: number) => string;
   homes: (n: number) => string;
   zoneNote: string;
+  /** the tap-me tag on the empty plot where the next building goes */
+  add: (name: string) => string;
 }
+
 
 type Item = { key: EnergyKey; group: THREE.Group; x: number; w: number; d: number; h: number; grow: number };
 
@@ -32,6 +35,10 @@ const LOTS: Record<'regular' | 'medium' | 'large' | 'mansion', [number, number]>
 const GAP: Partial<Record<EnergyKey, number>> = { medium: 5, large: 6, mansion: 8, office: 28, mall: 55, fab: 70 };
 const WALLS: Record<string, string> = { regular: '#f4dccd', medium: '#dbe8f0', large: '#f1e3c4', mansion: '#f7f4ec' };
 const ROOFS: Record<string, string> = { regular: '#b23a2a', medium: '#2f5f8f', large: '#2f6b4f', mansion: '#4a4f57' };
+/** lot lawns, as in the one-hectare scene (the small home's lot is mostly bare ground and concrete) */
+const LAWNS: Record<string, string> = { regular: '#a9a58f', medium: '#6f9d55', large: '#5f9a4a', mansion: '#58954a' };
+/** metres of grass per texture tile */
+const GRASS_TILE = 24;
 
 export class LineupFx {
   readonly group = new THREE.Group();
@@ -45,6 +52,12 @@ export class LineupFx {
   private visible = false;
   private bills = new Map<EnergyKey, HTMLDivElement>();
   private zonePos = new THREE.Vector3();
+  /** dashed outline of the next building's plot, and its tap-me tag */
+  private ghost: THREE.LineSegments;
+  private ghostFill: THREE.Mesh;
+  private nextTag: HTMLButtonElement;
+  private names: Record<EnergyKey, string> | null = null;
+  private addLabel: ((name: string) => string) | null = null;
   lite = false;
 
   constructor(private site: SiteScene) {
@@ -53,7 +66,6 @@ export class LineupFx {
     const plain = new THREE.MeshLambertMaterial({ vertexColors: true });
     const glass = new THREE.MeshLambertMaterial({ map: glassTexture() });
     const solar = new THREE.MeshLambertMaterial({ map: panelTexture() });
-    const lawn = new THREE.MeshLambertMaterial({ color: '#7aa865' });
 
     // lay the items out left to right (metres), then fit the line inside the zone
     let x = 0;
@@ -78,8 +90,8 @@ export class LineupFx {
         add(parts.walls, facade, WALLS[key]);
         add(parts.roofs, roof, ROOFS[key]);
         add(parts.details, plain);
-        const lot = new THREE.Mesh(new THREE.PlaneGeometry(lw - 0.4, ld - 0.4).rotateX(-Math.PI / 2), lawn);
-        lot.position.y = 0.05;
+        const lot = new THREE.Mesh(new THREE.PlaneGeometry(lw - 0.4, ld - 0.4).rotateX(-Math.PI / 2), new THREE.MeshLambertMaterial({ color: LAWNS[key] }));
+        lot.position.y = 0.06;
         lot.receiveShadow = true;
         g.add(lot);
         [w, d, h] = [lw, ld, key === 'regular' ? 4.3 : key === 'mansion' ? 10.6 : 8.4];
@@ -96,15 +108,41 @@ export class LineupFx {
     }
     this.length = x / 1000;
 
-    // a strip of paving under the whole line, so the close-up has a crisp ground
-    const depth = Math.max(...this.items.map((i) => i.d)) / 1000 + 0.04;
-    this.ground = new THREE.Mesh(new THREE.PlaneGeometry(this.length + 0.06, depth).rotateX(-Math.PI / 2), new THREE.MeshLambertMaterial({ color: '#b9b4a8' }));
+    // a field of mown grass under the whole line, so the close-up has a crisp, green ground
+    const depth = Math.max(...this.items.map((i) => i.d)) / 1000 + 0.08;
+    const gw = this.length + 0.1;
+    const gg = new THREE.PlaneGeometry(gw, depth).rotateX(-Math.PI / 2);
+    const guv = gg.attributes.uv as THREE.BufferAttribute;
+    for (let i = 0; i < guv.count; i++) guv.setXY(i, (guv.getX(i) * gw * 1000) / GRASS_TILE, (guv.getY(i) * depth * 1000) / GRASS_TILE);
+    this.ground = new THREE.Mesh(gg, new THREE.MeshLambertMaterial({ map: grassTexture() }));
     this.ground.receiveShadow = true;
     this.group.add(this.ground);
 
     [this.ox, this.oz] = this.pickSpot(depth);
     this.group.visible = false;
     site.scene.add(this.group);
+
+    // the next building's empty plot: a unit square outline, scaled to its footprint
+    const sq = new THREE.BufferGeometry().setFromPoints(
+      [[-0.5, -0.5], [0.5, -0.5], [0.5, -0.5], [0.5, 0.5], [0.5, 0.5], [-0.5, 0.5], [-0.5, 0.5], [-0.5, -0.5]].map(([x, z]) => new THREE.Vector3(x, 0, z)),
+    );
+    this.ghost = new THREE.LineSegments(sq, new THREE.LineDashedMaterial({ color: '#ffd166', dashSize: 0.004, gapSize: 0.003, transparent: true, opacity: 0.95 }));
+    this.ghost.visible = false;
+    this.ghostFill = new THREE.Mesh(
+      new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2),
+      new THREE.MeshBasicMaterial({ color: '#ffd166', transparent: true, opacity: 0.22, depthWrite: false }),
+    );
+    this.ghostFill.visible = false;
+    site.scene.add(this.ghost, this.ghostFill);
+    this.nextTag = document.createElement('button');
+    this.nextTag.type = 'button';
+    this.nextTag.className = 'next-tag';
+    this.nextTag.style.display = 'none';
+    this.nextTag.addEventListener('click', () => {
+      const next = this.nextKey();
+      if (next) window.dispatchEvent(new CustomEvent(ENERGY_EVENT, { detail: next }));
+    });
+    site.labelLayer.appendChild(this.nextTag);
 
     for (const key of ENERGY_KEYS) {
       const el = document.createElement('div');
@@ -120,7 +158,7 @@ export class LineupFx {
   private pickSpot(depth: number): [number, number] {
     const ring = this.site.hubXZ;
     const [cx, cz] = ringCentroid(ring);
-    const L = this.length + 0.06;
+    const L = this.length + 0.1;
     let best: [number, number] = [cx - L / 2, cz];
     let bestD = Infinity;
     for (let dx = -2.5; dx <= 2.5; dx += 0.05) {
@@ -132,11 +170,16 @@ export class LineupFx {
         const dd = Math.hypot(dx, dz);
         if (ok && dd < bestD) {
           bestD = dd;
-          best = [x0 + 0.03, z0];
+          best = [x0 + 0.05, z0];
         }
       }
     }
     return best;
+  }
+
+  /** the building that tapping "next" adds (none once the zone is shown, or for the zone itself) */
+  private nextKey(): EnergyKey | null {
+    return ENERGY_KEYS[ENERGY_KEYS.indexOf(this.key) + 1] ?? null;
   }
 
   get zoneShown() {
@@ -198,6 +241,28 @@ export class LineupFx {
       it.group.scale.set(0.001, 0.001 * Math.max(0.001, e), 0.001);
     }
     this.ground.position.set(this.ox + this.length / 2, y + 0.00012, this.oz);
+    const next = this.items.find((i) => i.key === this.nextKey());
+    this.ghost.visible = this.ghostFill.visible = this.visible && !!next;
+    if (next) {
+      // the plot, a little inset so the dashes read as an empty lot
+      this.ghost.position.set(this.ox + next.x / 1000, y + 0.0004, this.oz);
+      this.ghost.scale.set((next.w * 0.94) / 1000, 1, (next.d * 0.94) / 1000);
+      this.ghostFill.position.copy(this.ghost.position);
+      this.ghostFill.scale.copy(this.ghost.scale);
+      const m = this.ghost.material as THREE.LineDashedMaterial;
+      // keep the dashes about the same size on small and big plots
+      const k = Math.max(next.w, next.d) / 1000;
+      m.dashSize = Math.max(0.0012, k * 0.05);
+      m.gapSize = m.dashSize * 0.7;
+      this.ghost.computeLineDistances();
+      // computeLineDistances works in local units: scale them back to km along each side
+      const ld = this.ghost.geometry.attributes.lineDistance as THREE.BufferAttribute;
+      const sx = this.ghost.scale.x;
+      const sz = this.ghost.scale.z;
+      const sides = [sx, sx, sz, sz, sx, sx, sz, sz];
+      for (let i = 0; i < ld.count; i++) ld.setX(i, i % 2 ? sides[i] : 0);
+      ld.needsUpdate = true;
+    }
     const [hx, hz] = ringCentroid(this.site.hubXZ);
     this.zonePos.set(hx, this.site.heightAt(hx, hz) + 0.3, hz);
   }
@@ -215,6 +280,8 @@ export class LineupFx {
   }
 
   setLabels(t: BillLabels) {
+    this.names = t.names;
+    this.addLabel = t.add;
     for (const key of ENERGY_KEYS) {
       const kwh = ENERGY[key];
       const el = this.bills.get(key)!;
@@ -231,6 +298,7 @@ export class LineupFx {
   updateLabels(camera: THREE.Camera, w: number, h: number) {
     const k = ENERGY_KEYS.indexOf(this.key);
     const v = new THREE.Vector3();
+    this.updateNextTag(camera, w, h);
     for (const key of ENERGY_KEYS) {
       const el = this.bills.get(key)!;
       const i = ENERGY_KEYS.indexOf(key);
@@ -254,11 +322,76 @@ export class LineupFx {
       // (not "full": that class name belongs to the story's full-width sections)
       el.classList.toggle('bill-on', mode === 'full');
       el.classList.toggle('bill-tag', mode === 'mini');
-      el.style.transform = `translate(${((v.x * 0.5 + 0.5) * w).toFixed(1)}px, ${((-v.y * 0.5 + 0.5) * h).toFixed(1)}px) translate(-50%, -100%)`;
+      // centred over its building, slid in from the screen edge if it would be cut off
+      const bw = el.offsetWidth;
+      const bx = Math.min(Math.max((v.x * 0.5 + 0.5) * w, bw / 2 + 6), w - bw / 2 - 6);
+      el.style.transform = `translate(${bx.toFixed(1)}px, ${((-v.y * 0.5 + 0.5) * h).toFixed(1)}px) translate(-50%, -100%)`;
     }
+  }
+
+  /** "+ Medium home": over the empty plot, or pinned to the right edge (the line grows to the right) */
+  private updateNextTag(camera: THREE.Camera, w: number, h: number) {
+    const tag = this.nextTag;
+    const next = this.nextKey();
+    if (!this.visible || !next || next === 'hub' || !this.names || !this.addLabel) {
+      if (tag.style.display !== 'none') tag.style.display = 'none';
+      return;
+    }
+    const it = this.items.find((x) => x.key === next)!;
+    const v = new THREE.Vector3(this.ox + it.x / 1000, this.ghost.position.y + Math.min(it.h, 12) / 1000, this.oz).project(camera);
+    // pinned to the edge: sit at ground level, below the roofs and bills
+    if (v.x > 1) v.set(this.ox + it.x / 1000, this.ghost.position.y, this.oz).project(camera);
+    if (v.z > 1) {
+      tag.style.display = 'none';
+      return;
+    }
+    const text = this.addLabel(this.names[next]);
+    if (tag.dataset.text !== text) {
+      tag.dataset.text = text;
+      tag.textContent = text;
+    }
+    let x = (v.x * 0.5 + 0.5) * w;
+    let y = (-v.y * 0.5 + 0.5) * h;
+    const edge = x > w - 24;
+    if (edge) y -= 22;
+    tag.classList.toggle('edge', edge);
+    if (edge) x = w - 12;
+    y = Math.min(Math.max(y, 90), h - 60);
+    tag.style.display = '';
+    tag.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) translate(${edge ? '-100%' : '-50%'}, -50%)`;
   }
 
   hideLabels() {
     for (const el of this.bills.values()) el.style.display = 'none';
+    this.nextTag.style.display = 'none';
   }
+}
+
+/** mown grass: a mottled green tile with faint mowing stripes */
+function grassTexture() {
+  const S = 256;
+  const cv = document.createElement('canvas');
+  cv.width = S;
+  cv.height = S;
+  const g = cv.getContext('2d')!;
+  g.fillStyle = '#65944a';
+  g.fillRect(0, 0, S, S);
+  // mowing stripes, 4 per tile
+  for (let i = 0; i < 4; i++) {
+    g.fillStyle = i % 2 ? 'rgba(255, 255, 220, 0.022)' : 'rgba(0, 30, 0, 0.022)';
+    g.fillRect(0, (i * S) / 4, S, S / 4);
+  }
+  // speckles of lighter and darker blades (seeded, so every load looks the same)
+  let seed = 7;
+  const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  for (let i = 0; i < 2600; i++) {
+    const light = rnd() < 0.5;
+    g.fillStyle = light ? `rgba(160, 200, 110, ${0.12 + rnd() * 0.18})` : `rgba(40, 80, 30, ${0.12 + rnd() * 0.2})`;
+    g.fillRect(rnd() * S, rnd() * S, 1 + rnd() * 2.5, 1 + rnd() * 2.5);
+  }
+  const t = new THREE.CanvasTexture(cv);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 8;
+  return t;
 }

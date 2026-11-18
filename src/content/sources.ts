@@ -405,6 +405,15 @@ export const SOURCES: Source[] = [
     url: 'https://www.naturalearthdata.com/',
     kind: 'data',
   },
+  {
+    id: 'photos',
+    publisher: 'Wikimedia Commons contributors',
+    title: 'Photos in the 3D pop-ups (resized only): 12-inch silicon wafer by Peellden (CC BY-SA 3.0); SMT line at Megger, Dover, by Megger Ltd. (CC BY 3.0); Taganito nickel ore conveyors by Ryan Dael, EITI (CC BY-SA 2.0); Santa Lucia, Capas by Sindre Helvik (CC BY 3.0)',
+    date: '2008–2016',
+    url: 'https://commons.wikimedia.org/',
+    kind: 'reference',
+    note: 'Village close-ups without a photo are cut from the Copernicus Sentinel-2 image used for the 3D map. Google Maps links open Google’s own satellite view; none of its imagery is copied here.',
+  },
 ];
 
 export const SOURCE_INDEX: Record<string, number> = Object.fromEntries(SOURCES.map((s, i) => [s.id, i + 1]));

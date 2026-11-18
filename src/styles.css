@@ -512,6 +512,30 @@ details.more p {
   display: grid;
   gap: 12px;
 }
+/* phones: each group of chips is one sideways row */
+@media (max-width: 899px) {
+  .refpicker {
+    gap: 8px;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .refpicker .ref-group {
+    min-width: 0;
+  }
+  .refpicker .chips {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    margin: 0 calc(-1 * var(--card-pad, 18px));
+    padding: 0 var(--card-pad, 18px) 2px;
+  }
+  .refpicker .chips::-webkit-scrollbar {
+    display: none;
+  }
+  .refpicker .chip {
+    flex: none;
+    white-space: nowrap;
+  }
+}
 /* smaller side notes inside cards */
 .card-body .small {
   font-size: 13.5px;
@@ -613,6 +637,100 @@ details.more p {
   color: var(--muted);
   margin-bottom: 2px;
 }
+.energy-row {
+  position: relative;
+}
+/* the row that comes next calls for a tap */
+.energy-row.next {
+  border-color: rgba(255, 201, 77, 0.65);
+  animation: nextpulse 1.8s ease-in-out infinite;
+}
+.energy-tap {
+  align-self: center;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--amber);
+  color: #1a1300;
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 1.45;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  pointer-events: none;
+}
+@keyframes nextpulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 201, 77, 0.5);
+  }
+  60% {
+    box-shadow: 0 0 0 5px rgba(255, 201, 77, 0);
+  }
+}
+.energy-next {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--amber);
+  background: rgba(255, 201, 77, 0.16);
+  color: var(--text);
+  font: 500 14px/1.3 var(--sans);
+  text-align: center;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.energy-next:hover {
+  background: rgba(255, 201, 77, 0.26);
+}
+.energy-next b {
+  color: #ffd98a;
+}
+.energy-next.again {
+  border-color: var(--line);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--muted);
+}
+/* in 3D: "+ Tap to add" over the empty plot where the next building goes */
+.next-tag {
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: auto;
+  will-change: transform;
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 999px;
+  background: #ffd166;
+  color: #1a1300;
+  font: 700 13px/1.2 var(--sans);
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  animation: tagpulse 1.8s ease-in-out infinite;
+}
+.next-tag.edge::after {
+  content: ' →';
+}
+@keyframes tagpulse {
+  0%,
+  100% {
+    box-shadow:
+      0 4px 16px rgba(0, 0, 0, 0.4),
+      0 0 0 0 rgba(255, 209, 102, 0.6);
+  }
+  60% {
+    box-shadow:
+      0 4px 16px rgba(0, 0, 0, 0.4),
+      0 0 0 9px rgba(255, 209, 102, 0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .energy-row.next,
+  .next-tag {
+    animation: none;
+  }
+}
 /* phones: the rows become a sideways strip of chips (name + bill), so the 3D lineup stays in view */
 @media (max-width: 899px) {
   .energy-name small,
@@ -623,7 +741,22 @@ details.more p {
     display: flex !important;
     overflow-x: auto;
     scrollbar-width: none;
-    padding-bottom: 2px;
+    padding: 9px 6px 6px 2px;
+    margin: -9px 0 -4px;
+  }
+  /* phones: the badge sits on the chip's top edge, and the chip makes room for it */
+  .energy-row.next {
+    padding-top: 10px;
+  }
+  .energy-tap {
+    position: absolute;
+    top: -8px;
+    right: 6px;
+    font-size: 10px;
+  }
+  .energy-next {
+    padding: 7px 10px;
+    font-size: 13px;
   }
   .energy-rows::-webkit-scrollbar {
     display: none;
@@ -692,6 +825,21 @@ details.more p {
   font-size: 12.5px;
   line-height: 1.5;
   color: #d5e3f7;
+}
+.assume.assume-fold {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  text-align: left;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+.assume-open {
+  margin-left: auto;
+  padding-left: 8px;
+  color: #9cc4ff;
+  font-weight: 700;
 }
 .assume b {
   color: #e9f1ff;
@@ -1022,11 +1170,22 @@ details.more p {
   .gap-legend {
     font-size: 11.5px;
   }
-  /* phones: the four ways to fill the gap as a 2 × 2 grid */
+  /* phones: the four ways to fill the gap as a sideways strip, so the card stays short */
   .fillopts {
-    grid-template-columns: 1fr 1fr;
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    margin: 0 calc(-1 * var(--card-pad, 18px));
+    padding: 0 var(--card-pad, 18px) 2px;
+    gap: 6px;
+  }
+  .fillopts::-webkit-scrollbar {
+    display: none;
   }
   .fillopts li {
+    flex: 0 0 62%;
+    scroll-snap-align: start;
     grid-template-columns: 1fr;
     gap: 2px;
     padding: 6px 8px;
@@ -1210,6 +1369,23 @@ details.more p {
 .cbar.hub .cbar-val {
   color: var(--red);
   font-weight: 700;
+}
+/* phones: one line per city, the value never wraps */
+@media (max-width: 899px) {
+  .citybars {
+    gap: 4px;
+  }
+  .cbar {
+    grid-template-columns: 1fr auto;
+    gap: 2px 10px;
+    font-size: 13px;
+  }
+  .cbar-val {
+    white-space: nowrap;
+  }
+  .cbar-track {
+    height: 7px;
+  }
 }
 
 /* ---------- full-width sections ---------- */
@@ -2119,6 +2295,45 @@ html.snap-page {
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
+/* phones only: fold the card to its title so the 3D shows in full */
+.card-fold {
+  display: none;
+}
+@media (max-width: 899px) {
+  .card-count {
+    margin-left: auto;
+  }
+  .card-fold {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 9px;
+    border: 1px solid var(--line-2);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text);
+    font: 600 11px/1.3 var(--sans);
+    letter-spacing: 0;
+    text-transform: none;
+    cursor: pointer;
+  }
+  .card-fold::after {
+    content: '▾';
+    font-size: 10px;
+  }
+  .card.folded .card-fold::after {
+    content: '▴';
+  }
+  .card.folded .card-body,
+  .card.folded .more,
+  .card.folded .kicker {
+    display: none;
+  }
+  .card.folded .card-title {
+    margin-bottom: 0;
+    cursor: pointer;
+  }
+}
 .card .kicker {
   color: var(--muted);
 }
@@ -2548,5 +2763,151 @@ html.snap-page {
   }
   .card-title {
     font-size: 22px;
+  }
+}
+
+/* ---------- picture pop-ups on 3D labels ---------- */
+.label3d.has-pop {
+  pointer-events: auto;
+  cursor: pointer;
+}
+.label3d.has-pop:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 2px;
+}
+/* a small picture mark: the label opens a photo or a satellite close-up */
+.label3d.has-pop::after {
+  content: '';
+  display: inline-block;
+  width: 11px;
+  height: 11px;
+  margin-left: 5px;
+  vertical-align: -1px;
+  opacity: 0.8;
+  background: no-repeat center / contain
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffd166' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='5' width='18' height='14' rx='2'/%3E%3Ccircle cx='9' cy='10' r='1.6'/%3E%3Cpath d='M21 16l-5-5-9 8'/%3E%3C/svg%3E");
+}
+.label3d.sitio.key.has-pop::after {
+  position: absolute;
+  top: 5px;
+  right: 6px;
+  margin: 0;
+}
+.label3d.sitio.key.has-pop {
+  padding-right: 22px;
+}
+.pop3d {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 6;
+  width: 300px;
+  pointer-events: auto;
+  background: rgba(13, 17, 23, 0.97);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.55);
+  color: var(--text);
+  font: 13px/1.45 var(--sans);
+  animation: labelin 0.2s ease both;
+}
+.pop3d[hidden] {
+  display: none !important;
+}
+.pop-close {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 1;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font: 400 19px/28px var(--sans);
+  cursor: pointer;
+}
+.pop-close:hover {
+  background: rgba(0, 0, 0, 0.75);
+}
+.pop-img {
+  position: relative;
+  background: #1a1f27;
+}
+.pop-img img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.pop-body {
+  padding: 10px 12px 12px;
+}
+.pop-title {
+  font: 700 15px/1.25 var(--display);
+}
+.pop-sub {
+  margin-top: 2px;
+  color: #ffd98a;
+  font-size: 12px;
+}
+.pop-cap {
+  margin: 6px 0 4px;
+}
+.pop-credit {
+  font-size: 11px;
+  color: var(--muted);
+}
+.pop-credit a {
+  color: var(--muted);
+  text-decoration: underline;
+}
+.pop-link {
+  display: inline-block;
+  margin-top: 8px;
+  font-weight: 600;
+  color: var(--blue);
+  text-decoration: none;
+}
+.pop-link:hover {
+  text-decoration: underline;
+}
+/* phones: a compact panel under the top bar, picture on the left */
+.pop3d.sheet {
+  left: 10px;
+  right: 10px;
+  top: calc(var(--bar) + 8px);
+  width: auto;
+  display: grid;
+  grid-template-columns: 38% 1fr;
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+.pop3d.sheet .pop-img {
+  padding-top: 0 !important;
+  min-height: 132px;
+}
+.pop3d.sheet .pop-body {
+  padding: 9px 10px 10px;
+}
+.pop3d.sheet .pop-title {
+  font-size: 14px;
+}
+.pop3d.sheet .pop-cap {
+  margin: 4px 0 3px;
+}
+.pop3d.sheet .pop-link {
+  margin-top: 5px;
+}
+
+/* phones: long 3D notes wrap instead of running off the screen */
+@media (max-width: 899px) {
+  .label3d.fx {
+    white-space: normal;
+    max-width: min(300px, calc(100vw - 24px));
   }
 }

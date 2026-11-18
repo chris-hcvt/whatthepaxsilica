@@ -38,6 +38,9 @@ export interface UiStrings {
   fullReport: string;
   backToStory: string;
   learnMore: string;
+  /** phones: fold a card to its title so the 3D shows in full */
+  hideText: string;
+  showText: string;
   scrollCue: string;
   chooseLanguage: string;
   moreLanguagesSoon: string;

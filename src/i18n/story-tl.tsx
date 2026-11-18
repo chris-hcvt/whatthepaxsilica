@@ -364,6 +364,9 @@ export const storyTl: Record<string, StoryStep> = {
           }}
           kwh={(n) => `${bigTl(n)} kWh bawat buwan`}
           peso={(n) => `₱${bigTl(n)}`}
+          tap={'Pindutin'}
+          next={(name) => <>Idagdag ang susunod: <b>{name}</b> →</>}
+          restart={'↺ Magsimula ulit sa isang bahay'}
           detail={(k, homes) =>
             k === 'regular' ? (
               <>

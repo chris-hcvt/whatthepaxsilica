@@ -50,3 +50,17 @@ The map's search box suggests Philippine city and town centres from a local list
 - Power & water figures live in `src/content/power.ts` with their sources and formulas; `npm run check:numbers` re-computes every derived value.
 - Makati City's boundary (OSM relation 103716), laid onto the leveled zone for comparison.
 - The Philippines inset outline is Natural Earth 1:110m (public domain).
+
+## 8. Pictures for the 3D pop-ups (`place_photos.py`)
+
+Hover (or tap) a village label or one of the plan's industry tags to see a picture.
+
+- **Village close-ups** (`public/img/places/sat-<name>.jpg`): a ~1.8 km wide cut of `imagery-2048.jpg` (the same Copernicus Sentinel-2 image as the 3D map, ~12.6 m per pixel), enlarged 2× with a light sharpen and a ring at the village point. Wikimedia Commons has no openly licensed ground photos of these sitios (the nearest geotagged photos are 3.5 km or more away), except Sta. Lucia.
+- **Photos** (`public/img/photos/`), resized to 640 px, nothing else changed; credits in `src/content/photos.ts` and the sources list:
+  - 12-inch silicon wafer: Peellden, CC BY-SA 3.0
+  - SMT line at Megger, Dover: Megger Ltd., CC BY 3.0 (Wikimedia permission ticket 2009011310026582)
+  - Taganito nickel ore conveyors: Ryan Dael (EITI), CC BY-SA 2.0
+  - Santa Lucia, Capas (2012, about 0.8 km from the village point): Sindre Helvik, CC BY 3.0
+- Google Maps is only linked ("See it on Google Maps"); none of its imagery is copied.
+
+`python3 data-prep/place_photos.py` rebuilds the close-ups and downloads missing photos (`--refresh` re-downloads, `--sat-only` skips them).

@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { LocalProj, outerRing, pointInRing, ringCentroid, type LL, type SiteData, type Sitio } from './geo';
-import { SiteFx, type Fx, type FxLabels } from './fx';
+import { SiteFx, type Fx, type FxLabels, type LabelItem } from './fx';
+import { Popover, creditHtml, type PopContent } from './popover';
+import { PHOTOS, PLACE_PHOTOS, SAT_KM, mapsUrl, satSrc, type Photo } from '../content/photos';
 import type { HomeKey } from './hectare';
 import { addGroundDetail } from './ground';
 import { WATER_MLD, type EnergyKey, type WaterKey } from '../content/power';
@@ -8,6 +10,9 @@ import { WATER_MLD, type EnergyKey, type WaterKey } from '../content/power';
 export const EXAG = 2.4; // vertical exaggeration for readability
 const WALL_H = 0.32; // km, visual height of the boundary "curtain"
 const FLAT_BAND = 0.45; // km, width of the slope between the levelled pad and natural ground
+
+/** the villages the people chapter keeps on screen: north, west, east and the two south of the zone */
+const FIT_SITIOS = ['Sta. Lucia', 'Binyayan', 'Manabayucan', 'Sapang Kawayan', 'Kalangitan', 'Mauricia', 'Gayaman'];
 
 export type SiteView = 'hero' | 'overview' | 'hub' | 'hubClose' | 'hectare' | 'water' | 'lineup' | 'gauge' | 'top' | 'communities' | 'compare' | 'handoff' | 'ambient';
 
@@ -35,12 +40,35 @@ export interface SiteLabels {
   refCount: (shown: number, name: string, kind: 'mall' | 'district') => string;
   levelled: string;
   fx: FxLabels;
+  pop: PopLabels;
 }
+
+/** words for the picture pop-ups on village labels and the plan's industry tags */
+export interface PopLabels {
+  /** caption under a village's satellite close-up */
+  sat: (km: number) => string;
+  satCredit: string;
+  /** caption under a ground photo near a village */
+  photo: (place: string, year: string, km: string) => string;
+  photoBy: string;
+  maps: string;
+  close: string;
+  /** who lives there, by the site data's `people` value */
+  people: Record<string, string>;
+  barangay: (name: string) => string;
+  /** the three industry tags: caption and image description */
+  industry: { caption: [string, string, string]; alt: [string, string, string] };
+}
+
+/** a ground photo near a village: when and how far from the village point it was taken */
+const PLACE_PHOTO_META: Record<string, { year: string; km: string }> = { 'Sta. Lucia': { year: '2012', km: '0.8' } };
 
 interface Label {
   el: HTMLDivElement;
   pos: THREE.Vector3;
   on: boolean;
+  /** village labels give way to more important ones when they would overlap (0 = most important) */
+  rank?: number;
 }
 
 const KEY_SITIOS = ['Sapang Kawayan', 'Binyayan', 'Manabayucan'];
@@ -73,6 +101,10 @@ export class SiteScene {
   private refKey: string | null = null;
   private refShown = 0;
   private labels: Label[] = [];
+  private labelSizes = new WeakMap<HTMLElement, { w: number; h: number; text: string }>();
+  /** picture pop-ups for village labels and the plan's industry tags */
+  readonly pop: Popover;
+  private popT: SiteLabels | null = null;
   readonly labelLayer: HTMLElement;
   readonly hubXZ: [number, number][];
   readonly nccXZ: [number, number][];
@@ -97,6 +129,7 @@ export class SiteScene {
     labelLayer: HTMLElement,
   ) {
     this.labelLayer = labelLayer;
+    this.pop = new Popover(labelLayer);
     const { bbox, dem } = data.scene;
     this.proj = new LocalProj(bbox);
     this.nx = dem.nx;
@@ -135,7 +168,9 @@ export class SiteScene {
     this.scene.add(this.terrain);
     this.scene.add(this.buildSkirt());
 
-    // overlay drawn on a canvas and draped on the same geometry
+    // overlay drawn on a canvas and draped on the same geometry. It draws at exactly the ground's depth
+    // (less-or-equal, plus a constant nudge of a couple of depth steps): a slope-scaled offset grew large at
+    // grazing angles on small screens and showed through things standing on the ground (district blocks, lawns).
     const ow = 2048;
     const oh = Math.round((ow * (bbox[3] - bbox[1])) / (bbox[2] - bbox[0]));
     this.overlayCanvas.width = ow;
@@ -145,7 +180,15 @@ export class SiteScene {
     this.overlayTex.anisotropy = 4;
     const overlay = new THREE.Mesh(
       this.geo,
-      new THREE.MeshBasicMaterial({ map: this.overlayTex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 }),
+      new THREE.MeshBasicMaterial({
+        map: this.overlayTex,
+        transparent: true,
+        depthWrite: false,
+        depthFunc: THREE.LessEqualDepth,
+        polygonOffset: true,
+        polygonOffsetFactor: 0,
+        polygonOffsetUnits: -2,
+      }),
     );
     overlay.renderOrder = 1;
     this.scene.add(overlay);
@@ -163,8 +206,11 @@ export class SiteScene {
     const south = this.hubXZ.reduce((a, b) => (b[1] > a[1] ? b : a));
     this.hubLabelXZ = [south[0] * 0.7 + hc[0] * 0.3, south[1] * 0.7 + hc[1] * 0.3];
     this.hubLabel = this.addLabel('', new THREE.Vector3(), 'label3d hub');
+    // on crowded views the village names win over the zone and New Clark City tags
+    this.hubLabel.rank = 1.5;
     const nccTop = this.nccXZ.reduce((a, b) => (b[1] < a[1] ? b : a));
     this.nccLabel = this.addLabel('', new THREE.Vector3(nccTop[0] + 1.2, this.heightAt(nccTop[0], nccTop[1]) + 0.3, nccTop[1] + 0.4), 'label3d ncc');
+    this.nccLabel.rank = 1.5;
     this.refLabel = this.addLabel('', new THREE.Vector3(), 'label3d mall');
     this.flatLabel = this.addLabel('', new THREE.Vector3(), 'label3d flat');
     this.buildSitios(data.sitios);
@@ -410,7 +456,9 @@ export class SiteScene {
       this.sitioGroup.add(g);
       this.sitioXZ.set(s.name, { x, z, height, group: g });
       const label = this.addLabel(s.name, new THREE.Vector3(x, 0, z), `label3d sitio${s.insideHub ? ' inside' : ''}${key ? ' key' : ''}`);
+      label.rank = key ? 0 : FIT_SITIOS.includes(s.name) ? 1 : 2;
       this.sitioLabels.set(s.name, label);
+      this.pop.attach(label.el, () => this.placePop(s));
     }
   }
 
@@ -534,6 +582,7 @@ export class SiteScene {
     const key = JSON.stringify(layers);
     if (key !== this.layerKey) {
       this.layerKey = key;
+      this.pop.hide();
       if (layers.home) this.fx.setHome(layers.home);
       if (layers.water) this.fx.hectare.setWaterRate(WATER_MLD[layers.water]);
       if (layers.energy) this.fx.setEnergy(layers.energy);
@@ -555,6 +604,7 @@ export class SiteScene {
       } else if (this.refMesh) this.refMesh.visible = false;
     }
     const ref = layers.ref ? this.data.refs?.[layers.ref] : null;
+    this.popT = t;
     this.fx.setLabels(t.fx);
     const busy = (layers.fx ?? []).some((f) => ['icons', 'lease', 'unknowns', 'makati', 'hectare', 'homes', 'grid', 'power', 'lineup', 'gauge', 'water', 'reservoir'].includes(f));
     this.hubLabel.el.textContent = t.hub;
@@ -582,7 +632,8 @@ export class SiteScene {
     }
   }
 
-  view(v: SiteView, aspect: number, frac = 1) {
+  /** with `fit`, the engine moves the camera back until all those points are on screen */
+  view(v: SiteView, aspect: number, frac = 1): { target: THREE.Vector3; position: THREE.Vector3; fit?: THREE.Vector3[] } {
     const far = (aspect < 0.9 ? 1.55 : aspect < 1.3 ? 1.25 : 1) * Math.pow(frac, -0.7);
     const hc = this.hubCenter;
     const sk = this.data.sitios.find((s) => s.name === 'Sapang Kawayan')!;
@@ -607,6 +658,7 @@ export class SiteScene {
       handoff: { target: hc.clone(), offset: new THREE.Vector3(0, 1, 0) },
       compare: { target: new THREE.Vector3(hc.x, this.hFlat, hc.z), offset: new THREE.Vector3(2.2, 7.4, 5.6) },
       top: { target: hc.clone().add(new THREE.Vector3(0, 0, 0.5)), offset: new THREE.Vector3(0, 19, 3.2) },
+      // fitted by the engine to the villages around the zone (FIT_SITIOS)
       communities: { target: new THREE.Vector3((skx + hc.x) / 2 - 0.6, this.heightAt(skx, skz), (skz + hc.z) / 2), offset: new THREE.Vector3(3.6, 6.2, 7.2) },
     };
     if (v === 'handoff') {
@@ -618,7 +670,40 @@ export class SiteScene {
       return { target, position: target.clone().add(new THREE.Vector3(0, need / t, 0.001)) };
     }
     const { target, offset } = views[v];
-    return { target, position: target.clone().add(offset.multiplyScalar(far)) };
+    const phone = window.matchMedia('(max-width: 899px)').matches;
+    // phones: a steeper look for the villages, so the long north-south spread fits a tall screen without the map's edge
+    if (v === 'communities' && phone) offset.set(2.0, 9.5, 5.5);
+    const fit = v === 'communities' ? this.sitioPoints(FIT_SITIOS) : phone ? this.phoneFit(v) : undefined;
+    return { target, position: target.clone().add(offset.multiplyScalar(far)), fit };
+  }
+
+  /**
+   * Phones: the views about the zone keep all of it in the part of the screen the card leaves open
+   * (the card's height changes from step to step, and with folding).
+   */
+  private phoneFit(v: SiteView): THREE.Vector3[] | undefined {
+    if (v === 'hectare') {
+      // the 100-meter square, with a little height for the roofs
+      const c = this.fx.hectareTarget();
+      return [-1, 1].flatMap((sx) => [-1, 1].map((sz) => c.clone().add(new THREE.Vector3(sx * 0.05, 0.008, sz * 0.05))));
+    }
+    if (!['hub', 'compare', 'top', 'gauge', 'overview'].includes(v)) return undefined;
+    const pts = this.hubXZ.map(([x, z]) => new THREE.Vector3(x, this.heightAt(x, z), z));
+    const c = this.hubCenter;
+    // room for the tags that float over the zone, and for the power gauge
+    pts.push(c.clone().add(new THREE.Vector3(0, v === 'gauge' ? 2.5 : 0.45, 0)));
+    if (v === 'overview') pts.push(...this.nccXZ.map(([x, z]) => new THREE.Vector3(x, this.heightAt(x, z), z)));
+    return pts;
+  }
+
+  /** ground points of the named villages (for fitting the camera) */
+  private sitioPoints(names: string[]) {
+    return this.data.sitios
+      .filter((s) => names.includes(s.name))
+      .map((s) => {
+        const [x, z] = this.proj.xz(s.lonlat);
+        return new THREE.Vector3(x, this.heightAt(x, z), z);
+      });
   }
 
   /** the electricity lineup: frame every building up to the chosen row; "the zone" pulls back to the whole zone */
@@ -636,6 +721,7 @@ export class SiteScene {
 
   updateLabels(camera: THREE.Camera, w: number, h: number) {
     const v = new THREE.Vector3();
+    const items: LabelItem[] = [];
     for (const l of this.labels) {
       if (!l.on) {
         if (l.el.style.display !== 'none') l.el.style.display = 'none';
@@ -646,16 +732,98 @@ export class SiteScene {
         l.el.style.display = 'none';
         continue;
       }
-      l.el.style.display = '';
-      const x = (v.x * 0.5 + 0.5) * w;
-      const y = (-v.y * 0.5 + 0.5) * h;
-      l.el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) translate(-50%, -100%)`;
+      items.push({ el: l.el, x: (v.x * 0.5 + 0.5) * w, y: (-v.y * 0.5 + 0.5) * h, prio: l.rank ?? -1, mode: l.rank === undefined ? 'move' : 'hide' });
     }
-    this.fx.updateLabels(camera, w, h);
+    items.push(...this.fx.updateLabels(camera, w, h));
+    this.layoutLabels(items, w);
+  }
+
+  /**
+   * One pass over every label anchored above a point: most important first; village names give way where they
+   * would overlap, the chapter's tags are shifted up instead, so nothing is drawn over anything else.
+   */
+  private layoutLabels(items: LabelItem[], screenW: number) {
+    items.sort((a, b) => a.prio - b.prio);
+    const placed: [number, number, number, number][] = [];
+    const hits = (r: [number, number, number, number]) => placed.find((p) => r[0] < p[2] && r[2] > p[0] && r[1] < p[3] && r[3] > p[1]);
+    for (const it of items) {
+      const el = it.el;
+      if (el.style.display === 'none') el.style.display = '';
+      const text = el.textContent ?? '';
+      let size = this.labelSizes.get(el);
+      if (!size || size.text !== text) {
+        size = { w: el.offsetWidth, h: el.offsetHeight, text };
+        this.labelSizes.set(el, size);
+      }
+      let y = it.y;
+      // keep long labels on screen (phones): slide them in from the edge
+      const x = size.w + 12 < screenW ? Math.min(Math.max(it.x, size.w / 2 + 6), screenW - size.w / 2 - 6) : it.x;
+      const rect = (): [number, number, number, number] => [x - size!.w / 2 - 2, y - size!.h - 2, x + size!.w / 2 + 2, y + 2];
+      let r = rect();
+      let hit = hits(r);
+      if (hit && it.mode === 'hide') {
+        el.style.display = 'none';
+        continue;
+      }
+      for (let k = 0; hit && k < 4; k++) {
+        y = hit[1] - 1;
+        r = rect();
+        hit = hits(r);
+      }
+      placed.push(r);
+      el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) translate(-50%, -100%)`;
+    }
   }
 
   hideLabels() {
     for (const l of this.labels) l.el.style.display = 'none';
     this.fx.hideLabels();
+    this.pop.hide();
+  }
+
+  /** the pop-up for a village: a nearby ground photo if there is an openly licensed one, else a satellite close-up */
+  private placePop(s: SiteData['sitios'][number]): PopContent | null {
+    if (!this.popT) return null;
+    const t = this.popT.pop;
+    const [lon, lat] = s.lonlat;
+    const where = s.insideHub ? this.popT.inside : this.popT.outside((s.metersToHubEdge / 1000).toFixed(1));
+    const sub = [where, s.people ? t.people[s.people] ?? s.people : '', s.barangay ? t.barangay(s.barangay) : ''].filter(Boolean).join(' · ');
+    const key = PLACE_PHOTOS[s.name];
+    const link = { href: mapsUrl([lon, lat]), text: t.maps };
+    if (key) {
+      const p: Photo = PHOTOS[key];
+      const meta = PLACE_PHOTO_META[s.name];
+      return {
+        title: s.name,
+        sub,
+        img: { src: p.src, w: p.w, h: p.h, alt: t.photo(s.name, meta.year, meta.km) },
+        caption: t.photo(s.name, meta.year, meta.km),
+        credit: creditHtml(t.photoBy, p.author, p.page, p.license, p.licenseUrl),
+        link,
+        close: t.close,
+      };
+    }
+    return {
+      title: s.name,
+      sub,
+      img: { src: satSrc(s.name), w: 480, h: 320, alt: t.sat(SAT_KM) },
+      caption: t.sat(SAT_KM),
+      credit: t.satCredit,
+      link,
+      close: t.close,
+    };
+  }
+
+  /** the pop-up for one of the plan's industry tags */
+  industryPop(i: 0 | 1 | 2, title: string, p: Photo): PopContent | null {
+    if (!this.popT) return null;
+    const t = this.popT.pop;
+    return {
+      title,
+      img: { src: p.src, w: p.w, h: p.h, alt: t.industry.alt[i] },
+      caption: t.industry.caption[i],
+      credit: creditHtml(t.photoBy, p.author, p.page, p.license, p.licenseUrl),
+      close: t.close,
+    };
   }
 }

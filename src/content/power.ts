@@ -36,6 +36,8 @@ export const FAB_MW = 200; // one advanced wafer fab (Taipower) [fab-power]
 
 export type EnergyKey = 'regular' | 'medium' | 'large' | 'mansion' | 'office' | 'mall' | 'fab' | 'hub';
 export const ENERGY_KEYS: EnergyKey[] = ['regular', 'medium', 'large', 'mansion', 'office', 'mall', 'fab', 'hub'];
+/** window event the 3D "add the next building" tag fires, with the key as `detail`; the story sets the picker */
+export const ENERGY_EVENT = 'pax:energy';
 /**
  * Electricity per month (kWh), smallest to largest.
  *  regular  Meralco's typical household

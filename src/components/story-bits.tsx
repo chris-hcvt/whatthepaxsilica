@@ -1,8 +1,9 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { PH_CAPAS, PH_MANILA, PH_PATH, PH_VIEWBOX } from '../content/ph-outline';
 import type { ReactNode } from 'react';
 import { useDeck } from '../deck';
 import { Cite } from './bits';
+import { usePhone } from './usePhone';
 import { ENERGY, ENERGY_KEYS, HOME_KEYS, HOME_LOTS, REFS, WATER_KEYS, WATER_MLD, billOf, fitTimes, homesOf, type EnergyKey, type HomeKey, type RefKey, type WaterKey } from '../content/story';
 
 const MALLS: RefKey[] = ['moa', 'glorietta', 'northedsa', 'megamall', 'smpampanga', 'smclark'];
@@ -68,16 +69,26 @@ export function EnergyPicker({
   kwh,
   peso,
   detail,
+  tap,
+  next,
+  restart,
   mark = '*',
 }: {
   names: Record<EnergyKey, ReactNode>;
   kwh: (n: number) => ReactNode;
   peso: (n: number) => ReactNode;
   detail: (k: EnergyKey, homes: number) => ReactNode;
+  /** badge on the row that comes next ("Tap to add") */
+  tap: ReactNode;
+  /** the button under the detail that adds the next building */
+  next: (name: ReactNode) => ReactNode;
+  /** the same button once the zone is shown */
+  restart: ReactNode;
   /** footnote mark on the zone's bill: it is an illustration at household rates */
   mark?: string;
 }) {
   const { energyKey: on, setEnergyKey: setOn } = useDeck();
+  const nextKey = ENERGY_KEYS[ENERGY_KEYS.indexOf(on) + 1];
   const max = ENERGY.hub;
   const rowsRef = useRef<HTMLDivElement>(null);
   // phones show the rows as a sideways strip: keep the chosen one in view (without moving the page)
@@ -94,10 +105,11 @@ export function EnergyPicker({
         {ENERGY_KEYS.map((k) => {
           const v = ENERGY[k];
           return (
-            <button key={k} type="button" role="radio" aria-checked={on === k} className={`energy-row e-${k} ${on === k ? 'on' : ''}`} onClick={() => setOn(k)}>
+            <button key={k} type="button" role="radio" aria-checked={on === k} className={`energy-row e-${k} ${on === k ? 'on' : ''} ${k === nextKey ? 'next' : ''}`} onClick={() => setOn(k)}>
               <span className="energy-name">
                 <b>{names[k]}</b>
                 <small>{kwh(v)}</small>
+                {k === nextKey && <span className="energy-tap">{tap}</span>}
               </span>
               <span className="energy-bill">
                 {peso(billOf(v))}
@@ -114,6 +126,9 @@ export function EnergyPicker({
         <div className="energy-detail-kwh">{kwh(ENERGY[on])}</div>
         {detail(on, homesOf(ENERGY[on]))}
       </div>
+      <button type="button" className={`energy-next ${nextKey ? '' : 'again'}`} onClick={() => setOn(nextKey ?? ENERGY_KEYS[0])}>
+        {nextKey ? next(names[nextKey]) : restart}
+      </button>
     </div>
   );
 }
@@ -170,8 +185,25 @@ export function FillOptions({ items }: { items: { icon: 'sun' | 'flame' | 'grid'
   );
 }
 
-/** A clearly marked note on how to read a comparison (assumptions, illustration only, etc.). */
+/**
+ * A clearly marked note on how to read a comparison (assumptions, illustration only, etc.).
+ * On phones it starts folded to one line, so the card leaves room for the 3D; a tap opens it.
+ */
 export function Assumption({ title, children }: { title: ReactNode; children: ReactNode }) {
+  const phone = usePhone();
+  const [open, setOpen] = useState(false);
+  if (phone && !open)
+    return (
+      <button type="button" className="assume assume-fold" aria-expanded="false" onClick={() => setOpen(true)}>
+        <span className="assume-ico" aria-hidden="true">
+          i
+        </span>
+        <b>{title}</b>
+        <span className="assume-open" aria-hidden="true">
+          ＋
+        </span>
+      </button>
+    );
   return (
     <div className="assume" role="note">
       <span className="assume-ico" aria-hidden="true">

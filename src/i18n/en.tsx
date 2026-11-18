@@ -47,6 +47,8 @@ export const en: Locale = {
     fullReport: 'Full report',
     backToStory: '← Back to the story',
     learnMore: 'Learn more',
+    hideText: 'Hide text',
+    showText: 'Show text',
     scrollCue: 'Scroll to start',
     chooseLanguage: 'Choose your language',
     moreLanguagesSoon: 'More languages coming soon',
@@ -97,6 +99,24 @@ export const en: Locale = {
     outside: (km) => `${km} km outside the edge`,
     refCount: (n, name, kind) => (kind === 'mall' ? `${n} whole ${name} sites, to scale` : n === 1 ? `1 whole ${name}, to scale` : `${n} whole ${name}s, to scale`),
     levelled: 'Leveled for comparison (illustration)',
+    pop: {
+      sat: (km) => `Satellite view, about ${km} km across. The ring marks the village.`,
+      satCredit: 'Image: contains modified Copernicus Sentinel-2 data (2026), the same image as the 3D map.',
+      photo: (place, year, km) => `${place}, Capas (${year}), taken about ${km} km from the village point.`,
+      photoBy: 'Photo:',
+      maps: 'See it on Google Maps',
+      close: 'Close',
+      people: { 'Aeta Hungey': 'Aeta Hungey families', farmers: 'Farming families', 'Ayta Mag-antsi': 'Ayta Mag-antsi families' },
+      barangay: (b) => `Barangay ${b}`,
+      industry: {
+        caption: [
+          'Example: chips start as silicon wafers like this one. Each small square becomes one chip.',
+          'Example: a high-tech factory line, where machines place tiny parts on circuit boards (Megger, United Kingdom).',
+          'Example: nickel ore on its way to a processing plant at Taganito, Surigao del Norte (2016).',
+        ],
+        alt: ['A 12-inch silicon wafer covered in rows of chips', 'Circuit-board assembly machines in a row on a factory floor', 'Long conveyor belts carrying nickel ore across a mine site'],
+      },
+    },
     fx: {
       manila: 'Manila · about 75 km',
       icons: ['Chips & AI parts', 'High-tech factories', 'Mineral processing'],
@@ -123,6 +143,7 @@ export const en: Locale = {
         peso: (n) => `₱${bigNum(n)}`,
         homes: (n) => (n < 1.5 ? 'One typical home' : `= ${homesNum(n)} typical homes`),
         zoneNote: '*Illustration only, not the zone’s real bill',
+        add: (name) => `＋ Tap to add: ${name}`,
       },
       gauge: {
         need: '3 GW needed at full development (BCDA estimate)',

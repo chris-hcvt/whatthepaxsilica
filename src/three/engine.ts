@@ -123,10 +123,58 @@ export class Engine {
     else this.camera.clearViewOffset();
     this.camera.updateProjectionMatrix();
     if (this.mode === 'site' && this.site && this.lastState) {
-      const { position, target } = this.site.view(this.lastState.view, this.visibleAspect(), this.visibleFrac());
+      const { position, target } = this.siteView(this.lastState.view);
       this.flyTo(position, target, 0.9);
     }
     this.dirty = true;
+  }
+
+  /** the site's camera for a view; views that list places to keep in sight are fitted to the open part of the screen */
+  private siteView(v: Extract<SceneState, { kind: 'site' }>['view']) {
+    const r = this.site!.view(v, this.visibleAspect(), this.visibleFrac());
+    return r.fit ? this.fitTo(r.position, r.target, r.fit) : r;
+  }
+
+  /**
+   * Move the target and distance (same viewing direction) until every point projects inside the part of the
+   * screen the text leaves open, with room for the labels above the pins.
+   */
+  private fitTo(position: THREE.Vector3, target: THREE.Vector3, points: THREE.Vector3[]) {
+    const cam = this.camera.clone();
+    const dir = position.clone().sub(target).normalize();
+    let dist = position.distanceTo(target);
+    const t = target.clone();
+    const { w, h } = this;
+    // room for the village labels (about 120 px wide, drawn above their pins); less on phones
+    const side = w < 600 ? 44 : 70;
+    const m = { l: this.insets.left + side, r: side, t: (this.insets.top ?? 0) + (w < 600 ? 50 : 70), b: this.insets.bottom + 30 };
+    const winW = Math.max(80, w - m.l - m.r);
+    const winH = Math.max(80, h - m.t - m.b);
+    const v = new THREE.Vector3();
+    for (let it = 0; it < 6; it++) {
+      cam.position.copy(t).addScaledVector(dir, dist);
+      cam.lookAt(t);
+      cam.updateMatrixWorld();
+      let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+      for (const p of points) {
+        v.copy(p).project(cam);
+        const px = (v.x * 0.5 + 0.5) * w;
+        const py = (-v.y * 0.5 + 0.5) * h;
+        x0 = Math.min(x0, px); x1 = Math.max(x1, px);
+        y0 = Math.min(y0, py); y1 = Math.max(y1, py);
+      }
+      // re-centre: shift the target by the pixel offset, converted to km at the target's distance
+      const kmPerPx = (2 * dist * Math.tan(THREE.MathUtils.degToRad(cam.fov / 2))) / h;
+      const dx = (x0 + x1) / 2 - (m.l + winW / 2);
+      const dy = (y0 + y1) / 2 - (m.t + winH / 2);
+      const right = new THREE.Vector3().setFromMatrixColumn(cam.matrixWorld, 0);
+      const up = new THREE.Vector3().setFromMatrixColumn(cam.matrixWorld, 1);
+      t.addScaledVector(right, dx * kmPerPx).addScaledVector(up, -dy * kmPerPx);
+      // and scale the distance so the spread fills the open window
+      const s = Math.max((x1 - x0) / winW, (y1 - y0) / winH);
+      dist *= THREE.MathUtils.clamp(s, 0.6, 2.5);
+    }
+    return { target: t, position: t.clone().addScaledVector(dir, dist) };
   }
 
   private visibleAspect() {
@@ -191,7 +239,7 @@ export class Engine {
     this.controls.autoRotate = !!state.spin && !this.reducedMotion && !this.lite;
     site.setLayers(this.layers(state, opts), opts.labels, this.reducedMotion);
     this.lastState = state;
-    const { position, target } = site.view(state.view, this.visibleAspect(), this.visibleFrac());
+    const { position, target } = this.siteView(state.view);
     if (!this.flownIn) {
       this.flownIn = true;
       this.controls.target.copy(target);
@@ -208,7 +256,7 @@ export class Engine {
       this.site.setLayers(this.layers(state, opts), opts.labels, this.reducedMotion);
       // the lineup's framing follows the chosen row: re-aim the camera when it changes
       if (state.view === 'lineup' && this.mode === 'site') {
-        const { position, target } = this.site.view(state.view, this.visibleAspect(), this.visibleFrac());
+        const { position, target } = this.siteView(state.view);
         this.flyTo(position, target, 1.6);
       }
       this.dirty = true;

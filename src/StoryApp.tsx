@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { DeckContext, type DeckState } from './deck';
-import { STEPS, CHAPTERS, type RefKey, type HomeKey, type WaterKey, type EnergyKey, type Chapter } from './content/story';
+import { STEPS, CHAPTERS, ENERGY_EVENT, ENERGY_KEYS, type RefKey, type HomeKey, type WaterKey, type EnergyKey, type Chapter } from './content/story';
 import { LOCALES, initialLang, saveLang, savedLang, urlLang, type LangCode } from './i18n';
 import { Stage } from './components/Stage';
 import { MapLayer, DropControls } from './components/DropMap';
@@ -12,17 +12,17 @@ import type { Insets } from './three/engine';
 const prefersReduced = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
 const MAP_STEP = STEPS.findIndex((s) => s.kind === 'map');
 
-function useInsets(active: number): Insets {
+function useInsets(active: number, folded: string | null): Insets {
   const calc = () => {
     const w = window.innerWidth;
     const h = window.innerHeight;
     if (w >= 900) return { left: Math.round(Math.min(520, w * 0.4) + 40), bottom: 0, top: 60 };
-    // phones: the card covers the bottom; frame the 3D in what is left above it (tall cards leave less)
+    // phones: the card covers the bottom; frame the 3D in what is left above it (short or folded cards leave more)
     let bottom = h * 0.46;
     const step = STEPS[active];
     if (step?.kind === 'card') {
       const card = document.getElementById(step.id)?.querySelector<HTMLElement>('.card');
-      if (card) bottom = Math.min(h * 0.74, Math.max(bottom, card.offsetHeight + h * 0.05 + 8));
+      if (card) bottom = Math.min(h * 0.74, Math.max(h * 0.2, card.offsetHeight + h * 0.04 + 8));
     }
     return { left: 0, bottom: Math.round(bottom), top: 56 };
   };
@@ -30,7 +30,7 @@ function useInsets(active: number): Insets {
   useEffect(() => {
     const next = calc();
     setIns((cur) => (cur.left === next.left && cur.bottom === next.bottom && cur.top === next.top ? cur : next));
-  }, [active]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [active, folded]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     let lastW = window.innerWidth;
     const onR = () => {
@@ -56,15 +56,27 @@ export default function StoryApp() {
   const [lang, setLang] = useState<LangCode>(initialLang);
   const [langOpen, setLangOpen] = useState(() => !urlLang() && !savedLang());
   const [active, setActive] = useState(0);
+  /** the card folded to its title on a phone (one at a time; a new step opens with its text) */
+  const [folded, setFolded] = useState<string | null>(null);
+  useEffect(() => setFolded(null), [active]);
   const [refKey, setRefKey] = useState<RefKey>('moa');
   const [homeKey, setHomeKey] = useState<HomeKey>('regular');
   const [waterKey, setWaterKey] = useState<WaterKey>('high');
   const [energyKey, setEnergyKey] = useState<EnergyKey>('regular');
+  // the 3D "+ next building" tag
+  useEffect(() => {
+    const on = (e: Event) => {
+      const k = (e as CustomEvent<EnergyKey>).detail;
+      if (ENERGY_KEYS.includes(k)) setEnergyKey(k);
+    };
+    window.addEventListener(ENERGY_EVENT, on);
+    return () => window.removeEventListener(ENERGY_EVENT, on);
+  }, []);
   const [dropCenter, setDropCenterState] = useState<LL>([121.0239, 14.5556]);
   const [dropLabel, setDropLabel] = useState('makati');
   const [drawer, setDrawer] = useState<{ open: boolean; hl: string | null }>({ open: false, hl: null });
   const [copied, setCopied] = useState(false);
-  const insets = useInsets(active);
+  const insets = useInsets(active, folded);
   const reduced = useMemo(prefersReduced, []);
   const L = LOCALES[lang];
 
@@ -316,16 +328,22 @@ export default function StoryApp() {
             );
           return (
             <section key={s.id} className={`step ${s.kind === 'map' ? 'step-map' : ''} ${s.id === 'size-compare' ? 'tall' : ''} ${active === i ? 'is-active' : ''}`} data-step={i} id={s.id}>
-              <div className={`card ${active === i ? 'active' : ''}`}>
+              <div className={`card ${active === i ? 'active' : ''} ${folded === s.id ? 'folded' : ''}`}>
                 {s.chapter && pos && (
                   <div className="card-meta">
                     <span className="card-chap">{L.chapters[s.chapter]}</span>
                     <span className="card-count">{L.ui.stepOf(pos.k, pos.n)}</span>
+                    {/* phones: fold the card to its title to see the whole 3D view */}
+                    <button type="button" className="card-fold" aria-expanded={folded !== s.id} aria-controls={`${s.id}-body`} onClick={() => setFolded(folded === s.id ? null : s.id)}>
+                      {folded === s.id ? L.ui.showText : L.ui.hideText}
+                    </button>
                   </div>
                 )}
                 {t.kicker && <div className="kicker">{t.kicker}</div>}
-                <h2 className="card-title">{t.title}</h2>
-                <div className="card-body">
+                <h2 className="card-title" onClick={folded === s.id ? () => setFolded(null) : undefined}>
+                  {t.title}
+                </h2>
+                <div className="card-body" id={`${s.id}-body`}>
                   {t.body}
                   {s.kind === 'map' && <DropControls />}
                 </div>

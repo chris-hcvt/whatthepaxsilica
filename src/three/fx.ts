@@ -3,6 +3,7 @@ import { outerRing, pointInRing, ringCentroid, type LL } from './geo';
 import type { SiteScene } from './site';
 import { HectareFx, type HomeKey } from './hectare';
 import { LineupFx, type BillLabels } from './lineup';
+import { INDUSTRY_PHOTOS, PHOTOS } from '../content/photos';
 import { GaugeFx, type GaugeLabels } from './gauge';
 import type { EnergyKey } from '../content/power';
 import { RESERVOIR_HA } from '../content/story';
@@ -27,6 +28,17 @@ export type Fx =
   | 'gauge'
   | 'water'
   | 'reservoir';
+
+/** a DOM label anchored above a screen point, for the shared layout pass (site.updateLabels) */
+export interface LabelItem {
+  el: HTMLElement;
+  x: number;
+  y: number;
+  /** lower is placed first */
+  prio: number;
+  /** 'hide': skip it where it would overlap; 'move': always show it, shifted up out of the way */
+  mode: 'hide' | 'move';
+}
 
 export interface FxLabels {
   manila: string;
@@ -78,6 +90,8 @@ const ICONS = {
 const MANILA: LL = [120.9822, 14.5995];
 
 export class SiteFx {
+  /** the industry tags' words, for their photo pop-ups */
+  private iconTitles: [string, string, string] = ['', '', ''];
   private active = new Set<Fx>();
   private labels: FxLabel[] = [];
   private t = 0;
@@ -337,7 +351,11 @@ export class SiteFx {
     const s = this.site;
     this.addLabel('manila', this.manilaEnd, 0.35, 'fx-manila', '');
     const pts: [number, number][] = [this.hubPoint(-2.2, 0.9), this.hubPoint(0.2, -0.2), this.hubPoint(2.2, -1.0)];
-    (['chip', 'factory', 'mineral'] as const).forEach((ic, i) => this.addLabel('icons', pts[i], 0.55, `fx-icon bob${i}`, ICONS[ic]));
+    (['chip', 'factory', 'mineral'] as const).forEach((ic, i) => {
+      const l = this.addLabel('icons', pts[i], 0.55, `fx-icon bob${i}`, ICONS[ic]);
+      // hover or tap for an example photo of that kind of industry
+      s.pop.attach(l.el, () => s.industryPop(i as 0 | 1 | 2, this.iconTitles[i], PHOTOS[INDUSTRY_PHOTOS[i]]));
+    });
     this.addLabel('icons', this.hubPoint(0.2, 1.6), 0.25, 'fx-tag', '');
     this.addLabel('lease', this.hubPoint(0, 0), 0.45, 'fx-lease', '');
     const qs: [number, number][] = [this.hubPoint(-2.0, 0.6), this.hubPoint(0.4, -0.4), this.hubPoint(2.3, -1.1)];
@@ -393,6 +411,7 @@ export class SiteFx {
     by('manila')[0].el.innerHTML = `<span>${t.manila}</span>`;
     const icons = by('icons');
     icons.slice(0, 3).forEach((l, i) => (l.el.innerHTML = `${[ICONS.chip, ICONS.factory, ICONS.mineral][i]}<span>${t.icons[i]}</span>`));
+    this.iconTitles = t.icons;
     icons[3].el.innerHTML = `<span>${t.noDataCentres}</span>`;
     by('lease')[0].el.innerHTML = `${ICONS.key}<span>${t.lease}</span>`;
     by('unknowns').forEach((l, i) => (l.el.innerHTML = `${ICONS.q}<span>${t.unknowns[i]}</span>`));
@@ -511,11 +530,13 @@ export class SiteFx {
     return 1;
   }
 
-  updateLabels(camera: THREE.Camera, w: number, h: number) {
+  /** places the effect modules' own labels; returns this layer's labels for the site's shared layout pass */
+  updateLabels(camera: THREE.Camera, w: number, h: number): LabelItem[] {
     this.hectare.updateLabels(camera, w, h);
     this.lineup.updateLabels(camera, w, h);
     this.gauge.updateLabels(camera, w, h);
     const v = new THREE.Vector3();
+    const out: LabelItem[] = [];
     for (const l of this.labels) {
       if (!this.active.has(l.key)) {
         if (l.el.style.display !== 'none') l.el.style.display = 'none';
@@ -530,9 +551,10 @@ export class SiteFx {
         l.el.style.display = 'none';
         continue;
       }
-      l.el.style.display = '';
-      l.el.style.transform = `translate(${((v.x * 0.5 + 0.5) * w).toFixed(1)}px, ${((-v.y * 0.5 + 0.5) * h).toFixed(1)}px) translate(-50%, -100%)`;
+      // the chapter's own tags: always shown, nudged apart when they would overlap
+      out.push({ el: l.el, x: (v.x * 0.5 + 0.5) * w, y: (-v.y * 0.5 + 0.5) * h, prio: 0.5, mode: 'move' });
     }
+    return out;
   }
 
   hideLabels() {

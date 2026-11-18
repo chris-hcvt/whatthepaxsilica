@@ -134,8 +134,11 @@ export class GaugeFx {
         continue;
       }
       l.el.style.display = '';
-      const anchor = l.side > 0 ? 'translate(8px, -50%)' : 'translate(calc(-100% - 8px), -50%)';
-      l.el.style.transform = `translate(${((v.x * 0.5 + 0.5) * w).toFixed(1)}px, ${((-v.y * 0.5 + 0.5) * h).toFixed(1)}px) ${anchor}`;
+      // beside the tube, but never past the screen edge (phones): slide in and overlap the glass if needed
+      const lw = l.el.offsetWidth;
+      const px = (v.x * 0.5 + 0.5) * w;
+      const left = Math.min(Math.max(l.side > 0 ? px + 8 : px - 8 - lw, 6), w - 6 - lw);
+      l.el.style.transform = `translate(${left.toFixed(1)}px, ${((-v.y * 0.5 + 0.5) * h).toFixed(1)}px) translate(0, -50%)`;
     }
   }
 

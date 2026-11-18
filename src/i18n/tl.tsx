@@ -47,6 +47,8 @@ export const tl: Locale = {
     fullReport: 'Buong ulat',
     backToStory: '← Bumalik sa kuwento',
     learnMore: 'Alamin pa',
+    hideText: 'Itago ang teksto',
+    showText: 'Ipakita ang teksto',
     scrollCue: 'Mag-scroll para magsimula',
     chooseLanguage: 'Piliin ang wika',
     moreLanguagesSoon: 'Darating pa ang ibang wika',
@@ -97,6 +99,24 @@ export const tl: Locale = {
     outside: (km) => `${km} km sa labas ng gilid`,
     refCount: (n, name, kind) => (kind === 'mall' ? `${n} buong ${name}, ayon sa tunay na sukat` : `${n} buong ${name}, ayon sa tunay na sukat`),
     levelled: 'Pinatag para maikumpara (paglalarawan)',
+    pop: {
+      sat: (km) => `Kuha mula sa satellite, mga ${km} km ang lapad. Ang bilog ang tanda ng sitio.`,
+      satCredit: 'Larawan: may binagong datos ng Copernicus Sentinel-2 (2026), kapareho ng larawan sa 3D na mapa.',
+      photo: (place, year, km) => `${place}, Capas (${year}), kinunan mga ${km} km mula sa tanda ng sitio.`,
+      photoBy: 'Larawan:',
+      maps: 'Tingnan sa Google Maps',
+      close: 'Isara',
+      people: { 'Aeta Hungey': 'Mga pamilyang Aeta Hungey', farmers: 'Mga pamilyang magsasaka', 'Ayta Mag-antsi': 'Mga pamilyang Ayta Mag-antsi' },
+      barangay: (b) => `Barangay ${b}`,
+      industry: {
+        caption: [
+          'Halimbawa: nagsisimula ang chips bilang silicon wafer na tulad nito. Bawat maliit na parisukat ay magiging isang chip.',
+          'Halimbawa: linya sa isang high-tech na pabrika, kung saan naglalagay ang mga makina ng maliliit na piyesa sa circuit board (Megger, United Kingdom).',
+          'Halimbawa: nickel ore na papunta sa planta ng pagpoproseso sa Taganito, Surigao del Norte (2016).',
+        ],
+        alt: ['Isang 12-pulgadang silicon wafer na puno ng hanay ng chips', 'Mga makinang pang-assemble ng circuit board na nakahanay sa pabrika', 'Mahahabang conveyor na nagdadala ng nickel ore sa minahan'],
+      },
+    },
     fx: {
       manila: 'Maynila · mga 75 km',
       icons: ['Chips at piyesa ng AI', 'High-tech na pabrika', 'Pagpoproseso ng mineral'],
@@ -123,6 +143,7 @@ export const tl: Locale = {
         peso: (n) => `₱${bigNum(n, 'milyon', 'bilyon')}`,
         homes: (n) => (n < 1.5 ? 'Isang karaniwang bahay' : `= ${homesNum(n, 'milyong')} karaniwang bahay`),
         zoneNote: '*Paglalarawan lang, hindi tunay na singil ng zone',
+        add: (name) => `＋ Pindutin: ${name}`,
       },
       gauge: {
         need: '3 GW ang kailangan kapag buo na (tantiya ng BCDA)',
