@@ -2070,17 +2070,41 @@ details.more p {
   }
   .step {
     min-height: 105vh;
+    /* the visible page, with the browser's address and tool bars showing (vh is the page without them,
+       which pushed the bottom of each card under the bars on real phones) */
+    min-height: 100svh;
     align-items: flex-end;
     /* cards sit at the bottom; a tall card grows upward (over the 3D) instead of off the bottom of the screen */
-    padding: calc(var(--bar) + 10px) var(--gutter) 5vh;
+    padding: calc(var(--bar) + 10px) var(--gutter) calc(12px + env(safe-area-inset-bottom, 0px));
   }
   .step.tall {
     min-height: 105vh;
+    min-height: 100svh;
   }
   .card {
     width: 100%;
     padding: 18px 18px;
     opacity: 0.7;
+    /* never more than about 3/5 of the visible page: the 3D keeps the top; longer text scrolls in the card */
+    max-height: 62vh;
+    max-height: 62svh;
+    overflow-y: auto;
+  }
+  /* more text below: a fade and an arrow at the bottom edge of the card */
+  .card.more-below::after {
+    content: '▾';
+    position: sticky;
+    bottom: -18px;
+    display: block;
+    height: 40px;
+    margin: -40px -18px -18px;
+    padding-top: 16px;
+    background: linear-gradient(rgba(11, 14, 19, 0), rgba(11, 14, 19, 0.96) 70%);
+    color: var(--amber);
+    font-size: 14px;
+    line-height: 1;
+    text-align: center;
+    pointer-events: none;
   }
   .hero {
     padding-top: 40vh;
@@ -2367,6 +2391,26 @@ html.snap-page {
 }
 .full-head {
   padding-top: 8px;
+}
+/* desktop: a reading section fills the screen under the top bar, its content centred top to bottom
+   (short sections like "How many people would be moved?" no longer leave an empty band underneath) */
+@media (min-width: 900px) {
+  .full {
+    min-height: calc(100vh - var(--bar));
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding-top: 48px;
+    padding-bottom: 56px;
+    scroll-snap-align: start;
+  }
+  .full-inner {
+    width: 100%;
+  }
+  .full .snap,
+  .full .full-head {
+    scroll-snap-align: none;
+  }
 }
 .pc-col,
 .sc-cell,

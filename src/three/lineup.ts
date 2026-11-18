@@ -205,7 +205,8 @@ export class LineupFx {
     const right = this.ox + (last.x + last.w / 2) / 1000;
     const maxH = Math.max(...upto.map((i) => i.h)) / 1000;
     const maxD = Math.max(...upto.map((i) => i.d)) / 1000;
-    const y = this.site.heightAt(this.ox, this.oz);
+    // the lineup stands on the levelled zone: use the final level, not the ground mid-way through levelling
+    const y = this.site.levelHeight;
     return { cx: (left + right) / 2, cz: this.oz, y, span: right - left, maxH, maxD };
   }
 
@@ -234,7 +235,8 @@ export class LineupFx {
   }
 
   place() {
-    const y = this.site.heightAt(this.ox + this.length / 2, this.oz);
+    // on the levelled zone (the step levels it as it starts; heightAt would catch it half-way and bury the line)
+    const y = this.site.levelHeight;
     for (const it of this.items) {
       it.group.position.set(this.ox + it.x / 1000, y + 0.0002, this.oz);
       const e = it.grow * it.grow * (3 - 2 * it.grow);
@@ -264,7 +266,7 @@ export class LineupFx {
       ld.needsUpdate = true;
     }
     const [hx, hz] = ringCentroid(this.site.hubXZ);
-    this.zonePos.set(hx, this.site.heightAt(hx, hz) + 0.3, hz);
+    this.zonePos.set(hx, this.site.levelHeight + 0.3, hz);
   }
 
   update(dt: number) {
@@ -356,7 +358,8 @@ export class LineupFx {
     if (edge) y -= 22;
     tag.classList.toggle('edge', edge);
     if (edge) x = w - 12;
-    y = Math.min(Math.max(y, 90), h - 60);
+    // above the story card on phones
+    y = Math.min(Math.max(y, 90), h - Math.max(60, this.site.insetBottom + 26));
     tag.style.display = '';
     tag.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) translate(${edge ? '-100%' : '-50%'}, -50%)`;
   }

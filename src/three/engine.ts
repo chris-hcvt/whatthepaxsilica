@@ -114,6 +114,7 @@ export class Engine {
     this.w = w;
     this.h = h;
     this.insets = insets;
+    if (this.site) this.site.insetBottom = insets.bottom;
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h;
     // shift the projection so the subject sits in the part of the screen not covered by text
@@ -198,6 +199,7 @@ export class Engine {
       .then(([data, dem, tex]) => {
         tex.anisotropy = Math.min(8, this.renderer.capabilities.getMaxAnisotropy());
         this.site = new SiteScene(data, dem, tex, this.labelLayer);
+        this.site.insetBottom = this.insets.bottom;
         this.site.lite = this.lite;
         this.onSiteProgress?.('ready');
         this.dirty = true;

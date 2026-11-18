@@ -113,8 +113,15 @@ export class GaugeFx {
   }
 
   update(dt: number) {
-    if (this.on && this.fill < 1) {
+    if (!this.on) return false;
+    if (this.fill < 1) {
       this.fill = Math.min(1, this.fill + dt / 1.2);
+      this.place();
+      return true;
+    }
+    // follow the ground while it changes (the zone un-levels after the lineup step)
+    const [x, z] = ringCentroid(this.site.hubXZ);
+    if (Math.abs(this.site.heightAt(x, z) + 0.01 - this.base.y) > 1e-5) {
       this.place();
       return true;
     }
@@ -123,7 +130,10 @@ export class GaugeFx {
 
   updateLabels(camera: THREE.Camera, w: number, h: number) {
     const v = new THREE.Vector3();
-    for (const l of this.labels) {
+    // placed from the top of the gauge down; on a narrow screen a label that would sit on another one drops below it
+    const placed: [number, number, number, number][] = [];
+    const order = [...this.labels].sort((a, b) => b.mw - a.mw);
+    for (const l of order) {
       if (!this.on) {
         if (l.el.style.display !== 'none') l.el.style.display = 'none';
         continue;
@@ -136,9 +146,17 @@ export class GaugeFx {
       l.el.style.display = '';
       // beside the tube, but never past the screen edge (phones): slide in and overlap the glass if needed
       const lw = l.el.offsetWidth;
+      const lh = l.el.offsetHeight;
       const px = (v.x * 0.5 + 0.5) * w;
       const left = Math.min(Math.max(l.side > 0 ? px + 8 : px - 8 - lw, 6), w - 6 - lw);
-      l.el.style.transform = `translate(${left.toFixed(1)}px, ${((-v.y * 0.5 + 0.5) * h).toFixed(1)}px) translate(0, -50%)`;
+      let cy = (-v.y * 0.5 + 0.5) * h;
+      for (let k = 0; k < 4; k++) {
+        const hit = placed.find((p) => left < p[2] && left + lw > p[0] && cy - lh / 2 < p[3] && cy + lh / 2 > p[1]);
+        if (!hit) break;
+        cy = hit[3] + lh / 2 + 3;
+      }
+      placed.push([left - 2, cy - lh / 2 - 2, left + lw + 2, cy + lh / 2 + 2]);
+      l.el.style.transform = `translate(${left.toFixed(1)}px, ${cy.toFixed(1)}px) translate(0, -50%)`;
     }
   }
 

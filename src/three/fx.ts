@@ -530,6 +530,14 @@ export class SiteFx {
     return 1;
   }
 
+  /** where the chapter's tags hang (near the zone only), so a phone camera can keep them in view */
+  labelAnchors(centre: THREE.Vector3, withinKm = 6): THREE.Vector3[] {
+    return this.labels
+      .filter((l) => this.active.has(l.key) && l.key !== 'manila')
+      .map((l) => new THREE.Vector3(l.xz[0], this.site.heightAt(l.xz[0], l.xz[1]) + l.lift, l.xz[1]))
+      .filter((p) => Math.hypot(p.x - centre.x, p.z - centre.z) < withinKm);
+  }
+
   /** places the effect modules' own labels; returns this layer's labels for the site's shared layout pass */
   updateLabels(camera: THREE.Camera, w: number, h: number): LabelItem[] {
     this.hectare.updateLabels(camera, w, h);

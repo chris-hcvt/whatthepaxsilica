@@ -59,6 +59,23 @@ export default function StoryApp() {
   /** the card folded to its title on a phone (one at a time; a new step opens with its text) */
   const [folded, setFolded] = useState<string | null>(null);
   useEffect(() => setFolded(null), [active]);
+  // phones: a card taller than its space scrolls; show a fade and an arrow while there is more below
+  useEffect(() => {
+    const step = STEPS[active];
+    const card = step && document.getElementById(step.id)?.querySelector<HTMLElement>('.card');
+    if (!card) return;
+    const check = () => card.classList.toggle('more-below', card.scrollHeight - card.clientHeight - card.scrollTop > 8);
+    check();
+    card.addEventListener('scroll', check, { passive: true });
+    const ro = new ResizeObserver(check);
+    ro.observe(card);
+    for (const c of Array.from(card.children)) ro.observe(c);
+    return () => {
+      card.removeEventListener('scroll', check);
+      ro.disconnect();
+      card.classList.remove('more-below');
+    };
+  }, [active, folded, lang]);
   const [refKey, setRefKey] = useState<RefKey>('moa');
   const [homeKey, setHomeKey] = useState<HomeKey>('regular');
   const [waterKey, setWaterKey] = useState<WaterKey>('high');

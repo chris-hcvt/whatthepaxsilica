@@ -104,6 +104,8 @@ export class SiteScene {
   private labelSizes = new WeakMap<HTMLElement, { w: number; h: number; text: string }>();
   /** picture pop-ups for village labels and the plan's industry tags */
   readonly pop: Popover;
+  /** pixels at the bottom of the screen covered by the story card (phones), kept up to date by the engine */
+  insetBottom = 0;
   private popT: SiteLabels | null = null;
   readonly labelLayer: HTMLElement;
   readonly hubXZ: [number, number][];
@@ -274,6 +276,11 @@ export class SiteScene {
       }
     }
     this.hFlat = n ? sum / n : 0;
+  }
+
+  /** the height the zone is levelled to (scene units): where things built on the levelled zone stand */
+  get levelHeight() {
+    return this.hFlat;
   }
 
   /** bilinear terrain height (scene units) at local x/z (km), including any levelling */
@@ -456,7 +463,8 @@ export class SiteScene {
       this.sitioGroup.add(g);
       this.sitioXZ.set(s.name, { x, z, height, group: g });
       const label = this.addLabel(s.name, new THREE.Vector3(x, 0, z), `label3d sitio${s.insideHub ? ' inside' : ''}${key ? ' key' : ''}`);
-      label.rank = key ? 0 : FIT_SITIOS.includes(s.name) ? 1 : 2;
+      // the named villages are placed before the chapter's tags (0.5), which move aside instead
+      label.rank = key ? 0 : FIT_SITIOS.includes(s.name) ? 0.4 : 2;
       this.sitioLabels.set(s.name, label);
       this.pop.attach(label.el, () => this.placePop(s));
     }
@@ -682,6 +690,12 @@ export class SiteScene {
    * (the card's height changes from step to step, and with folding).
    */
   private phoneFit(v: SiteView): THREE.Vector3[] | undefined {
+    if (v === 'water') {
+      // the square and the tallest column it can show (a month at the highest estimate), with its day label
+      const c = this.fx.hectareTarget();
+      const top = this.fx.hectare.waterMonthKm;
+      return [-1, 1].flatMap((sx) => [-1, 1].flatMap((sz) => [0, top].map((y) => c.clone().add(new THREE.Vector3(sx * 0.05, y, sz * 0.05)))));
+    }
     if (v === 'hectare') {
       // the 100-meter square, with a little height for the roofs
       const c = this.fx.hectareTarget();
@@ -692,6 +706,8 @@ export class SiteScene {
     const c = this.hubCenter;
     // room for the tags that float over the zone, and for the power gauge
     pts.push(c.clone().add(new THREE.Vector3(0, v === 'gauge' ? 2.5 : 0.45, 0)));
+    // and the chapter's own tags (river names, the reservoir note, the industry tags)
+    pts.push(...this.fx.labelAnchors(c));
     if (v === 'overview') pts.push(...this.nccXZ.map(([x, z]) => new THREE.Vector3(x, this.heightAt(x, z), z)));
     return pts;
   }
@@ -735,17 +751,21 @@ export class SiteScene {
       items.push({ el: l.el, x: (v.x * 0.5 + 0.5) * w, y: (-v.y * 0.5 + 0.5) * h, prio: l.rank ?? -1, mode: l.rank === undefined ? 'move' : 'hide' });
     }
     items.push(...this.fx.updateLabels(camera, w, h));
-    this.layoutLabels(items, w);
+    this.layoutLabels(items, w, h);
   }
 
   /**
    * One pass over every label anchored above a point: most important first; village names give way where they
-   * would overlap, the chapter's tags are shifted up instead, so nothing is drawn over anything else.
+   * would overlap, the chapter's tags move to the nearest free spot above or below (on the open part of the
+   * screen), so nothing is drawn over anything else.
    */
-  private layoutLabels(items: LabelItem[], screenW: number) {
+  private layoutLabels(items: LabelItem[], screenW: number, screenH: number) {
     items.sort((a, b) => a.prio - b.prio);
     const placed: [number, number, number, number][] = [];
-    const hits = (r: [number, number, number, number]) => placed.find((p) => r[0] < p[2] && r[2] > p[0] && r[1] < p[3] && r[3] > p[1]);
+    const overlaps = (r: [number, number, number, number]) => placed.some((p) => r[0] < p[2] && r[2] > p[0] && r[1] < p[3] && r[3] > p[1]);
+    // the open part of the screen: under the top bar, above the story card on phones
+    const top = 62;
+    const bottom = screenH - this.insetBottom - 4;
     for (const it of items) {
       const el = it.el;
       if (el.style.display === 'none') el.style.display = '';
@@ -755,22 +775,28 @@ export class SiteScene {
         size = { w: el.offsetWidth, h: el.offsetHeight, text };
         this.labelSizes.set(el, size);
       }
-      let y = it.y;
+      const sz = size;
       // keep long labels on screen (phones): slide them in from the edge
-      const x = size.w + 12 < screenW ? Math.min(Math.max(it.x, size.w / 2 + 6), screenW - size.w / 2 - 6) : it.x;
-      const rect = (): [number, number, number, number] => [x - size!.w / 2 - 2, y - size!.h - 2, x + size!.w / 2 + 2, y + 2];
-      let r = rect();
-      let hit = hits(r);
-      if (hit && it.mode === 'hide') {
+      const x = sz.w + 12 < screenW ? Math.min(Math.max(it.x, sz.w / 2 + 6), screenW - sz.w / 2 - 6) : it.x;
+      const rectAt = (y: number): [number, number, number, number] => [x - sz.w / 2 - 2, y - sz.h - 2, x + sz.w / 2 + 2, y + 2];
+      let y: number | null = it.y;
+      if (overlaps(rectAt(it.y))) {
+        if (it.mode === 'hide') y = null;
+        else {
+          // the nearest free spot just above or below a label in the way, still on the open part of the screen
+          const cands = placed
+            .filter((p) => x - sz.w / 2 < p[2] && x + sz.w / 2 > p[0])
+            .flatMap((p) => [p[1] - 1, p[3] + sz.h + 3])
+            .filter((c) => c - sz.h >= top && c <= bottom && !overlaps(rectAt(c)))
+            .sort((a, b) => Math.abs(a - it.y) - Math.abs(b - it.y));
+          y = cands.length ? cands[0] : null;
+        }
+      }
+      if (y === null) {
         el.style.display = 'none';
         continue;
       }
-      for (let k = 0; hit && k < 4; k++) {
-        y = hit[1] - 1;
-        r = rect();
-        hit = hits(r);
-      }
-      placed.push(r);
+      placed.push(rectAt(y));
       el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) translate(-50%, -100%)`;
     }
   }
