@@ -1,9 +1,9 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { PH_CAPAS, PH_MANILA, PH_PATH, PH_VIEWBOX } from '../content/ph-outline';
 import type { ReactNode } from 'react';
 import { useDeck } from '../deck';
 import { Cite } from './bits';
-import { HOME_KEYS, HOME_LOTS, REFS, fitTimes, type HomeKey, type RefKey } from '../content/story';
+import { ENERGY, ENERGY_KEYS, HOME_KEYS, HOME_LOTS, REFS, billOf, fitTimes, homesOf, type EnergyKey, type HomeKey, type RefKey } from '../content/story';
 
 const MALLS: RefKey[] = ['moa', 'glorietta', 'northedsa', 'megamall', 'smpampanga', 'smclark'];
 const DISTRICTS: RefKey[] = ['bgc', 'makaticbd', 'ortigas'];
@@ -55,6 +55,50 @@ export function HomePicker({ names, lot, count }: { names: Record<HomeKey, React
           </button>
         );
       })}
+    </div>
+  );
+}
+
+/**
+ * The electricity ladder, from one home to the whole zone. Bars are to scale (linear), so everything
+ * below the chip factory is a sliver next to the zone: that is the point.
+ */
+export function EnergyPicker({
+  names,
+  kwh,
+  peso,
+  detail,
+}: {
+  names: Record<EnergyKey, ReactNode>;
+  kwh: (n: number) => ReactNode;
+  peso: (n: number) => ReactNode;
+  detail: (k: EnergyKey, homes: number) => ReactNode;
+}) {
+  const [on, setOn] = useState<EnergyKey>('regular');
+  const max = ENERGY.hub;
+  return (
+    <div className="energy">
+      <div className="energy-rows" role="radiogroup">
+        {ENERGY_KEYS.map((k) => {
+          const v = ENERGY[k];
+          return (
+            <button key={k} type="button" role="radio" aria-checked={on === k} className={`energy-row e-${k} ${on === k ? 'on' : ''}`} onClick={() => setOn(k)}>
+              <span className="energy-name">
+                <b>{names[k]}</b>
+                <small>{kwh(v)}</small>
+              </span>
+              <span className="energy-bill">{peso(billOf(v))}</span>
+              <span className="energy-bar" aria-hidden="true">
+                <span style={{ width: `max(3px, ${(v / max) * 100}%)` }} />
+              </span>
+            </button>
+          );
+        })}
+      </div>
+      <div className="energy-detail" aria-live="polite">
+        <div className="energy-detail-kwh">{kwh(ENERGY[on])}</div>
+        {detail(on, homesOf(ENERGY[on]))}
+      </div>
     </div>
   );
 }

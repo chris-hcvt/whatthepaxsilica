@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { pointInRing, ringCentroid } from './geo';
 import type { SiteScene } from './site';
-import { HOME_LOTS, type HomeKey } from '../content/story';
+import { HOME_LOTS, WATER_DAY_M, type HomeKey } from '../content/story';
 import { buildHouse, facadeTexture, roofTexture } from './houses';
 
 /**
@@ -60,6 +60,16 @@ export class HectareFx {
   private treeTops: THREE.InstancedMesh;
   private trunks: THREE.InstancedMesh;
   private trees: { x: number; z: number; s: number; h: number; a: number }[] = [];
+  /** a month of the zone's water, poured on the square: rises one day at a time */
+  private water: THREE.Group;
+  private waterSides: THREE.Mesh;
+  private waterTop: THREE.Mesh;
+  private waterTex: THREE.CanvasTexture;
+  private days = 0;
+  /** seconds to wait before the water starts rising (lets the camera arrive first) */
+  private waterWait = 0;
+  private waterLabels: { el: HTMLDivElement; day: number; pos: THREE.Vector3 }[] = [];
+  private waterDayText: (day: number, meters: number) => string = (d, m) => `${d} · ${m} m`;
   private grid: THREE.LineSegments;
   private gridMat: THREE.ShaderMaterial;
   private home: HomeKey = 'regular';
@@ -70,7 +80,7 @@ export class HectareFx {
   private gridPlacedFlat = -1;
   private houseCells: { x: number; z: number; delay: number; i: number }[] = [];
   private liteMode = false;
-  show = { plot: false, court: false, homes: false, grid: false };
+  show = { plot: false, court: false, homes: false, grid: false, water: false };
 
   get lite() {
     return this.liteMode;
@@ -173,7 +183,32 @@ export class HectareFx {
     this.grid.renderOrder = 4;
     this.grid.frustumCulled = false;
 
-    this.group.add(this.plot, this.frame, this.court, this.beacon, this.ground, this.lots, this.walls, this.roofs, this.details, this.treeTops, this.trunks, this.grid);
+    // the water column: open 4-sided "box" (a square cylinder) with one band per day, and a lid
+    this.waterTex = dayBandTexture();
+    const sides = new THREE.CylinderGeometry(SIDE / Math.SQRT2, SIDE / Math.SQRT2, 1, 4, 1, true);
+    sides.rotateY(Math.PI / 4);
+    sides.translate(0, 0.5, 0);
+    this.waterSides = new THREE.Mesh(
+      sides,
+      new THREE.MeshLambertMaterial({ color: '#58b4ff', map: this.waterTex, transparent: true, opacity: 0.72, emissive: '#0b3a66', emissiveIntensity: 0.5, side: THREE.DoubleSide, depthWrite: false }),
+    );
+    const lid = new THREE.PlaneGeometry(SIDE, SIDE);
+    lid.rotateX(-Math.PI / 2);
+    this.waterTop = new THREE.Mesh(lid, new THREE.MeshLambertMaterial({ color: '#7cc6ff', transparent: true, opacity: 0.8, emissive: '#0d4f8a', emissiveIntensity: 0.45, depthWrite: false }));
+    this.water = new THREE.Group();
+    this.water.add(this.waterSides, this.waterTop);
+    this.water.renderOrder = 8;
+    this.waterSides.renderOrder = 8;
+    this.waterTop.renderOrder = 9;
+    for (const day of [0, 1, 7, 30]) {
+      const el = document.createElement('div');
+      el.className = `label3d fx ${day === 0 ? 'fx-waterday' : 'fx-watertick'}`;
+      el.style.display = 'none';
+      site.labelLayer.appendChild(el);
+      this.waterLabels.push({ el, day, pos: new THREE.Vector3() });
+    }
+
+    this.group.add(this.plot, this.frame, this.court, this.beacon, this.ground, this.lots, this.walls, this.roofs, this.details, this.treeTops, this.trunks, this.grid, this.water);
     site.scene.add(this.group);
 
     // the sun casts shadows in a box around the square (only while the close-up is on screen)
@@ -361,9 +396,13 @@ export class HectareFx {
   }
 
   /** which parts are on; `instant` skips the animations */
-  set(show: { plot: boolean; court: boolean; homes: boolean; grid: boolean }, instant: boolean) {
+  set(show: { plot: boolean; court: boolean; homes: boolean; grid: boolean; water: boolean }, instant: boolean) {
     const was = this.show;
     this.show = show;
+    if (show.water && !was.water) {
+      this.days = instant ? 30 : 0;
+      this.waterWait = instant ? 0 : 2.6;
+    }
     if (show.homes && (!was.homes || this.builtHome !== this.home)) {
       this.buildHomes();
       this.grow = instant || this.lite ? 1 : 0;
@@ -387,6 +426,8 @@ export class HectareFx {
     this.treeTops.visible = this.trunks.visible = close;
     this.grid.visible = grid;
     this.gridMat.uniforms.uReveal.value = this.reveal;
+    this.water.visible = this.show.water;
+    this.placeWater();
     // sun shadows only in the close-up (and not on slow devices)
     const shadows = close && !this.liteMode;
     const sun = this.site.sun;
@@ -549,9 +590,68 @@ export class HectareFx {
     this.trunks.instanceMatrix.needsUpdate = true;
   }
 
+  /** text for the water labels: a day counter and the 1 day / 1 week / 1 month marks */
+  setWaterLabels(day: (day: number, meters: number) => string, ticks: [string, string, string]) {
+    this.waterDayText = day;
+    this.waterLabels.forEach((l, i) => {
+      if (i > 0) l.el.innerHTML = `<span>${ticks[i - 1]}</span>`;
+    });
+    this.placeWater();
+  }
+
+  private placeWater() {
+    if (!this.show.water) return;
+    const base = this.padTop || this.site.heightAt(this.cx, this.cz);
+    const shown = Math.max(0.02, this.days);
+    const h = (shown * WATER_DAY_M) / 1000;
+    this.water.position.set(this.cx, base, this.cz);
+    this.waterSides.scale.set(1, h, 1);
+    this.waterTop.position.y = h;
+    this.waterTex.repeat.set(1, shown);
+    this.waterTex.offset.set(0, (1 - (shown % 1)) % 1);
+    const whole = Math.floor(this.days + 1e-6);
+    const day = this.waterLabels[0];
+    day.el.innerHTML = `<span>${this.waterDayText(Math.max(1, Math.ceil(this.days - 1e-6)), Math.round(Math.max(1, Math.ceil(this.days - 1e-6)) * WATER_DAY_M))}</span>`;
+    day.pos.set(this.cx, base + h + 0.012, this.cz);
+    for (const l of this.waterLabels.slice(1)) {
+      l.pos.set(this.x0 + SIDE + 0.004, base + (l.day * WATER_DAY_M) / 1000, this.z0 + SIDE);
+      l.el.dataset.on = whole >= l.day ? '1' : '';
+    }
+  }
+
+  updateLabels(camera: THREE.Camera, w: number, h: number) {
+    const v = new THREE.Vector3();
+    for (const l of this.waterLabels) {
+      const on = this.show.water && (l.day === 0 ? this.days > 0.05 : l.el.dataset.on === '1');
+      if (!on) {
+        if (l.el.style.display !== 'none') l.el.style.display = 'none';
+        continue;
+      }
+      v.copy(l.pos).project(camera);
+      if (v.z > 1 || Math.abs(v.x) > 1.1 || Math.abs(v.y) > 1.1) {
+        l.el.style.display = 'none';
+        continue;
+      }
+      l.el.style.display = '';
+      const anchor = l.day === 0 ? 'translate(-50%, -100%)' : 'translate(0, -50%)';
+      l.el.style.transform = `translate(${((v.x * 0.5 + 0.5) * w).toFixed(1)}px, ${((-v.y * 0.5 + 0.5) * h).toFixed(1)}px) ${anchor}`;
+    }
+  }
+
+  hideLabels() {
+    for (const l of this.waterLabels) l.el.style.display = 'none';
+  }
+
   /** returns true while animating */
   update(dt: number) {
     let moving = false;
+    if (this.show.water && this.days < 30) {
+      // wait for the camera, then a month in about 6 seconds (slow at first, faster as it piles up)
+      if (this.waterWait > 0) this.waterWait -= dt;
+      else this.days = Math.min(30, this.days + dt * (2 + this.days * 0.25));
+      this.placeWater();
+      moving = true;
+    }
     if (this.show.homes && this.grow < 1) {
       this.grow = Math.min(1, this.grow + dt / 1.5);
       this.placeHomes();
@@ -621,5 +721,26 @@ function courtTexture() {
   const t = new THREE.CanvasTexture(cv);
   t.colorSpace = THREE.SRGBColorSpace;
   t.anisotropy = 4;
+  return t;
+}
+
+/** one band per day of water: a thin bright line where each day starts */
+function dayBandTexture() {
+  const cv = document.createElement('canvas');
+  cv.width = 4;
+  cv.height = 64;
+  const g = cv.getContext('2d')!;
+  const grad = g.createLinearGradient(0, 0, 0, 64);
+  grad.addColorStop(0, '#ffffff');
+  grad.addColorStop(1, '#cfe6ff');
+  g.fillStyle = grad;
+  g.fillRect(0, 0, 4, 64);
+  g.fillStyle = '#ffffff';
+  g.fillRect(0, 62, 4, 2);
+  g.fillStyle = 'rgba(20, 60, 110, 0.45)';
+  g.fillRect(0, 60, 4, 2);
+  const t = new THREE.CanvasTexture(cv);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.colorSpace = THREE.SRGBColorSpace;
   return t;
 }

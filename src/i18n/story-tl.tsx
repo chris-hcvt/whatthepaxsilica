@@ -2,13 +2,14 @@ import type { StoryStep } from './types';
 import type { Chapter } from '../content/story';
 import { REFS, CITY_STATS, HUB_HA, HUB_COURTS, COURTS_PER_HECTARE } from '../content/story';
 import { Cite, CityBars, Timeline } from '../components/bits';
-import { BigNumber, Bullets, DotChart, HomePicker, ProsCons, RefPicker, ScoreCard } from '../components/story-bits';
+import { BigNumber, Bullets, DotChart, EnergyPicker, HomePicker, ProsCons, RefPicker, ScoreCard } from '../components/story-bits';
 
 export const chaptersTl: Record<Chapter, string> = {
   basics: 'Ang basics',
   plan: 'Ang plano',
   size: 'Gaano kalaki',
   people: 'Ang mga tao',
+  power: 'Kuryente at tubig',
   proscons: 'Pros at cons',
   benefit: 'Sino ang panalo?',
   next: 'Ano ang susunod',
@@ -22,6 +23,19 @@ const TAGS = {
   planned: 'Plano',
   reported: 'Iniulat',
   goal: 'Pangunahing layunin',
+};
+
+/** 3,110 · 10.2 milyon · 2.27 bilyon */
+const bigTl = (n: number) => {
+  const trim = (s: string) => s.replace(/\.0$/, '');
+  if (n >= 1e9) return `${trim((n / 1e9).toFixed(n >= 1e10 ? 1 : 2))} bilyon`;
+  if (n >= 1e6) return `${trim((n / 1e6).toFixed(n >= 1e8 ? 0 : 1))} milyon`;
+  return (n >= 1e5 ? Math.round(n / 1000) * 1000 : Math.round(n)).toLocaleString('en-US');
+};
+const homesTl = (n: number) => {
+  if (n >= 1e6) return `${Math.round(n / 1e6)} milyong`;
+  if (n >= 1000) return (Math.round(n / 100) * 100).toLocaleString('en-US');
+  return String(Math.round(n));
 };
 
 export const storyTl: Record<string, StoryStep> = {
@@ -304,6 +318,156 @@ export const storyTl: Record<string, StoryStep> = {
           />
         </div>
       </div>
+    ),
+  },
+  'power-ladder': {
+    title: 'Gaano kalaki ang 3 gigawatt na kuryente?',
+    body: (
+      <>
+        <p>
+          Ayon sa BCDA, mga <b>3 gigawatt</b> kapag buo na. Gamit at singil bawat buwan sa presyong pambahay ng Meralco (₱15.55 bawat kWh):
+          <Cite s={['gma-3gw', 'meralco-nov']} />
+        </p>
+        <EnergyPicker
+          names={{
+            regular: 'Karaniwang bahay',
+            medium: 'Katamtamang bahay',
+            large: 'Malaking bahay',
+            mansion: 'Mansyon',
+            office: 'Office tower',
+            mall: 'Malaking mall',
+            fab: 'Pabrika ng chips',
+            hub: 'Ang zone (3 gigawatt)',
+          }}
+          kwh={(n) => `${bigTl(n)} kWh bawat buwan`}
+          peso={(n) => `₱${bigTl(n)}`}
+          detail={(k, homes) =>
+            k === 'regular' ? (
+              <>
+                <b>Karaniwang bahay ayon sa Meralco:</b> 200 kWh bawat buwan, mga ₱3,110 sa singil ng Nobyembre 2026.
+              </>
+            ) : k === 'hub' ? (
+              <>
+                Kasindami ng <b>mga {homesTl(homes)} karaniwang bahay</b>, at mga <b>ikalima ng pinakamataas na pangangailangan ng Luzon</b>. Tinawag
+                ng BCDA ang 3 gigawatt na maingat na unang tantiya.
+              </>
+            ) : (
+              <>
+                {k === 'office' ? 'Ang isang 50,000-metro-kuwadradong office tower' : k === 'mall' ? 'Ang isang malaking mall (SM City Fairview)' : k === 'fab' ? 'Ang isang modernong pabrika ng chips' : 'Ang bahay na ito'}{' '}
+                ay gumagamit ng kasindami ng <b>{homesTl(homes)} karaniwang bahay</b>.
+              </>
+            )
+          }
+        />
+      </>
+    ),
+    more: (
+      <p>
+        Iisang presyong pambahay ang ginamit sa lahat para direktang maikumpara; kadalasang mas mababa ang singil bawat kWh sa malalaking gumagamit.
+        Halimbawang dami lang ang katamtaman, malaki at mansyon. Office tower: 50,000 metro kuwadrado sa karaniwang gamit ng mga opisina ng Ayala Land
+        noong 2024 (157 kWh bawat metro kuwadrado bawat taon). Mall: 5,960 MWh bawat taon ang gawa ng solar sa bubong ng SM City Fairview, na 11% daw ng
+        gamit ng mall. Pabrika ng chips: mga 200 megawatt bawat modernong wafer factory (Taipower). Ang zone: 3 gigawatt buong buwan (730 oras).
+        Tinatayang pinakamataas na pangangailangan ng Luzon sa 2026: mga 14,600 megawatt.
+        <Cite s={['ayala-offices', 'sm-fairview', 'fab-power', 'iemop']} />
+      </p>
+    ),
+  },
+  'power-supply': {
+    title: 'Paano nila ito papailawin?',
+    body: (
+      <Bullets
+        items={[
+          <>
+            <b>Plano ng BCDA: karamihan ay solar.</b> May 500 megawatt na raw na handa, ikaanim ng kailangan.
+            <Cite s="gma-3gw" />
+          </>,
+          <>
+            <b>Walang solar sa gabi,</b> kaya sa isang pagsusuri, may dagdag na 1-gigawatt na planta ng gas (LNG) sa New Clark City, gamit ang inangkat
+            na gasolina.
+            <Cite s="mendoza" />
+          </>,
+          <>
+            <b>Kakailanganin ng mga solar farm ang mga 20,000 ektarya</b>, 12 beses ng zone (ang asul na parisukat), karamihan sa ibang bahagi ng
+            Gitnang Luzon.
+            <Cite s="mendoza" />
+          </>,
+          <>
+            <b>Nabanggit din ang nukleyar,</b> sa mga US$6–10 bilyon para sa 1 gigawatt.
+            <Cite s="scienceph" />
+          </>,
+        ]}
+      />
+    ),
+    more: (
+      <p>
+        Sa pagsusuri, mga 2 gigawatt na solar ang ipinares sa planta ng gas, at ₱301–424 bilyon ang paunang gastos sa kuryente at tubig, kasama ang
+        mga 50 kilometrong linya ng kuryente papunta sa mga solar farm. Pinag-aaralan daw ng BCDA ang solar na may battery storage. Para sa nukleyar,
+        walang permanenteng tapunan ng nuclear waste ang bansa. Wala pang inilalabas na pinal na plano sa kuryente.
+        <Cite s={['mendoza', 'tribune-water']} />
+      </p>
+    ),
+  },
+  'water-volume': {
+    title: 'At 65–90 milyong litro ng tubig bawat araw',
+    body: (
+      <>
+        <p>
+          Tantiya mismo ito ng BCDA: hanggang <b>36 na Olympic-size na swimming pool bawat araw</b>.
+          <Cite s="tribune-water" />
+        </p>
+        <p>
+          Ibuhos ang tubig ng isang araw sa 1-ektaryang parisukat at <b>9 na metro ang lalim</b>. Sa isang linggo, 63 metro. Sa isang buwan,{' '}
+          <b>270 metro</b>, kasintaas ng 90-palapag na gusali.
+        </p>
+        <p className="muted small">
+          Ang pinakamataas na tantiyang naiulat ay 130 milyong litro bawat araw, halos gamit ng 600,000 na sambahayan.
+          <Cite s="scienceph" />
+        </p>
+      </>
+    ),
+    more: (
+      <p>
+        Ang 90 milyong litro ay 90,000 metro kubiko. Kung ikakalat sa 1 ektarya (10,000 metro kuwadrado), 9 na metro ang lalim. Mga 3 metro ang isang
+        palapag.
+      </p>
+    ),
+  },
+  'water-supply': {
+    title: 'Saan manggagaling ang tubig?',
+    body: (
+      <>
+        <Bullets
+          items={[
+            <>
+              <b>Sa mga ilog, hindi sa ilalim ng lupa, ayon sa BCDA:</b> Bangut, O’Donnell at Abacan, iipunin sa mga tangke. Kaya raw ng Bangut pa lang
+              ang 130–200 milyong litro bawat araw.
+              <Cite s="tribune-water" />
+            </>,
+            <>
+              <b>Tubig-dagat na ginawang tabang</b> (desalination), na idadaan sa tabi ng SCTEX, ay pinag-aaralan din.
+              <Cite s="tribune-water" />
+            </>,
+            <>
+              <b>Ang pangamba ay ang tagtuyot:</b> tuwing El Niño, maaaring kulangin ang mga imbakan nang 10–65 milyong litro bawat araw.
+              <Cite s={['mendoza', 'scienceph']} />
+            </>,
+            <>
+              <b>Recycling:</b> kayang ibaba ang bagong tubig sa 6–20 milyong litro bawat araw, sa halagang ₱10–20 bilyon. Kung wala ito, maaaring umasa
+              ang zone sa mga balon ng mga pamilya.
+              <Cite s="mendoza" />
+            </>,
+          ]}
+        />
+        <p className="muted small">Asul: 390–780 ektaryang imbakan ng tubig (isang pagsusuri), iginuhit sa zone para makita ang laki.</p>
+      </>
+    ),
+    more: (
+      <p>
+        Galing sa pag-aaral noong tag-init ang bilang ng BCDA para sa ilog, at inaasahan nilang mas marami ang tubig tuwing tag-ulan. Ayon sa mga
+        kritiko, bumababa nang 40–60% ang ulan tuwing El Niño. Ang Bangut ay ang ilog na “Bangot” sa mapa. Dagdag ng pagsusuri, ₱0.8–2 bilyon bawat
+        taon ang gastos sa pagpapatakbo ng recycling.
+        <Cite s={['tribune-water', 'mendoza']} />
+      </p>
     ),
   },
   proscons: {

@@ -8,7 +8,7 @@ export const EXAG = 2.4; // vertical exaggeration for readability
 const WALL_H = 0.32; // km, visual height of the boundary "curtain"
 const FLAT_BAND = 0.45; // km, width of the slope between the levelled pad and natural ground
 
-export type SiteView = 'hero' | 'overview' | 'hub' | 'hubClose' | 'hectare' | 'top' | 'communities' | 'compare' | 'handoff' | 'ambient';
+export type SiteView = 'hero' | 'overview' | 'hub' | 'hubClose' | 'hectare' | 'water' | 'solar' | 'top' | 'communities' | 'compare' | 'handoff' | 'ambient';
 
 export interface SiteLayers {
   ncc?: boolean;
@@ -473,6 +473,13 @@ export class SiteScene {
       ctx.stroke();
     }
     this.fx.drawOverlay(ctx, px);
+    if (hub && (this.fx.has('solar') || this.fx.has('reservoir'))) {
+      // keep the zone's outline on top of the drawings
+      path(this.data.hub);
+      ctx.lineWidth = 5;
+      ctx.strokeStyle = 'rgba(255,80,80,1)';
+      ctx.stroke();
+    }
     this.overlayTex.needsUpdate = true;
   }
 
@@ -526,6 +533,8 @@ export class SiteScene {
       this.fx.set(layers.fx ?? [], instant);
       this.drawOverlay(!!layers.ncc, layers.hub !== false, !!layers.flat);
       this.wall.visible = !!layers.wall;
+      // the zone glows amber while its electricity use is on screen
+      (this.wallMat.uniforms.uColor.value as THREE.Color).set((layers.fx ?? []).includes('power') ? '#ffb020' : '#ff3b3b');
       this.sitioGroup.visible = !!layers.sitios;
       for (const g of this.sitioGroup.children) g.visible = layers.sitios === 'all' || KEY_SITIOS.includes(g.userData.name);
       this.flatTarget = layers.flat ? 1 : 0;
@@ -540,7 +549,7 @@ export class SiteScene {
     }
     const ref = layers.ref ? this.data.refs?.[layers.ref] : null;
     this.fx.setLabels(t.fx);
-    const busy = (layers.fx ?? []).some((f) => ['icons', 'lease', 'unknowns', 'makati', 'hectare', 'homes', 'grid'].includes(f));
+    const busy = (layers.fx ?? []).some((f) => ['icons', 'lease', 'unknowns', 'makati', 'hectare', 'homes', 'grid', 'power', 'solar', 'water', 'reservoir'].includes(f));
     this.hubLabel.el.textContent = t.hub;
     this.hubLabel.on = layers.hub !== false && !ref && !layers.flat && !busy;
     this.nccLabel.el.textContent = t.ncc;
@@ -578,6 +587,10 @@ export class SiteScene {
       hubClose: { target: hc.clone(), offset: new THREE.Vector3(2.6, 6.2, 6.0) },
       // close on the one-hectare square, from the same direction as hubClose so the zoom-out is a straight pull-back
       hectare: { target: this.fx.hectareTarget(), offset: new THREE.Vector3(2.6, 6.2, 6.0).normalize().multiplyScalar(aspect < 0.9 ? 0.25 : 0.215) },
+      // lower and further back, so a month of water (270 m) fits above the square
+      water: { target: this.fx.hectareTarget().add(new THREE.Vector3(0, 0.13, 0)), offset: new THREE.Vector3(0.62, 0.36, 0.78).normalize().multiplyScalar(0.62) },
+      // high enough to see the 14 km solar square around the zone
+      solar: { target: hc.clone().add(new THREE.Vector3(0, 0, 1)), offset: new THREE.Vector3(3, 22, 15) },
       ambient: { target: hc.clone(), offset: new THREE.Vector3(9, 15, 15) },
       handoff: { target: hc.clone(), offset: new THREE.Vector3(0, 1, 0) },
       compare: { target: new THREE.Vector3(hc.x, this.hFlat, hc.z), offset: new THREE.Vector3(2.2, 7.4, 5.6) },

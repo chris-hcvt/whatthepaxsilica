@@ -2,13 +2,14 @@ import type { StoryStep } from './types';
 import type { Chapter } from '../content/story';
 import { REFS, CITY_STATS, HUB_HA, HUB_COURTS, COURTS_PER_HECTARE } from '../content/story';
 import { Cite, CityBars, Timeline } from '../components/bits';
-import { BigNumber, Bullets, DotChart, HomePicker, ProsCons, RefPicker, ScoreCard } from '../components/story-bits';
+import { BigNumber, Bullets, DotChart, EnergyPicker, HomePicker, ProsCons, RefPicker, ScoreCard } from '../components/story-bits';
 
 export const chaptersEn: Record<Chapter, string> = {
   basics: 'The basics',
   plan: 'The plan',
   size: 'How big',
   people: 'The people',
+  power: 'Power & water',
   proscons: 'Pros & cons',
   benefit: 'Who benefits?',
   next: 'What’s next',
@@ -22,6 +23,20 @@ const TAGS = {
   planned: 'Planned',
   reported: 'Reported',
   goal: 'Main goal',
+};
+
+/** 3,110 · 10.2 million · 2.27 billion */
+const bigEn = (n: number) => {
+  const trim = (s: string) => s.replace(/\.0$/, '');
+  if (n >= 1e9) return `${trim((n / 1e9).toFixed(n >= 1e10 ? 1 : 2))} billion`;
+  if (n >= 1e6) return `${trim((n / 1e6).toFixed(n >= 1e8 ? 0 : 1))} million`;
+  return (n >= 1e5 ? Math.round(n / 1000) * 1000 : Math.round(n)).toLocaleString('en-US');
+};
+/** homes, rounded the way people say them: 2 · 3,300 · 22,600 · 730,000 · 11 million */
+const homesEn = (n: number) => {
+  if (n >= 1e6) return `${Math.round(n / 1e6)} million`;
+  if (n >= 1000) return (Math.round(n / 100) * 100).toLocaleString('en-US');
+  return String(Math.round(n));
 };
 
 export const storyEn: Record<string, StoryStep> = {
@@ -304,6 +319,147 @@ export const storyEn: Record<string, StoryStep> = {
           </div>
         </div>
       </>
+    ),
+  },
+  'power-ladder': {
+    title: 'How much electricity is 3 gigawatts?',
+    body: (
+      <>
+        <p>
+          BCDA expects about <b>3 gigawatts</b> at full development. Monthly use and bill at Meralco’s household rate (₱15.55 per kWh):
+          <Cite s={['gma-3gw', 'meralco-nov']} />
+        </p>
+        <EnergyPicker
+          names={{
+            regular: 'Regular home',
+            medium: 'Medium home',
+            large: 'Large home',
+            mansion: 'Mansion',
+            office: 'Office tower',
+            mall: 'Big mall',
+            fab: 'Chip factory',
+            hub: 'The zone (3 gigawatts)',
+          }}
+          kwh={(n) => `${bigEn(n)} kWh a month`}
+          peso={(n) => `₱${bigEn(n)}`}
+          detail={(k, homes) =>
+            k === 'regular' ? (
+              <>
+                <b>Meralco’s typical household:</b> 200 kWh a month, about ₱3,110 at November 2026 rates.
+              </>
+            ) : k === 'hub' ? (
+              <>
+                As much as <b>about {homesEn(homes)} typical homes</b>, and about <b>a fifth of Luzon’s peak demand</b>. BCDA calls 3 gigawatts a
+                conservative first estimate.
+              </>
+            ) : (
+              <>
+                {k === 'office' ? 'A 50,000-square-meter office tower' : k === 'mall' ? 'One big mall (SM City Fairview)' : k === 'fab' ? 'One advanced chip factory' : 'This home'}{' '}
+                uses as much as <b>{homesEn(homes)} typical homes</b>.
+              </>
+            )
+          }
+        />
+      </>
+    ),
+    more: (
+      <p>
+        The same household rate is used for everything so the bills compare directly; big users usually pay less per kWh. Medium, large and mansion
+        homes are example amounts. Office tower: 50,000 square meters at Ayala Land’s 2024 office average (157 kWh per square
+        meter a year). Mall: SM City Fairview’s rooftop solar makes 5,960 MWh a year, which SM says is 11% of the mall’s use. Chip factory: about 200
+        megawatts for each advanced wafer factory (Taipower). The zone: 3 gigawatts running all month (730 hours). Luzon’s forecast peak for 2026: about
+        14,600 megawatts.
+        <Cite s={['ayala-offices', 'sm-fairview', 'fab-power', 'iemop']} />
+      </p>
+    ),
+  },
+  'power-supply': {
+    title: 'How could they power it?',
+    body: (
+      <Bullets
+        items={[
+          <>
+            <b>BCDA’s plan: mostly solar.</b> It says 500 megawatts is already available, a sixth of the need.
+            <Cite s="gma-3gw" />
+          </>,
+          <>
+            <b>Solar stops at night,</b> so one analysis adds a 1-gigawatt gas (LNG) plant in New Clark City, on imported fuel.
+            <Cite s="mendoza" />
+          </>,
+          <>
+            <b>The solar farms would need about 20,000 hectares</b>, 12 times the zone (the blue square), mostly elsewhere in Central Luzon.
+            <Cite s="mendoza" />
+          </>,
+          <>
+            <b>Nuclear has been raised too,</b> at about US$6–10 billion for 1 gigawatt.
+            <Cite s="scienceph" />
+          </>,
+        ]}
+      />
+    ),
+    more: (
+      <p>
+        The analysis pairs about 2 gigawatts of solar with the gas plant, and puts the energy and water setup at ₱301–424 billion up front, plus about
+        50 kilometers of power lines to the solar farms. BCDA says it is studying solar with battery storage. For nuclear, the country has no permanent
+        site for nuclear waste. No final power plan has been published.
+        <Cite s={['mendoza', 'tribune-water']} />
+      </p>
+    ),
+  },
+  'water-volume': {
+    title: 'And 65–90 million liters of water a day',
+    body: (
+      <>
+        <p>
+          That’s BCDA’s own estimate: up to <b>36 Olympic-size pools every day</b>.
+          <Cite s="tribune-water" />
+        </p>
+        <p>
+          Pour one day of it on the 1-hectare square and it stands <b>9 meters deep</b>. In a week, 63 meters. In a month, <b>270 meters</b>, as tall
+          as a 90-storey building.
+        </p>
+        <p className="muted small">
+          The highest estimate reported is 130 million liters a day, about what 600,000 households use.
+          <Cite s="scienceph" />
+        </p>
+      </>
+    ),
+    more: <p>90 million liters is 90,000 cubic meters. Spread over 1 hectare (10,000 square meters), that is 9 meters deep. A storey is about 3 meters.</p>,
+  },
+  'water-supply': {
+    title: 'Where would the water come from?',
+    body: (
+      <>
+        <Bullets
+          items={[
+            <>
+              <b>Rivers, not groundwater, says BCDA:</b> the Bangut, O’Donnell and Abacan, stored in tanks. It says the Bangut alone gives 130–200
+              million liters a day.
+              <Cite s="tribune-water" />
+            </>,
+            <>
+              <b>Desalinated seawater</b>, piped along SCTEX, is also being studied.
+              <Cite s="tribune-water" />
+            </>,
+            <>
+              <b>Dry years are the worry:</b> in El Niño years the reservoirs could run 10–65 million liters a day short.
+              <Cite s={['mendoza', 'scienceph']} />
+            </>,
+            <>
+              <b>Recycling</b> could cut new water to 6–20 million liters a day, for ₱10–20 billion. Without it, the zone may lean on wells families use.
+              <Cite s="mendoza" />
+            </>,
+          ]}
+        />
+        <p className="muted small">Blue: 390–780 hectares of reservoirs (one analysis), drawn in the zone for size.</p>
+      </>
+    ),
+    more: (
+      <p>
+        BCDA’s river figure comes from a dry-season study, and it expects more water in the rainy season. Critics note that rain falls 40–60% in El
+        Niño years. The Bangut is the river labelled “Bangot” on the map. The analysis adds that recycling would cost ₱0.8–2 billion a year to run.
+        <Cite s={['tribune-water', 'mendoza']} />
+      </p>
     ),
   },
   proscons: {

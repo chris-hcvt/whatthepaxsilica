@@ -2,9 +2,27 @@ import * as THREE from 'three';
 import { outerRing, pointInRing, ringCentroid, type LL } from './geo';
 import type { SiteScene } from './site';
 import { HectareFx, type HomeKey } from './hectare';
+import { RESERVOIR_HA, SOLAR_HA } from '../content/story';
 
 /** One extra visual per story step, added on top of the base scene. */
-export type Fx = 'nccDraw' | 'manila' | 'icons' | 'lease' | 'unknowns' | 'hectare' | 'court' | 'homes' | 'grid' | 'makati' | 'rings' | 'river' | 'farms';
+export type Fx =
+  | 'nccDraw'
+  | 'manila'
+  | 'icons'
+  | 'lease'
+  | 'unknowns'
+  | 'hectare'
+  | 'court'
+  | 'homes'
+  | 'grid'
+  | 'makati'
+  | 'rings'
+  | 'river'
+  | 'farms'
+  | 'power'
+  | 'solar'
+  | 'water'
+  | 'reservoir';
 
 export interface FxLabels {
   manila: string;
@@ -16,6 +34,13 @@ export interface FxLabels {
   side: string;
   court: string;
   oneHectare: string;
+  power: string;
+  solar: string;
+  lng: string;
+  reservoir: string;
+  /** the rising water column: day counter, and marks at 1 day, 1 week, 1 month */
+  waterDay: (day: number, meters: number) => string;
+  waterTicks: [string, string, string];
   makati: string;
   families: string;
   river: string;
@@ -39,6 +64,9 @@ const ICONS = {
   q: '<span class="fx-q">?</span>',
   drop: '<svg viewBox="0 0 24 24"><path d="M12 3s6 7 6 11a6 6 0 0 1-12 0c0-4 6-11 6-11Z"/></svg>',
   home: '<svg viewBox="0 0 24 24"><path d="M3 11 12 4l9 7v9H3z"/></svg>',
+  bolt: '<svg viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z"/></svg>',
+  sun: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>',
+  flame: '<svg viewBox="0 0 24 24"><path d="M12 3s5 5 5 10a5 5 0 0 1-10 0c0-2 1-3.5 2-4.5 0 2 1 3 2 3 0-3 1-6 1-8.5Z"/></svg>',
 };
 
 const MANILA: LL = [120.9822, 14.5995];
@@ -57,6 +85,9 @@ export class SiteFx {
   private ringCentre: [number, number];
   private manilaEnd: [number, number];
   readonly hectare: HectareFx;
+  /** 20,000-hectare solar square around the zone (lon/lat corners) and the reservoir parts of the zone */
+  private solarSquare: LL[];
+  private reservoirParts: LL[][];
   private liteMode = false;
 
   get lite() {
@@ -133,6 +164,20 @@ export class SiteFx {
 
     this.hectare = new HectareFx(site);
 
+    // power & water: the land a 2-gigawatt solar farm would need, as a square centred on the zone
+    const [hlon, hlat] = ringCentroid(site.data.hub as [number, number][]);
+    const half = Math.sqrt(SOLAR_HA / 100) / 2; // km
+    const dlon = half / (111.32 * Math.cos((hlat * Math.PI) / 180));
+    const dlat = half / 110.574;
+    this.solarSquare = [
+      [hlon - dlon, hlat + dlat],
+      [hlon + dlon, hlat + dlat],
+      [hlon + dlon, hlat - dlat],
+      [hlon - dlon, hlat - dlat],
+    ];
+    // reservoirs: the northern part of the zone with the same area as 390 and 780 hectares
+    this.reservoirParts = RESERVOIR_HA.map((ha) => this.northPart(ha / 100));
+
     this.buildLabels();
     this.place();
   }
@@ -144,6 +189,45 @@ export class SiteFx {
 
   setHome(k: HomeKey) {
     this.hectare.setHome(k);
+  }
+
+  /** the part of the zone north of a line, with the given area (km²), as lon/lat */
+  private northPart(km2: number): LL[] {
+    const ring = this.site.hubXZ;
+    const clip = (zc: number) => {
+      const out: [number, number][] = [];
+      for (let i = 0; i < ring.length; i++) {
+        const a = ring[i];
+        const b = ring[(i + 1) % ring.length];
+        const ina = a[1] <= zc;
+        const inb = b[1] <= zc;
+        if (ina) out.push(a);
+        if (ina !== inb) {
+          const t = (zc - a[1]) / (b[1] - a[1]);
+          out.push([a[0] + (b[0] - a[0]) * t, zc]);
+        }
+      }
+      return out;
+    };
+    const area = (p: [number, number][]) => {
+      let s = 0;
+      for (let i = 0; i < p.length; i++) {
+        const [x1, z1] = p[i];
+        const [x2, z2] = p[(i + 1) % p.length];
+        s += x1 * z2 - x2 * z1;
+      }
+      return Math.abs(s) / 2;
+    };
+    const zs = ring.map((p) => p[1]);
+    let lo = Math.min(...zs);
+    let hi = Math.max(...zs);
+    for (let k = 0; k < 40; k++) {
+      const mid = (lo + hi) / 2;
+      if (area(clip(mid)) < km2) lo = mid;
+      else hi = mid;
+    }
+    const p = this.site.proj;
+    return clip(hi).map(([x, z]) => [p.lon0 + x / p.kx, p.lat0 - z / p.ky] as LL);
   }
 
   private densify(ring: [number, number][], step: number) {
@@ -236,6 +320,12 @@ export class SiteFx {
     this.addLabel('hectare', a.east, 0.002, 'fx-side', '');
     this.addLabel('court', a.court, 0.004, 'fx-court', '');
     this.addLabel('grid', a.centre, 0.6, 'fx-onehectare', '');
+    this.addLabel('power', this.hubPoint(0.2, -0.4), 0.55, 'fx-power', '');
+    const [sw, se] = [this.solarSquare[3], this.solarSquare[2]];
+    this.addLabel('solar', s.proj.xz([(sw[0] + se[0]) / 2, sw[1]]), 0.35, 'fx-solar', '');
+    this.addLabel('solar', [s.nccCenter.x, s.nccCenter.z], 0.6, 'fx-lng', '');
+    const rp = this.reservoirParts[1].map((q) => s.proj.xz(q));
+    this.addLabel('reservoir', ringCentroid(rp), 0.35, 'fx-reservoir', '');
     this.addLabel('makati', this.hubPoint(0, -0.3), 0.45, 'fx-makati', '');
     this.addLabel('rings', this.ringCentre, 1.6, 'fx-families', '');
     // rivers and farms: label at a point along each named line / the largest farm
@@ -280,6 +370,12 @@ export class SiteFx {
     by('hectare').forEach((l) => (l.el.innerHTML = `<span>${t.side}</span>`));
     by('court')[0].el.innerHTML = `<span>${t.court}</span>`;
     by('grid')[0].el.innerHTML = `<span>${t.oneHectare}</span>`;
+    by('power')[0].el.innerHTML = `${ICONS.bolt}<span>${t.power}</span>`;
+    const sl = by('solar');
+    sl[0].el.innerHTML = `${ICONS.sun}<span>${t.solar}</span>`;
+    sl[1].el.innerHTML = `${ICONS.flame}<span>${t.lng}</span>`;
+    by('reservoir')[0].el.innerHTML = `${ICONS.drop}<span>${t.reservoir}</span>`;
+    this.hectare.setWaterLabels(t.waterDay, t.waterTicks);
     by('makati')[0].el.innerHTML = `<span>${t.makati}</span>`;
     by('rings')[0].el.innerHTML = `${ICONS.home}<span>${t.families}</span>`;
     const rl = by('river');
@@ -300,7 +396,13 @@ export class SiteFx {
     this.makatiMesh.visible = next.has('makati');
     this.rings.forEach((r) => (r.visible = next.has('rings')));
     this.hectare.set(
-      { plot: next.has('hectare') || next.has('homes') || next.has('grid'), court: next.has('court'), homes: next.has('homes'), grid: next.has('grid') },
+      {
+        plot: next.has('hectare') || next.has('homes') || next.has('grid') || next.has('water'),
+        court: next.has('court'),
+        homes: next.has('homes'),
+        grid: next.has('grid'),
+        water: next.has('water'),
+      },
       instant,
     );
     this.applyProgress();
@@ -357,16 +459,20 @@ export class SiteFx {
       });
       if (!this.lite) moving = true;
     }
-    if (this.active.has('unknowns') && !this.lite) moving = true; // the wall pulses
+    if ((this.active.has('unknowns') || this.active.has('power')) && !this.lite) moving = true; // the wall pulses
     return moving;
   }
 
   /** pulse factor for the boundary wall (1 = normal) */
   wallPulse() {
-    return this.active.has('unknowns') && !this.lite ? 0.55 + 0.45 * Math.sin(this.t * 3.2) : 1;
+    if (this.lite) return 1;
+    if (this.active.has('unknowns')) return 0.55 + 0.45 * Math.sin(this.t * 3.2);
+    if (this.active.has('power')) return 1.1 + 0.45 * Math.sin(this.t * 4.2);
+    return 1;
   }
 
   updateLabels(camera: THREE.Camera, w: number, h: number) {
+    this.hectare.updateLabels(camera, w, h);
     const v = new THREE.Vector3();
     for (const l of this.labels) {
       if (!this.active.has(l.key)) {
@@ -389,11 +495,66 @@ export class SiteFx {
 
   hideLabels() {
     for (const l of this.labels) l.el.style.display = 'none';
+    this.hectare.hideLabels();
   }
 
   /** extra drawings on the ground overlay */
   drawOverlay(ctx: CanvasRenderingContext2D, px: (p: LL) => readonly [number, number]) {
     const s = this.site;
+    const poly = (ring: LL[]) => {
+      ctx.beginPath();
+      ring.forEach((p, i) => {
+        const [x, y] = px(p);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.closePath();
+    };
+    if (this.active.has('solar')) {
+      // rows of panels: dark blue with fine lighter lines, a bright border
+      poly(this.solarSquare);
+      ctx.save();
+      ctx.fillStyle = 'rgba(18, 44, 82, 0.86)';
+      ctx.fill();
+      ctx.clip();
+      const [x0, y0] = px(this.solarSquare[0]);
+      const [x1, y1] = px(this.solarSquare[2]);
+      ctx.strokeStyle = 'rgba(120, 175, 240, 0.32)';
+      ctx.lineWidth = 1;
+      for (let y = y0; y < y1; y += 3) {
+        ctx.beginPath();
+        ctx.moveTo(x0, y);
+        ctx.lineTo(x1, y);
+        ctx.stroke();
+      }
+      ctx.strokeStyle = 'rgba(10, 20, 40, 0.55)';
+      ctx.lineWidth = 2;
+      for (let x = x0; x < x1; x += 28) {
+        ctx.beginPath();
+        ctx.moveTo(x, y0);
+        ctx.lineTo(x, y1);
+        ctx.stroke();
+      }
+      ctx.restore();
+      poly(this.solarSquare);
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = '#8fc0ff';
+      ctx.stroke();
+    }
+    if (this.active.has('reservoir')) {
+      const [big, small] = [this.reservoirParts[1], this.reservoirParts[0]];
+      poly(big);
+      ctx.fillStyle = 'rgba(70, 160, 255, 0.38)';
+      ctx.fill();
+      ctx.setLineDash([10, 8]);
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = 'rgba(150, 205, 255, 0.95)';
+      ctx.stroke();
+      ctx.setLineDash([]);
+      poly(small);
+      ctx.fillStyle = 'rgba(40, 130, 240, 0.7)';
+      ctx.fill();
+    }
     if (this.active.has('farms')) {
       ctx.fillStyle = 'rgba(214, 232, 90, 0.38)';
       ctx.strokeStyle = 'rgba(234, 245, 140, 0.9)';
@@ -431,6 +592,6 @@ export class SiteFx {
   }
 
   overlayKey() {
-    return ['farms', 'river', 'grid'].filter((k) => this.active.has(k as Fx)).join(',');
+    return ['farms', 'river', 'grid', 'solar', 'reservoir'].filter((k) => this.active.has(k as Fx)).join(',');
   }
 }

@@ -512,6 +512,120 @@ details.more p {
   display: grid;
   gap: 12px;
 }
+/* smaller side notes inside cards */
+.card-body .small {
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+/* electricity ladder */
+.energy {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+.energy-rows {
+  display: grid;
+  gap: 4px;
+}
+.energy-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas: 'name bill' 'bar bar';
+  align-items: center;
+  column-gap: 10px;
+  row-gap: 3px;
+  width: 100%;
+  padding: 4px 10px 5px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.035);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    border-color 0.2s;
+}
+.energy-row:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+.energy-row.on {
+  border-color: #ffc94d;
+  background: rgba(255, 201, 77, 0.1);
+}
+.energy-name {
+  grid-area: name;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  line-height: 1.25;
+}
+.energy-name b {
+  font-size: 13.5px;
+}
+.energy-name small {
+  font-size: 11.5px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.energy-bill {
+  grid-area: bill;
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.energy-bar {
+  grid-area: bar;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+.energy-bar span {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: #ffc94d;
+}
+.energy-row.e-hub .energy-bar span {
+  background: linear-gradient(90deg, #ffc94d, #ff4d4d);
+}
+.energy-row.e-hub .energy-bill {
+  color: #ff8a8a;
+}
+.energy-detail {
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: rgba(255, 201, 77, 0.08);
+  border: 1px solid rgba(255, 201, 77, 0.25);
+  font-size: 14px;
+  line-height: 1.45;
+}
+.energy-detail b {
+  color: #ffd98a;
+}
+.energy-detail-kwh {
+  display: none;
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 2px;
+}
+/* phones: one line per row (name + bill); the selected row's kWh shows in the box below */
+@media (max-width: 899px) {
+  .energy-name small {
+    display: none;
+  }
+  .energy-detail-kwh {
+    display: block;
+  }
+  .energy-row {
+    padding: 5px 10px;
+  }
+}
+
 /* home sizes in one hectare */
 .homes {
   display: grid;
@@ -1367,10 +1481,11 @@ details.more p {
   .step {
     min-height: 105vh;
     align-items: flex-end;
-    padding: 50vh var(--gutter) 6vh;
+    /* cards sit at the bottom; a tall card grows upward (over the 3D) instead of off the bottom of the screen */
+    padding: calc(var(--bar) + 14px) var(--gutter) 6vh;
   }
   .step.tall {
-    min-height: 120vh;
+    min-height: 105vh;
   }
   .card {
     width: 100%;
@@ -1886,6 +2001,44 @@ html.snap-page {
   background: rgba(60, 30, 10, 0.88);
   border-color: rgba(230, 150, 90, 0.85) !important;
   color: #ffd9bd;
+}
+.fx-power {
+  background: rgba(60, 40, 0, 0.9);
+  border-color: rgba(255, 190, 60, 0.95) !important;
+  color: #ffe1a0;
+  font-weight: 700;
+  font-size: 13.5px;
+}
+.fx-solar {
+  background: rgba(12, 32, 62, 0.92);
+  border-color: rgba(143, 192, 255, 0.9) !important;
+  color: #d6e7ff;
+  font-weight: 700;
+}
+.fx-lng {
+  background: rgba(60, 22, 8, 0.9);
+  border-color: rgba(255, 140, 80, 0.85) !important;
+  color: #ffd6c0;
+}
+.fx-reservoir {
+  background: rgba(8, 40, 80, 0.9);
+  border-color: rgba(120, 190, 255, 0.9) !important;
+  color: #d4ebff;
+}
+.fx-waterday {
+  background: #58b4ff;
+  border-color: #58b4ff !important;
+  color: #04213d;
+  font-weight: 800;
+  font-size: 13.5px;
+  font-variant-numeric: tabular-nums;
+}
+.fx-watertick {
+  background: rgba(8, 30, 56, 0.85);
+  border-color: rgba(120, 190, 255, 0.7) !important;
+  color: #cfe6ff;
+  font-size: 11.5px;
+  padding: 3px 8px !important;
 }
 .fx-onehectare {
   background: #ffd34d;

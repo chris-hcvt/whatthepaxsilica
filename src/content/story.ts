@@ -3,8 +3,8 @@ import type { LL } from '../three/geo';
 
 /** Language-independent structure of the scrolling story. Text lives in src/i18n/story-*.tsx. */
 
-export type Chapter = 'basics' | 'plan' | 'size' | 'people' | 'proscons' | 'benefit' | 'next';
-export const CHAPTERS: Chapter[] = ['basics', 'plan', 'size', 'people', 'proscons', 'benefit', 'next'];
+export type Chapter = 'basics' | 'plan' | 'size' | 'people' | 'power' | 'proscons' | 'benefit' | 'next';
+export const CHAPTERS: Chapter[] = ['basics', 'plan', 'size', 'people', 'power', 'proscons', 'benefit', 'next'];
 
 export type StepKind = 'hero' | 'card' | 'full' | 'map';
 
@@ -39,6 +39,10 @@ export const STEPS: StepDef[] = [
   { id: 'people-1', chapter: 'people', kind: 'card', scene: site({ view: 'communities', hub: true, wall: true, ncc: true, sitios: 'all', fx: ['rings'] }) },
   { id: 'people-2', chapter: 'people', kind: 'card', scene: site({ view: 'communities', hub: true, sitios: 'key', fx: ['river', 'farms'] }) },
   { id: 'people-numbers', chapter: 'people', kind: 'full', scene: AMBIENT },
+  { id: 'power-ladder', chapter: 'power', kind: 'card', scene: site({ view: 'hub', hub: true, wall: true, fx: ['power'] }) },
+  { id: 'power-supply', chapter: 'power', kind: 'card', scene: site({ view: 'solar', hub: true, ncc: true, fx: ['solar'] }) },
+  { id: 'water-volume', chapter: 'power', kind: 'card', scene: site({ view: 'water', hub: false, fx: ['water'] }) },
+  { id: 'water-supply', chapter: 'power', kind: 'card', scene: site({ view: 'hub', hub: true, wall: true, fx: ['river', 'reservoir'] }) },
   { id: 'proscons', chapter: 'proscons', kind: 'full', scene: AMBIENT },
   { id: 'benefit', chapter: 'benefit', kind: 'full', scene: AMBIENT },
   { id: 'next', chapter: 'next', kind: 'full', scene: AMBIENT },
@@ -108,3 +112,46 @@ export const CITY_CENTRES: { id: string; ll: LL }[] = [
 ];
 
 export const CITY_STATS = { sanjuan: 581.7, mandaluyong: 1142.5, makati: 1815.2, updiliman: 501.0, rizalpark: 28.9 };
+
+/* ---------- power & water ---------- */
+
+/** Meralco's overall rate for a typical household, November 2026 (₱ per kWh) */
+export const MERALCO_RATE = 15.551;
+/** average hours in a month (8,760 ÷ 12) */
+export const HOURS_PER_MONTH = 730;
+/** BCDA: about 3 gigawatts at full development, a "conservative" first estimate */
+export const HUB_GW = 3;
+/** Luzon's forecast peak demand for 2026 (IEMOP), megawatts */
+export const LUZON_PEAK_MW = 14_600;
+
+export type EnergyKey = 'regular' | 'medium' | 'large' | 'mansion' | 'office' | 'mall' | 'fab' | 'hub';
+export const ENERGY_KEYS: EnergyKey[] = ['regular', 'medium', 'large', 'mansion', 'office', 'mall', 'fab', 'hub'];
+/**
+ * Electricity per month (kWh), smallest to largest.
+ * regular: Meralco's "typical household" (200 kWh). medium / large / mansion: example amounts.
+ * office: a 50,000-square-meter office tower at Ayala Land's 2024 office average of 157 kWh per square meter a year.
+ * mall: SM City Fairview, whose 5,960 MWh-a-year rooftop solar covers 11% of the mall's yearly use.
+ * fab: one advanced chip factory (wafer fab), about 200 megawatts (Taipower), running all month.
+ * hub: 3 gigawatts running all month.
+ */
+export const ENERGY: Record<EnergyKey, number> = {
+  regular: 200,
+  medium: 400,
+  large: 800,
+  mansion: 2_000,
+  office: (50_000 * 157) / 12,
+  mall: 5_960_000 / 0.11 / 12,
+  fab: 200_000 * HOURS_PER_MONTH,
+  hub: HUB_GW * 1_000_000 * HOURS_PER_MONTH,
+};
+export const billOf = (kwh: number) => kwh * MERALCO_RATE;
+export const homesOf = (kwh: number) => kwh / ENERGY.regular;
+
+/** water: BCDA's estimate, liters a day (and the highest reported estimate) */
+export const WATER_MLD: [number, number] = [65, 90];
+export const WATER_HIGH_MLD = 130;
+/** one day of the upper BCDA figure, poured on one hectare: 90,000 cubic meters ÷ 10,000 square meters */
+export const WATER_DAY_M = (WATER_MLD[1] * 1_000) / HECTARE_M2;
+/** analysis: reservoirs of 390–780 hectares; solar farms of about 20,000 hectares for 2 gigawatts */
+export const RESERVOIR_HA: [number, number] = [390, 780];
+export const SOLAR_HA = 20_000;
