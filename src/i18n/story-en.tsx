@@ -1,3 +1,4 @@
+import { cloneElement } from 'react';
 import type { StoryStep } from './types';
 import type { Chapter } from '../content/story';
 import { REFS, CITY_STATS, HUB_HA, HUB_COURTS, COURTS_PER_HECTARE } from '../content/story';
@@ -63,6 +64,129 @@ const homesEn = (n: number) => {
   return String(Math.round(n));
 };
 
+/* controls shown in full in the text and, on phones, compact under the short caption */
+const homePickerEn = (
+  <HomePicker
+    names={{ regular: 'Regular home', medium: 'Medium home', large: 'Large home', mansion: 'Mansion' }}
+    lot={(m2) => `${m2.toLocaleString('en-US')} square meters per lot`}
+    count={(n) => (
+      <>
+        <b>{n}</b> homes
+      </>
+    )}
+  />
+);
+
+const refPickerEn = (
+  <RefPicker
+    malls="Malls"
+    districts="Business districts"
+    result={(k, times) => {
+      const r = REFS[k];
+      return (
+        <>
+          <div className="ref-big">
+            <b>{times}×</b> {r.name}
+          </div>
+          <p className="muted">
+            {r.kind === 'mall'
+              ? `Based on area (${r.ha} hectares each). In 3D: ${r.packed} whole copies, packed with the gaps that leaves.`
+              : `By area, the zone equals about ${times} ${r.name}s. Because the zone is long and narrow, ${r.packed} whole copies fit inside it side by side (shown in 3D), with land to spare. ${
+                  r.basis === 'square'
+                    ? 'BGC is about 240 hectares (BCDA); it has no published boundary, so it’s shown as a square.'
+                    : `Its outline follows its main bounding roads: about ${Math.round(r.ha)} hectares.`
+                }`}
+          </p>
+        </>
+      );
+    }}
+  />
+);
+
+const energyPickerEn = (
+  <EnergyPicker
+    names={{
+      regular: 'Regular home',
+      medium: 'Medium home',
+      large: 'Large home',
+      mansion: 'Mansion',
+      office: 'Office tower',
+      mall: 'Big mall',
+      fab: 'Chip factory',
+      hub: 'The zone (3 gigawatts)',
+    }}
+    kwh={(n) => `${bigEn(n)} kWh a month`}
+    peso={(n) => `₱${bigEn(n)}`}
+    tap={'Tap to add'}
+    next={(name) => <>Add the next one: <b>{name}</b> →</>}
+    restart={'↺ Start again from one home'}
+    detail={(k, homes) =>
+      k === 'regular' ? (
+        <>
+          <b>Meralco’s typical household</b>, about ₱3,110 at November 2026 rates.
+        </>
+      ) : k === 'hub' ? (
+        <>
+          As much as <b>about {homesEn(homes)} typical homes</b>, about <b>{pct(HUB_SHARE_OF_LUZON_PEAK)} of Luzon’s forecast 2026 peak</b>. BCDA
+          calls 3 GW a conservative first estimate.
+        </>
+      ) : (
+        <>
+          {k === 'office' ? 'A 50,000-square-meter office tower' : k === 'mall' ? 'One big mall (SM City Fairview)' : k === 'fab' ? 'One advanced chip factory' : 'This home'}{' '}
+          uses as much as <b>{homesEn(homes)} typical homes</b>.
+        </>
+      )
+    }
+  />
+);
+
+const gapBarEn = (
+  <GapBar
+    parts={[
+      {
+        share: ACWA_AVG_MW[1] / HUB_MW,
+        color: '#36d39a',
+        label: (
+          <>
+            <b>≈ {rangeEn(ACWA_AVG_MW, 1)} MW</b> ACWA Power solar + batteries: lease signed June 2026, not built ({ACWA_MW} MW at full sun only)
+            <Cite s={['acwa-lease', 'moa-solar', 'sm-fairview']} />
+          </>
+        ),
+      },
+      {
+        share: BCDA_LNG_STUDY_MW / HUB_MW,
+        color: '#ffb020',
+        striped: true,
+        label: (
+          <>
+            <b>{BCDA_LNG_STUDY_MW} MW</b> gas (LNG) plant for New Clark City: under study
+            <Cite s="lng-40mw" />
+          </>
+        ),
+      },
+    ]}
+    rest={
+      <>
+        <b>≈ {pct(GAP_SHARE[0])}</b> no published plan yet
+      </>
+    }
+  />
+);
+
+const waterPickerEn = (
+  <WaterPicker
+    names={{ low: '65 million', high: '90 million', max: '130 million' }}
+    tags={{ low: 'BCDA, low end', high: 'BCDA, high end', max: 'Highest estimate (Science.ph)' }}
+    result={(k, mld) => (
+      <>
+        <b>{mld} million liters a day</b> = {poolsOf(mld)} Olympic pools. On 1 hectare: <b>{depthPerDay(mld)} m</b> deep after a day,{' '}
+        {depthPerDay(mld) * DAYS_WEEK} m after a week, <b>{depthPerDay(mld) * DAYS_MONTH} m</b> after a month (30 days)
+        {k === 'max' ? <>, about what {householdsOf(mld).toLocaleString('en-US')} households use at 200 liters each.</> : '.'}
+      </>
+    )}
+  />
+);
+
 export const storyEn: Record<string, StoryStep> = {
   hero: {
     kicker: 'Capas, Tarlac · Philippines',
@@ -75,6 +199,11 @@ export const storyEn: Record<string, StoryStep> = {
     ),
   },
   'basics-1': {
+    brief: (
+      <>
+        Its goal: make computer chips, AI and the minerals they need, <b>without relying on China</b>.
+      </>
+    ),
     kicker: 'Pax Silica in 30 seconds',
     title: 'A US-led club of about 25 countries',
     body: (
@@ -92,6 +221,11 @@ export const storyEn: Record<string, StoryStep> = {
     ),
   },
   'basics-2': {
+    brief: (
+      <>
+        The government offered land for a giant factory zone, <b>right here in Tarlac</b>.
+      </>
+    ),
     title: 'The Philippines joined in April 2026',
     body: (
       <p>
@@ -108,6 +242,11 @@ export const storyEn: Record<string, StoryStep> = {
     ),
   },
   'plan-where': {
+    brief: (
+      <>
+        About 75 km north of Manila, on former US base land run by the government’s <b>BCDA</b>.
+      </>
+    ),
     title: 'Where: New Clark City, Capas, Tarlac',
     body: (
       <p>
@@ -118,6 +257,11 @@ export const storyEn: Record<string, StoryStep> = {
     more: <p>Yellow dashes: New Clark City (about 9,450 hectares). Red: the planned tech zone.</p>,
   },
   'plan-what': {
+    brief: (
+      <>
+        Plus nickel processing. <b>No data centers</b>, officials say. Construction target: <b>2028</b>.
+      </>
+    ),
     title: 'What: factories for chips and AI parts',
     body: (
       <p>
@@ -127,6 +271,11 @@ export const storyEn: Record<string, StoryStep> = {
     ),
   },
   'plan-land': {
+    brief: (
+      <>
+        Investors could lease it for up to <b>99 years</b>. No tenant is confirmed yet.
+      </>
+    ),
     title: 'The land stays Philippine-owned — but it will be rented out',
     body: (
       <p>
@@ -136,6 +285,11 @@ export const storyEn: Record<string, StoryStep> = {
     ),
   },
   'plan-status': {
+    brief: (
+      <>
+        No signed agreement, no environmental study, no official map. The red outline is an <b>independent estimate</b>.
+      </>
+    ),
     title: 'Nothing is final yet',
     body: (
       <>
@@ -169,6 +323,11 @@ export const storyEn: Record<string, StoryStep> = {
     ),
   },
   'size-hectare': {
+    brief: (
+      <>
+        <b>10,000 square meters</b>: a square 100 meters on each side, about <b>{Math.round(COURTS_PER_HECTARE)} basketball courts</b>.
+      </>
+    ),
     title: 'First, how big is 1 hectare?',
     body: (
       <>
@@ -184,19 +343,17 @@ export const storyEn: Record<string, StoryStep> = {
     more: <p>A full-size basketball court is 28 × 15 meters, or 420 square meters. 10,000 ÷ 420 ≈ 24. One court is drawn in the square to scale.</p>,
   },
   'size-homes': {
+    brief: (
+      <>
+        Every house sits on a lot. Tap a size:
+      </>
+    ),
+    control: cloneElement(homePickerEn, { compact: true }),
     title: 'How many homes fit in 1 hectare?',
     body: (
       <>
         <p>Every house sits on a lot. Tap a size to fill the square:</p>
-        <HomePicker
-          names={{ regular: 'Regular home', medium: 'Medium home', large: 'Large home', mansion: 'Mansion' }}
-          lot={(m2) => `${m2.toLocaleString('en-US')} square meters per lot`}
-          count={(n) => (
-            <>
-              <b>{n}</b> homes
-            </>
-          )}
-        />
+        {homePickerEn}
       </>
     ),
     more: (
@@ -209,6 +366,11 @@ export const storyEn: Record<string, StoryStep> = {
     ),
   },
   'size-number': {
+    brief: (
+      <>
+        Each small square is 1 hectare: <b>16.19 million square meters</b>, about {HUB_COURTS.toLocaleString('en-US')} basketball courts.
+      </>
+    ),
     title: <BigNumber value="1,619" unit="hectares" />,
     body: (
       <p>
@@ -219,37 +381,24 @@ export const storyEn: Record<string, StoryStep> = {
     more: <p>1,619 hectares is the official size (4,000 acres). The grid is drawn on our approximate outline, so it shows a few more squares.</p>,
   },
   'size-flat': {
+    brief: (
+      <>
+        We flattened the zone so you can compare it with places you know.
+      </>
+    ),
     title: 'Now imagine it leveled',
     body: <p>We flattened the land inside the zone so you can compare it with places you know.</p>,
     more: <p>This is only an illustration for comparing sizes. It is not a construction plan.</p>,
   },
   'size-compare': {
-    title: 'How many would fit?',
-    body: (
-      <RefPicker
-        malls="Malls"
-        districts="Business districts"
-        result={(k, times) => {
-          const r = REFS[k];
-          return (
-            <>
-              <div className="ref-big">
-                <b>{times}×</b> {r.name}
-              </div>
-              <p className="muted">
-                {r.kind === 'mall'
-                  ? `Based on area (${r.ha} hectares each). In 3D: ${r.packed} whole copies, packed with the gaps that leaves.`
-                  : `By area, the zone equals about ${times} ${r.name}s. Because the zone is long and narrow, ${r.packed} whole copies fit inside it side by side (shown in 3D), with land to spare. ${
-                      r.basis === 'square'
-                        ? 'BGC is about 240 hectares (BCDA); it has no published boundary, so it’s shown as a square.'
-                        : `Its outline follows its main bounding roads: about ${Math.round(r.ha)} hectares.`
-                    }`}
-              </p>
-            </>
-          );
-        }}
-      />
+    brief: (
+      <>
+        Pick a mall or a business district:
+      </>
     ),
+    control: cloneElement(refPickerEn, { compact: true }),
+    title: 'How many would fit?',
+    body: refPickerEn,
     more: (
       <p>
         Mall sizes are the mall lots mapped on OpenStreetMap. Makati CBD: EDSA, Gil Puyat, Chino Roces and Arnaiz avenues. Ortigas Center: EDSA, Ortigas
@@ -259,6 +408,11 @@ export const storyEn: Record<string, StoryStep> = {
     ),
   },
   'size-cities': {
+    brief: (
+      <>
+        At {HUB_HA.toLocaleString('en-US')} hectares, the zone is almost as big as <b>Makati City</b> ({Math.round(CITY_STATS.makati).toLocaleString('en-US')} hectares) and bigger than <b>Mandaluyong</b> ({Math.round(CITY_STATS.mandaluyong).toLocaleString('en-US')}).
+      </>
+    ),
     title: 'Bigger than some whole cities',
     body: (
       <CityBars
@@ -281,10 +435,20 @@ export const storyEn: Record<string, StoryStep> = {
     ),
   },
   'size-map': {
+    brief: (
+      <>
+        Pick a city, or search your town. The outline keeps its real size.
+      </>
+    ),
     title: 'Drop it on your city',
     body: <p>Pick a city, or search your town. The outline keeps its real size.</p>,
   },
   'people-1': {
+    brief: (
+      <>
+        On the independent map, their village is <b>inside the zone</b>. They have claimed it as ancestral land since 1994; the claim was never approved.
+      </>
+    ),
     title: 'About 200 Aeta Hungey families live in Sapang Kawayan',
     body: (
       <p>
@@ -295,6 +459,11 @@ export const storyEn: Record<string, StoryStep> = {
     ),
   },
   'people-2': {
+    brief: (
+      <>
+        Farmers in <b>Binyayan</b> and the <b>Ayta Mag-antsi</b> of Manabayucan, who get water and fish from the Bangot River.
+      </>
+    ),
     title: 'Their neighbors would be affected too',
     body: (
       <p>
@@ -346,6 +515,12 @@ export const storyEn: Record<string, StoryStep> = {
     ),
   },
   'power-ladder': {
+    brief: (
+      <>
+        BCDA expects <b>3 gigawatts</b>. Add buildings one by one and compare their monthly bills:
+      </>
+    ),
+    control: cloneElement(energyPickerEn, { compact: true }),
     title: 'How much electricity is 3 gigawatts?',
     body: (
       <>
@@ -353,40 +528,7 @@ export const storyEn: Record<string, StoryStep> = {
           BCDA estimates about <b>3 gigawatts</b> at full development. Tap a row to add that building beside the others, with its bill:
           <Cite s="gma-3gw" />
         </p>
-        <EnergyPicker
-          names={{
-            regular: 'Regular home',
-            medium: 'Medium home',
-            large: 'Large home',
-            mansion: 'Mansion',
-            office: 'Office tower',
-            mall: 'Big mall',
-            fab: 'Chip factory',
-            hub: 'The zone (3 gigawatts)',
-          }}
-          kwh={(n) => `${bigEn(n)} kWh a month`}
-          peso={(n) => `₱${bigEn(n)}`}
-          tap={'Tap to add'}
-          next={(name) => <>Add the next one: <b>{name}</b> →</>}
-          restart={'↺ Start again from one home'}
-          detail={(k, homes) =>
-            k === 'regular' ? (
-              <>
-                <b>Meralco’s typical household</b>, about ₱3,110 at November 2026 rates.
-              </>
-            ) : k === 'hub' ? (
-              <>
-                As much as <b>about {homesEn(homes)} typical homes</b>, about <b>{pct(HUB_SHARE_OF_LUZON_PEAK)} of Luzon’s forecast 2026 peak</b>. BCDA
-                calls 3 GW a conservative first estimate.
-              </>
-            ) : (
-              <>
-                {k === 'office' ? 'A 50,000-square-meter office tower' : k === 'mall' ? 'One big mall (SM City Fairview)' : k === 'fab' ? 'One advanced chip factory' : 'This home'}{' '}
-                uses as much as <b>{homesEn(homes)} typical homes</b>.
-              </>
-            )
-          }
-        />
+        {energyPickerEn}
         <Assumption title="Read with care:">
           3 GW is a demand estimate, not measured use; the zone’s row assumes 3 GW nonstop (× 730 hours). *Bills use Meralco’s November 2026 household
           rate, ₱15.5510 per kWh, only to compare: ₱{bigEn(billOf(ENERGY.hub))} is not the zone’s real industrial bill.
@@ -408,6 +550,12 @@ export const storyEn: Record<string, StoryStep> = {
     ),
   },
   'power-supply': {
+    brief: (
+      <>
+        Only about <b>{pct(1 - GAP_SHARE[0])}</b> is lined up: ACWA’s planned solar and a gas plant still under study. The rest has <b>no published plan</b>.
+      </>
+    ),
+    control: cloneElement(gapBarEn, { compact: true }),
     title: 'How could they power it?',
     body: (
       <>
@@ -415,36 +563,7 @@ export const storyEn: Record<string, StoryStep> = {
           Against the 3 gigawatts BCDA expects, this is what is lined up, averaged over day and night:
           <Cite s="gma-3gw" />
         </p>
-        <GapBar
-          parts={[
-            {
-              share: ACWA_AVG_MW[1] / HUB_MW,
-              color: '#36d39a',
-              label: (
-                <>
-                  <b>≈ {rangeEn(ACWA_AVG_MW, 1)} MW</b> ACWA Power solar + batteries: lease signed June 2026, not built ({ACWA_MW} MW at full sun only)
-                  <Cite s={['acwa-lease', 'moa-solar', 'sm-fairview']} />
-                </>
-              ),
-            },
-            {
-              share: BCDA_LNG_STUDY_MW / HUB_MW,
-              color: '#ffb020',
-              striped: true,
-              label: (
-                <>
-                  <b>{BCDA_LNG_STUDY_MW} MW</b> gas (LNG) plant for New Clark City: under study
-                  <Cite s="lng-40mw" />
-                </>
-              ),
-            },
-          ]}
-          rest={
-            <>
-              <b>≈ {pct(GAP_SHARE[0])}</b> no published plan yet
-            </>
-          }
-        />
+        {gapBarEn}
         <p className="fill-head">
           <b>Ways to fill the gap</b> (none chosen):
         </p>
@@ -494,6 +613,19 @@ export const storyEn: Record<string, StoryStep> = {
     ),
   },
   'water-volume': {
+    brief: (
+      <>
+        BCDA’s estimate for the zone. Pick a daily amount to stack it on one hectare:
+      </>
+    ),
+    control: cloneElement(waterPickerEn, {
+      compact: true,
+      result: (_k: string, mld: number) => (
+        <>
+          <b>{poolsOf(mld)} Olympic pools</b> a day · <b>{depthPerDay(mld) * DAYS_MONTH} m</b> deep after a month
+        </>
+      ),
+    }),
     title: 'And 65–90 million liters of water a day',
     body: (
       <>
@@ -501,17 +633,7 @@ export const storyEn: Record<string, StoryStep> = {
           That’s BCDA’s estimate for the zone. Pick a daily amount to see it as a column on the 1-hectare square:
           <Cite s={['tribune-water', 'scienceph']} />
         </p>
-        <WaterPicker
-          names={{ low: '65 million', high: '90 million', max: '130 million' }}
-          tags={{ low: 'BCDA, low end', high: 'BCDA, high end', max: 'Highest estimate (Science.ph)' }}
-          result={(k, mld) => (
-            <>
-              <b>{mld} million liters a day</b> = {poolsOf(mld)} Olympic pools. On 1 hectare: <b>{depthPerDay(mld)} m</b> deep after a day,{' '}
-              {depthPerDay(mld) * DAYS_WEEK} m after a week, <b>{depthPerDay(mld) * DAYS_MONTH} m</b> after a month (30 days)
-              {k === 'max' ? <>, about what {householdsOf(mld).toLocaleString('en-US')} households use at 200 liters each.</> : '.'}
-            </>
-          )}
-        />
+        {waterPickerEn}
         <Assumption title="The column shows volume only.">It is not a planned reservoir or its height.</Assumption>
       </>
     ),
@@ -526,6 +648,11 @@ export const storyEn: Record<string, StoryStep> = {
     ),
   },
   'water-supply': {
+    brief: (
+      <>
+        BCDA’s preliminary plan: three rivers and storage tanks. Critics’ dry-season math: up to <b>{shortfall(90)[1]} million liters a day short</b> at BCDA’s own estimate.
+      </>
+    ),
     title: 'Where would the water come from?',
     body: (
       <>

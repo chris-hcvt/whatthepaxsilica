@@ -6,13 +6,15 @@ import { Stage } from './components/Stage';
 import { MapLayer, DropControls } from './components/DropMap';
 import { PhInset } from './components/story-bits';
 import { LangButton, LangModal, SourcesDrawer } from './components/Chrome';
+import { DetailSheet, PhoneMenu } from './components/PhoneUi';
+import { usePhone } from './components/usePhone';
 import type { LL } from './three/geo';
 import type { Insets } from './three/engine';
 
 const prefersReduced = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
 const MAP_STEP = STEPS.findIndex((s) => s.kind === 'map');
 
-function useInsets(active: number, folded: string | null): Insets {
+function useInsets(active: number, phone: boolean): Insets {
   const calc = () => {
     const w = window.innerWidth;
     const h = window.innerHeight;
@@ -22,7 +24,7 @@ function useInsets(active: number, folded: string | null): Insets {
     const step = STEPS[active];
     if (step?.kind === 'card') {
       const card = document.getElementById(step.id)?.querySelector<HTMLElement>('.card');
-      if (card) bottom = Math.min(h * 0.74, Math.max(h * 0.2, card.offsetHeight + h * 0.04 + 8));
+      if (card) bottom = Math.min(h * 0.74, Math.max(h * 0.18, card.offsetHeight + h * 0.04 + 8));
     }
     return { left: 0, bottom: Math.round(bottom), top: 56 };
   };
@@ -30,7 +32,7 @@ function useInsets(active: number, folded: string | null): Insets {
   useEffect(() => {
     const next = calc();
     setIns((cur) => (cur.left === next.left && cur.bottom === next.bottom && cur.top === next.top ? cur : next));
-  }, [active, folded]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [active, phone]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     let lastW = window.innerWidth;
     const onR = () => {
@@ -56,9 +58,34 @@ export default function StoryApp() {
   const [lang, setLang] = useState<LangCode>(initialLang);
   const [langOpen, setLangOpen] = useState(() => !urlLang() && !savedLang());
   const [active, setActive] = useState(0);
-  /** the card folded to its title on a phone (one at a time; a new step opens with its text) */
-  const [folded, setFolded] = useState<string | null>(null);
-  useEffect(() => setFolded(null), [active]);
+  const phone = usePhone();
+  /** phones: the step whose full text is open in the details sheet, and the top bar's menu */
+  const [sheet, setSheet] = useState<string | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  // the sheets are history entries, so the phone's back button closes them
+  useEffect(() => {
+    const onPop = () => {
+      setSheet(null);
+      setMenuOpen(false);
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
+  const openSheet = (id: string) => {
+    window.history.pushState({ paxSheet: id }, '');
+    setSheet(id);
+  };
+  const openMenu = () => {
+    window.history.pushState({ paxSheet: 'menu' }, '');
+    setMenuOpen(true);
+  };
+  const closeSheets = useCallback(() => {
+    if ((window.history.state as { paxSheet?: string } | null)?.paxSheet) window.history.back();
+    else {
+      setSheet(null);
+      setMenuOpen(false);
+    }
+  }, []);
   // phones: a card taller than its space scrolls; show a fade and an arrow while there is more below
   useEffect(() => {
     const step = STEPS[active];
@@ -75,7 +102,7 @@ export default function StoryApp() {
       ro.disconnect();
       card.classList.remove('more-below');
     };
-  }, [active, folded, lang]);
+  }, [active, phone, lang]);
   const [refKey, setRefKey] = useState<RefKey>('moa');
   const [homeKey, setHomeKey] = useState<HomeKey>('regular');
   const [waterKey, setWaterKey] = useState<WaterKey>('high');
@@ -93,7 +120,7 @@ export default function StoryApp() {
   const [dropLabel, setDropLabel] = useState('makati');
   const [drawer, setDrawer] = useState<{ open: boolean; hl: string | null }>({ open: false, hl: null });
   const [copied, setCopied] = useState(false);
-  const insets = useInsets(active, folded);
+  const insets = useInsets(active, phone);
   const reduced = useMemo(prefersReduced, []);
   const L = LOCALES[lang];
 
@@ -273,6 +300,24 @@ export default function StoryApp() {
             </button>
           ))}
         </nav>
+        {/* phones: where you are, and one menu button */}
+        <div className="sbar-now" aria-hidden="true">
+          {chapter ? (
+            <>
+              <b>{L.chapters[chapter]}</b>
+              <span>
+                {CHAPTERS.indexOf(chapter) + 1}/{CHAPTERS.length}
+              </span>
+            </>
+          ) : (
+            <b>{L.ui.siteTitle}</b>
+          )}
+        </div>
+        <button type="button" className="menu-btn" onClick={openMenu} aria-label={L.ui.menu} aria-haspopup="dialog">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 7h16M4 12h16M4 17h16" />
+          </svg>
+        </button>
         <div className="sbar-actions">
           <LangButton lang={lang} label={L.ui.language} onClick={() => setLangOpen(true)} />
           <a className="tbtn report-btn" href={reportHref}>
@@ -343,34 +388,44 @@ export default function StoryApp() {
                 </div>
               </section>
             );
+          const meta = s.chapter && pos && (
+            <div className="card-meta">
+              <span className="card-chap">{L.chapters[s.chapter]}</span>
+              <span className="card-count">{L.ui.stepOf(pos.k, pos.n)}</span>
+              {phone && t.brief && (
+                <button type="button" className="details-btn" onClick={() => openSheet(s.id)} aria-haspopup="dialog">
+                  {L.ui.details} <span aria-hidden="true">↑</span>
+                </button>
+              )}
+            </div>
+          );
           return (
             <section key={s.id} className={`step ${s.kind === 'map' ? 'step-map' : ''} ${s.id === 'size-compare' ? 'tall' : ''} ${active === i ? 'is-active' : ''}`} data-step={i} id={s.id}>
-              <div className={`card ${active === i ? 'active' : ''} ${folded === s.id ? 'folded' : ''}`}>
-                {s.chapter && pos && (
-                  <div className="card-meta">
-                    <span className="card-chap">{L.chapters[s.chapter]}</span>
-                    <span className="card-count">{L.ui.stepOf(pos.k, pos.n)}</span>
-                    {/* phones: fold the card to its title to see the whole 3D view */}
-                    <button type="button" className="card-fold" aria-expanded={folded !== s.id} aria-controls={`${s.id}-body`} onClick={() => setFolded(folded === s.id ? null : s.id)}>
-                      {folded === s.id ? L.ui.showText : L.ui.hideText}
-                    </button>
-                  </div>
-                )}
-                {t.kicker && <div className="kicker">{t.kicker}</div>}
-                <h2 className="card-title" onClick={folded === s.id ? () => setFolded(null) : undefined}>
-                  {t.title}
-                </h2>
-                <div className="card-body" id={`${s.id}-body`}>
-                  {t.body}
+              {phone && t.brief ? (
+                <div className={`card m-card ${active === i ? 'active' : ''}`}>
+                  {meta}
+                  <h2 className="card-title">{t.title}</h2>
+                  <p className="card-brief">{t.brief}</p>
+                  {t.control && <div className="card-control">{t.control}</div>}
                   {s.kind === 'map' && <DropControls />}
                 </div>
-                {t.more && (
-                  <details className="more">
-                    <summary>{L.ui.learnMore}</summary>
-                    {t.more}
-                  </details>
-                )}
-              </div>
+              ) : (
+                <div className={`card ${active === i ? 'active' : ''}`}>
+                  {meta}
+                  {t.kicker && <div className="kicker">{t.kicker}</div>}
+                  <h2 className="card-title">{t.title}</h2>
+                  <div className="card-body">
+                    {t.body}
+                    {s.kind === 'map' && <DropControls />}
+                  </div>
+                  {t.more && (
+                    <details className="more">
+                      <summary>{L.ui.learnMore}</summary>
+                      {t.more}
+                    </details>
+                  )}
+                </div>
+              )}
             </section>
           );
         })}
@@ -391,6 +446,47 @@ export default function StoryApp() {
         </footer>
       </main>
 
+      {sheet && L.story[sheet] && (
+        <DetailSheet
+          open
+          chapter={STEPS.find((x) => x.id === sheet)?.chapter ? L.chapters[STEPS.find((x) => x.id === sheet)!.chapter!] : ''}
+          title={L.story[sheet].title}
+          closeLabel={L.ui.close}
+          onClose={closeSheets}
+        >
+          {L.story[sheet].kicker && <div className="kicker">{L.story[sheet].kicker}</div>}
+          {L.story[sheet].body}
+          {STEPS.find((x) => x.id === sheet)?.kind === 'map' && <p className="hint">{L.ui.mapHint}</p>}
+          {L.story[sheet].more && (
+            <div className="psheet-more">
+              <h3>{L.ui.learnMore}</h3>
+              {L.story[sheet].more}
+            </div>
+          )}
+        </DetailSheet>
+      )}
+      <PhoneMenu
+        open={menuOpen}
+        L={L}
+        lang={lang}
+        chapters={CHAPTERS}
+        current={chapter}
+        reportHref={reportHref}
+        onChapter={(c) => {
+          closeSheets();
+          // after the menu's history entry is gone, so the jump isn't undone
+          window.setTimeout(() => goChapter(c), 60);
+        }}
+        onLang={(l) => {
+          pickLang(l);
+          closeSheets();
+        }}
+        onSources={() => {
+          closeSheets();
+          window.setTimeout(() => setDrawer({ open: true, hl: null }), 60);
+        }}
+        onClose={closeSheets}
+      />
       <SourcesDrawer L={L} open={drawer.open} highlight={drawer.hl} onClose={() => setDrawer({ open: false, hl: null })} />
       <LangModal open={langOpen} current={savedLang() ? lang : null} onPick={pickLang} onClose={() => setLangOpen(false)} />
     </DeckContext.Provider>

@@ -18,6 +18,10 @@ export interface StoryStep {
   body?: ReactNode;
   /** optional "Learn more" content */
   more?: ReactNode;
+  /** phones: the one or two sentences shown under the headline (the full body opens in the details sheet) */
+  brief?: ReactNode;
+  /** phones: the one control shown under the brief (a compact copy of the one in the body) */
+  control?: ReactNode;
 }
 
 export interface UiStrings {
@@ -38,9 +42,11 @@ export interface UiStrings {
   fullReport: string;
   backToStory: string;
   learnMore: string;
-  /** phones: fold a card to its title so the 3D shows in full */
-  hideText: string;
-  showText: string;
+  /** phones: opens the full text of a step (numbers, notes, sources) */
+  details: string;
+  /** phones: the top bar's menu (chapters, language, report, sources) */
+  menu: string;
+  chaptersTitle: string;
   scrollCue: string;
   chooseLanguage: string;
   moreLanguagesSoon: string;

@@ -1,3 +1,4 @@
+import { cloneElement } from 'react';
 import type { StoryStep } from './types';
 import type { Chapter } from '../content/story';
 import { REFS, CITY_STATS, HUB_HA, HUB_COURTS, COURTS_PER_HECTARE } from '../content/story';
@@ -61,6 +62,130 @@ const homesTl = (n: number) => {
   return String(Math.round(n));
 };
 
+/* controls shown in full in the text and, on phones, compact under the short caption */
+const homePickerTl = (
+  <HomePicker
+    names={{ regular: 'Karaniwang bahay', medium: 'Katamtamang bahay', large: 'Malaking bahay', mansion: 'Mansyon' }}
+    lot={(m2) => `${m2.toLocaleString('en-US')} metro kuwadrado bawat lote`}
+    count={(n) => (
+      <>
+        <b>{n}</b> bahay
+      </>
+    )}
+  />
+);
+
+const refPickerTl = (
+  <RefPicker
+    malls="Mga mall"
+    districts="Mga business district"
+    result={(k, times) => {
+      const r = REFS[k];
+      return (
+        <>
+          <div className="ref-big">
+            <b>{times}×</b> {r.name}
+          </div>
+          <p className="muted">
+            {r.kind === 'mall'
+              ? `Batay sa sukat (${r.ha} ektarya bawat isa). Sa 3D: ${r.packed} buong kopya, kasama ang mga puwang sa pagitan.`
+              : `Sa sukat, katumbas ng zone ang mga ${times} na ${r.name}. Dahil mahaba at makitid ang zone, ${r.packed} buong kopya ang kasya nang magkakatabi (makikita sa 3D), at may sobra pang lupa. ${
+                  r.basis === 'square'
+                    ? 'Mga 240 ektarya ang BGC (BCDA); walang inilathalang hangganan, kaya parisukat ang ipinakita.'
+                    : `Sinusundan ng balangkas ang mga pangunahing kalsadang nakapaligid: mga ${Math.round(r.ha)} ektarya.`
+                }`}
+          </p>
+        </>
+      );
+    }}
+  />
+);
+
+const energyPickerTl = (
+  <EnergyPicker
+    names={{
+      regular: 'Karaniwang bahay',
+      medium: 'Katamtamang bahay',
+      large: 'Malaking bahay',
+      mansion: 'Mansyon',
+      office: 'Office tower',
+      mall: 'Malaking mall',
+      fab: 'Pabrika ng chips',
+      hub: 'Ang zone (3 gigawatt)',
+    }}
+    kwh={(n) => `${bigTl(n)} kWh bawat buwan`}
+    peso={(n) => `₱${bigTl(n)}`}
+    tap={'Pindutin'}
+    next={(name) => <>Idagdag ang susunod: <b>{name}</b> →</>}
+    restart={'↺ Magsimula ulit sa isang bahay'}
+    detail={(k, homes) =>
+      k === 'regular' ? (
+        <>
+          <b>Karaniwang bahay ayon sa Meralco</b>, mga ₱3,110 sa singil ng Nobyembre 2026.
+        </>
+      ) : k === 'hub' ? (
+        <>
+          Kasindami ng <b>mga {homesTl(homes)} karaniwang bahay</b>, mga <b>{pct(HUB_SHARE_OF_LUZON_PEAK)} ng pinakamataas na gamit ng Luzon</b>.
+          Maingat na unang tantiya raw ito ng BCDA.
+        </>
+      ) : (
+        <>
+          {k === 'office' ? 'Ang isang 50,000-metro-kuwadradong office tower' : k === 'mall' ? 'Ang isang malaking mall (SM City Fairview)' : k === 'fab' ? 'Ang isang modernong pabrika ng chips' : 'Ang bahay na ito'}{' '}
+          ay gumagamit ng kasindami ng <b>{homesTl(homes)} karaniwang bahay</b>.
+        </>
+      )
+    }
+  />
+);
+
+const gapBarTl = (
+  <GapBar
+    parts={[
+      {
+        share: ACWA_AVG_MW[1] / HUB_MW,
+        color: '#36d39a',
+        label: (
+          <>
+            <b>≈ {rangeEn(ACWA_AVG_MW, 1)} MW</b> solar + baterya ng ACWA Power: napirmahan ang upa noong Hunyo 2026, hindi pa naitatayo ({ACWA_MW} MW
+            sa tirik na araw lang)
+            <Cite s={['acwa-lease', 'moa-solar', 'sm-fairview']} />
+          </>
+        ),
+      },
+      {
+        share: BCDA_LNG_STUDY_MW / HUB_MW,
+        color: '#ffb020',
+        striped: true,
+        label: (
+          <>
+            <b>{BCDA_LNG_STUDY_MW} MW</b> planta ng gas (LNG) para sa New Clark City: pinag-aaralan
+            <Cite s="lng-40mw" />
+          </>
+        ),
+      },
+    ]}
+    rest={
+      <>
+        <b>≈ {pct(GAP_SHARE[0])}</b> wala pang inilalabas na plano
+      </>
+    }
+  />
+);
+
+const waterPickerTl = (
+  <WaterPicker
+    names={{ low: '65 milyon', high: '90 milyon', max: '130 milyon' }}
+    tags={{ low: 'BCDA, pinakamababa', high: 'BCDA, pinakamataas', max: 'Pinakamataas na tantiya (Science.ph)' }}
+    result={(k, mld) => (
+      <>
+        <b>{mld} milyong litro bawat araw</b> = {poolsOf(mld)} Olympic pool. Sa 1 ektarya: <b>{depthPerDay(mld)} metro</b> ang lalim sa isang
+        araw, {depthPerDay(mld) * DAYS_WEEK} metro sa isang linggo, <b>{depthPerDay(mld) * DAYS_MONTH} metro</b> sa isang buwan (30 araw)
+        {k === 'max' ? <>, halos gamit ng {householdsOf(mld).toLocaleString('en-US')} na sambahayan sa 200 litro bawat isa.</> : '.'}
+      </>
+    )}
+  />
+);
+
 export const storyTl: Record<string, StoryStep> = {
   hero: {
     kicker: 'Capas, Tarlac · Pilipinas',
@@ -73,6 +198,11 @@ export const storyTl: Record<string, StoryStep> = {
     ),
   },
   'basics-1': {
+    brief: (
+      <>
+        Layunin nito: gumawa ng computer chips, AI at ng mga mineral na kailangan nila, <b>nang hindi umaasa sa China</b>.
+      </>
+    ),
     kicker: 'Pax Silica sa loob ng 30 segundo',
     title: 'Grupo ng mga 25 bansa na pinamumunuan ng US',
     body: (
@@ -90,6 +220,11 @@ export const storyTl: Record<string, StoryStep> = {
     ),
   },
   'basics-2': {
+    brief: (
+      <>
+        Nag-alok ang gobyerno ng lupa para sa isang malaking factory zone, <b>dito mismo sa Tarlac</b>.
+      </>
+    ),
     title: 'Sumali ang Pilipinas noong Abril 2026',
     body: (
       <p>
@@ -106,6 +241,11 @@ export const storyTl: Record<string, StoryStep> = {
     ),
   },
   'plan-where': {
+    brief: (
+      <>
+        Mga 75 km hilaga ng Maynila, sa dating lupa ng base militar ng US na hawak ng <b>BCDA</b>.
+      </>
+    ),
     title: 'Saan: New Clark City, Capas, Tarlac',
     body: (
       <p>
@@ -117,6 +257,11 @@ export const storyTl: Record<string, StoryStep> = {
     more: <p>Dilaw na putol-putol na linya: New Clark City (mga 9,450 ektarya). Pula: ang planong tech zone.</p>,
   },
   'plan-what': {
+    brief: (
+      <>
+        Kasama ang pagpoproseso ng nickel. <b>Walang data center</b>, sabi ng mga opisyal. Target ng konstruksyon: <b>2028</b>.
+      </>
+    ),
     title: 'Ano: mga pabrika ng chips at piyesa ng AI',
     body: (
       <p>
@@ -126,6 +271,11 @@ export const storyTl: Record<string, StoryStep> = {
     ),
   },
   'plan-land': {
+    brief: (
+      <>
+        Puwedeng upahan ito ng mga mamumuhunan nang hanggang <b>99 na taon</b>. Wala pang kumpirmadong tenant.
+      </>
+    ),
     title: 'Mananatiling pag-aari ng Pilipinas ang lupa — pero uupahan ito',
     body: (
       <p>
@@ -136,6 +286,11 @@ export const storyTl: Record<string, StoryStep> = {
     ),
   },
   'plan-status': {
+    brief: (
+      <>
+        Walang pirmadong kasunduan, walang pag-aaral pangkalikasan, walang opisyal na mapa. <b>Tantiya ng mga independiyenteng heograpo</b> ang pulang balangkas.
+      </>
+    ),
     title: 'Wala pang pinal',
     body: (
       <>
@@ -169,6 +324,11 @@ export const storyTl: Record<string, StoryStep> = {
     ),
   },
   'size-hectare': {
+    brief: (
+      <>
+        <b>10,000 metro kuwadrado</b>: parisukat na 100 metro bawat gilid, kasinlaki ng mga <b>{Math.round(COURTS_PER_HECTARE)} basketball court</b>.
+      </>
+    ),
     title: 'Una, gaano kalaki ang 1 ektarya?',
     body: (
       <>
@@ -184,19 +344,17 @@ export const storyTl: Record<string, StoryStep> = {
     more: <p>Ang isang buong basketball court ay 28 × 15 metro, o 420 metro kuwadrado. 10,000 ÷ 420 ≈ 24. May isang court sa loob ng parisukat, ayon sa tunay na sukat.</p>,
   },
   'size-homes': {
+    brief: (
+      <>
+        Bawat bahay ay nakatayo sa isang lote. Pumili ng laki:
+      </>
+    ),
+    control: cloneElement(homePickerTl, { compact: true }),
     title: 'Ilang bahay ang kasya sa 1 ektarya?',
     body: (
       <>
         <p>Bawat bahay ay nakatayo sa isang lote. Pumili ng laki para punuin ang parisukat:</p>
-        <HomePicker
-          names={{ regular: 'Karaniwang bahay', medium: 'Katamtamang bahay', large: 'Malaking bahay', mansion: 'Mansyon' }}
-          lot={(m2) => `${m2.toLocaleString('en-US')} metro kuwadrado bawat lote`}
-          count={(n) => (
-            <>
-              <b>{n}</b> bahay
-            </>
-          )}
-        />
+        {homePickerTl}
       </>
     ),
     more: (
@@ -209,6 +367,11 @@ export const storyTl: Record<string, StoryStep> = {
     ),
   },
   'size-number': {
+    brief: (
+      <>
+        Bawat maliit na parisukat ay 1 ektarya: <b>16.19 milyong metro kuwadrado</b>, mga {HUB_COURTS.toLocaleString('en-US')} basketball court.
+      </>
+    ),
     title: <BigNumber value="1,619" unit="ektarya" />,
     body: (
       <p>
@@ -219,37 +382,24 @@ export const storyTl: Record<string, StoryStep> = {
     more: <p>Ang 1,619 ektarya ay ang opisyal na laki (4,000 acre). Iginuhit ang grid sa aming tantiyang balangkas, kaya bahagyang mas marami ang parisukat.</p>,
   },
   'size-flat': {
+    brief: (
+      <>
+        Pinatag namin ang zone para maikumpara mo ito sa mga lugar na kilala mo.
+      </>
+    ),
     title: 'Isipin mong pinatag ito',
     body: <p>Pinatag namin ang lupa sa loob ng zone para maikumpara mo ito sa mga lugar na kilala mo.</p>,
     more: <p>Paglalarawan lang ito para maikumpara ang laki. Hindi ito plano ng konstruksyon.</p>,
   },
   'size-compare': {
-    title: 'Ilan ang kasya?',
-    body: (
-      <RefPicker
-        malls="Mga mall"
-        districts="Mga business district"
-        result={(k, times) => {
-          const r = REFS[k];
-          return (
-            <>
-              <div className="ref-big">
-                <b>{times}×</b> {r.name}
-              </div>
-              <p className="muted">
-                {r.kind === 'mall'
-                  ? `Batay sa sukat (${r.ha} ektarya bawat isa). Sa 3D: ${r.packed} buong kopya, kasama ang mga puwang sa pagitan.`
-                  : `Sa sukat, katumbas ng zone ang mga ${times} na ${r.name}. Dahil mahaba at makitid ang zone, ${r.packed} buong kopya ang kasya nang magkakatabi (makikita sa 3D), at may sobra pang lupa. ${
-                      r.basis === 'square'
-                        ? 'Mga 240 ektarya ang BGC (BCDA); walang inilathalang hangganan, kaya parisukat ang ipinakita.'
-                        : `Sinusundan ng balangkas ang mga pangunahing kalsadang nakapaligid: mga ${Math.round(r.ha)} ektarya.`
-                    }`}
-              </p>
-            </>
-          );
-        }}
-      />
+    brief: (
+      <>
+        Pumili ng mall o business district:
+      </>
     ),
+    control: cloneElement(refPickerTl, { compact: true }),
+    title: 'Ilan ang kasya?',
+    body: refPickerTl,
     more: (
       <p>
         Ang sukat ng mga mall ay ang lote nila ayon sa OpenStreetMap. Makati CBD: EDSA, Gil Puyat, Chino Roces at Arnaiz. Ortigas Center: EDSA, Ortigas
@@ -259,6 +409,11 @@ export const storyTl: Record<string, StoryStep> = {
     ),
   },
   'size-cities': {
+    brief: (
+      <>
+        Sa {HUB_HA.toLocaleString('en-US')} ektarya, halos kasinlaki ng zone ang <b>Lungsod ng Makati</b> ({Math.round(CITY_STATS.makati).toLocaleString('en-US')} ektarya) at mas malaki pa sa <b>Mandaluyong</b> ({Math.round(CITY_STATS.mandaluyong).toLocaleString('en-US')}).
+      </>
+    ),
     title: 'Mas malaki pa sa ilang buong lungsod',
     body: (
       <CityBars
@@ -281,10 +436,20 @@ export const storyTl: Record<string, StoryStep> = {
     ),
   },
   'size-map': {
+    brief: (
+      <>
+        Pumili ng lungsod, o hanapin ang bayan mo. Totoong laki pa rin ang balangkas.
+      </>
+    ),
     title: 'Ilapag sa lungsod mo',
     body: <p>Pumili ng lungsod, o hanapin ang bayan mo. Totoong laki pa rin ang balangkas.</p>,
   },
   'people-1': {
+    brief: (
+      <>
+        Sa independiyenteng mapa, <b>nasa loob ng zone</b> ang kanilang sitio. Mula 1994, inaangkin nila ito bilang lupaing ninuno; hindi pa naaaprubahan ang claim.
+      </>
+    ),
     title: 'Mga 200 pamilyang Aeta Hungey ang nakatira sa Sapang Kawayan',
     body: (
       <p>
@@ -295,6 +460,11 @@ export const storyTl: Record<string, StoryStep> = {
     ),
   },
   'people-2': {
+    brief: (
+      <>
+        Mga magsasaka sa <b>Binyayan</b> at ang <b>Ayta Mag-antsi</b> ng Manabayucan, na kumukuha ng tubig at isda sa Ilog Bangot.
+      </>
+    ),
     title: 'Maaapektuhan din ang mga kapitbahay nila',
     body: (
       <p>
@@ -344,6 +514,12 @@ export const storyTl: Record<string, StoryStep> = {
     ),
   },
   'power-ladder': {
+    brief: (
+      <>
+        Tantiya ng BCDA: <b>3 gigawatt</b>. Idagdag ang mga gusali isa-isa at ikumpara ang buwanang singil:
+      </>
+    ),
+    control: cloneElement(energyPickerTl, { compact: true }),
     title: 'Gaano kalaki ang 3 gigawatt na kuryente?',
     body: (
       <>
@@ -351,40 +527,7 @@ export const storyTl: Record<string, StoryStep> = {
           Tantiya ng BCDA: mga <b>3 gigawatt</b> kapag buo na. Pindutin ang hanay para idagdag ang gusali katabi ng iba, kasama ang singil:
           <Cite s="gma-3gw" />
         </p>
-        <EnergyPicker
-          names={{
-            regular: 'Karaniwang bahay',
-            medium: 'Katamtamang bahay',
-            large: 'Malaking bahay',
-            mansion: 'Mansyon',
-            office: 'Office tower',
-            mall: 'Malaking mall',
-            fab: 'Pabrika ng chips',
-            hub: 'Ang zone (3 gigawatt)',
-          }}
-          kwh={(n) => `${bigTl(n)} kWh bawat buwan`}
-          peso={(n) => `₱${bigTl(n)}`}
-          tap={'Pindutin'}
-          next={(name) => <>Idagdag ang susunod: <b>{name}</b> →</>}
-          restart={'↺ Magsimula ulit sa isang bahay'}
-          detail={(k, homes) =>
-            k === 'regular' ? (
-              <>
-                <b>Karaniwang bahay ayon sa Meralco</b>, mga ₱3,110 sa singil ng Nobyembre 2026.
-              </>
-            ) : k === 'hub' ? (
-              <>
-                Kasindami ng <b>mga {homesTl(homes)} karaniwang bahay</b>, mga <b>{pct(HUB_SHARE_OF_LUZON_PEAK)} ng pinakamataas na gamit ng Luzon</b>.
-                Maingat na unang tantiya raw ito ng BCDA.
-              </>
-            ) : (
-              <>
-                {k === 'office' ? 'Ang isang 50,000-metro-kuwadradong office tower' : k === 'mall' ? 'Ang isang malaking mall (SM City Fairview)' : k === 'fab' ? 'Ang isang modernong pabrika ng chips' : 'Ang bahay na ito'}{' '}
-                ay gumagamit ng kasindami ng <b>{homesTl(homes)} karaniwang bahay</b>.
-              </>
-            )
-          }
-        />
+        {energyPickerTl}
         <Assumption title="Basahin nang maingat:">
           Tantiya ang 3 GW, hindi sukat; tuloy-tuloy na 3 GW (× 730 oras) ang hanay ng zone. *Presyong pambahay ng Meralco (Nob 2026, ₱15.5510 bawat
           kWh) para maikumpara lang: hindi ₱{bigTl(billOf(ENERGY.hub))} ang tunay na singil ng zone.
@@ -407,6 +550,12 @@ export const storyTl: Record<string, StoryStep> = {
     ),
   },
   'power-supply': {
+    brief: (
+      <>
+        Mga <b>{pct(1 - GAP_SHARE[0])}</b> lang ang nakalinya: ang planong solar ng ACWA at isang planta ng gas na pinag-aaralan pa. <b>Walang inilalabas na plano</b> para sa natitira.
+      </>
+    ),
+    control: cloneElement(gapBarTl, { compact: true }),
     title: 'Paano nila ito papailawin?',
     body: (
       <>
@@ -414,37 +563,7 @@ export const storyTl: Record<string, StoryStep> = {
           Laban sa 3 gigawatt na inaasahan ng BCDA, ito ang nakalinya, sa karaniwan sa araw at gabi:
           <Cite s="gma-3gw" />
         </p>
-        <GapBar
-          parts={[
-            {
-              share: ACWA_AVG_MW[1] / HUB_MW,
-              color: '#36d39a',
-              label: (
-                <>
-                  <b>≈ {rangeEn(ACWA_AVG_MW, 1)} MW</b> solar + baterya ng ACWA Power: napirmahan ang upa noong Hunyo 2026, hindi pa naitatayo ({ACWA_MW} MW
-                  sa tirik na araw lang)
-                  <Cite s={['acwa-lease', 'moa-solar', 'sm-fairview']} />
-                </>
-              ),
-            },
-            {
-              share: BCDA_LNG_STUDY_MW / HUB_MW,
-              color: '#ffb020',
-              striped: true,
-              label: (
-                <>
-                  <b>{BCDA_LNG_STUDY_MW} MW</b> planta ng gas (LNG) para sa New Clark City: pinag-aaralan
-                  <Cite s="lng-40mw" />
-                </>
-              ),
-            },
-          ]}
-          rest={
-            <>
-              <b>≈ {pct(GAP_SHARE[0])}</b> wala pang inilalabas na plano
-            </>
-          }
-        />
+        {gapBarTl}
         <p className="fill-head">
           <b>Mga paraan para punan ang kulang</b> (wala pang napili):
         </p>
@@ -497,6 +616,19 @@ export const storyTl: Record<string, StoryStep> = {
     ),
   },
   'water-volume': {
+    brief: (
+      <>
+        Tantiya ng BCDA para sa zone. Pumili ng dami bawat araw para isalansan ito sa isang ektarya:
+      </>
+    ),
+    control: cloneElement(waterPickerTl, {
+      compact: true,
+      result: (_k: string, mld: number) => (
+        <>
+          <b>{poolsOf(mld)} Olympic pool</b> bawat araw · <b>{depthPerDay(mld) * DAYS_MONTH} metro</b> ang lalim sa isang buwan
+        </>
+      ),
+    }),
     title: 'At 65–90 milyong litro ng tubig bawat araw',
     body: (
       <>
@@ -504,17 +636,7 @@ export const storyTl: Record<string, StoryStep> = {
           Tantiya ito ng BCDA para sa zone. Pumili ng dami bawat araw para makita ito bilang haligi sa 1-ektaryang parisukat:
           <Cite s={['tribune-water', 'scienceph']} />
         </p>
-        <WaterPicker
-          names={{ low: '65 milyon', high: '90 milyon', max: '130 milyon' }}
-          tags={{ low: 'BCDA, pinakamababa', high: 'BCDA, pinakamataas', max: 'Pinakamataas na tantiya (Science.ph)' }}
-          result={(k, mld) => (
-            <>
-              <b>{mld} milyong litro bawat araw</b> = {poolsOf(mld)} Olympic pool. Sa 1 ektarya: <b>{depthPerDay(mld)} metro</b> ang lalim sa isang
-              araw, {depthPerDay(mld) * DAYS_WEEK} metro sa isang linggo, <b>{depthPerDay(mld) * DAYS_MONTH} metro</b> sa isang buwan (30 araw)
-              {k === 'max' ? <>, halos gamit ng {householdsOf(mld).toLocaleString('en-US')} na sambahayan sa 200 litro bawat isa.</> : '.'}
-            </>
-          )}
-        />
+        {waterPickerTl}
         <Assumption title="Dami lang ng tubig ang ipinapakita ng haligi.">Hindi ito planong imbakan o ang taas nito.</Assumption>
       </>
     ),
@@ -530,6 +652,11 @@ export const storyTl: Record<string, StoryStep> = {
     ),
   },
   'water-supply': {
+    brief: (
+      <>
+        Paunang plano ng BCDA: tatlong ilog at mga tangke. Ayon sa kuwenta ng kritiko sa tag-init, puwedeng <b>kulangin nang hanggang {shortfall(90)[1]} milyong litro bawat araw</b> kahit sa tantiya ng BCDA.
+      </>
+    ),
     title: 'Saan manggagaling ang tubig?',
     body: (
       <>

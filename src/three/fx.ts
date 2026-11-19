@@ -64,6 +64,13 @@ export interface FxLabels {
   river: string;
   creek: string;
   farms: string;
+  /** shorter wording for phones, where long labels crowd the picture (the full wording is in the card's details) */
+  phone?: {
+    gauge?: Partial<GaugeLabels>;
+    reservoir?: string;
+    river?: string;
+    waterDay?: (day: number, meters: number, mld: number) => string;
+  };
 }
 
 interface FxLabel {
@@ -406,7 +413,11 @@ export class SiteFx {
     }
   }
 
-  setLabels(t: FxLabels) {
+  setLabels(full: FxLabels) {
+    const p = window.matchMedia('(max-width: 899px)').matches ? full.phone : undefined;
+    const t: FxLabels = p
+      ? { ...full, gauge: { ...full.gauge, ...p.gauge }, reservoir: p.reservoir ?? full.reservoir, river: p.river ?? full.river, waterDay: p.waterDay ?? full.waterDay }
+      : full;
     const by = (k: Fx) => this.labels.filter((l) => l.key === k);
     by('manila')[0].el.innerHTML = `<span>${t.manila}</span>`;
     const icons = by('icons');

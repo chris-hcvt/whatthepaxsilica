@@ -9,13 +9,37 @@ import { ENERGY, ENERGY_KEYS, HOME_KEYS, HOME_LOTS, REFS, WATER_KEYS, WATER_MLD,
 const MALLS: RefKey[] = ['moa', 'glorietta', 'northedsa', 'megamall', 'smpampanga', 'smclark'];
 const DISTRICTS: RefKey[] = ['bgc', 'makaticbd', 'ortigas'];
 
-export function RefPicker({ malls, districts, result }: { malls: ReactNode; districts: ReactNode; result: (k: RefKey, times: string) => ReactNode }) {
+export function RefPicker({
+  malls,
+  districts,
+  result,
+  compact = false,
+}: {
+  malls: ReactNode;
+  districts: ReactNode;
+  result: (k: RefKey, times: string) => ReactNode;
+  /** phones: malls and districts in one sideways row, and only the headline result */
+  compact?: boolean;
+}) {
   const { refKey, setRefKey } = useDeck();
   const chip = (k: RefKey) => (
     <button key={k} type="button" role="radio" aria-checked={refKey === k} className={`chip ${refKey === k ? 'on' : ''}`} onClick={() => setRefKey(k)}>
       {REFS[k].name}
     </button>
   );
+  if (compact)
+    return (
+      <div className="refpicker compact">
+        <div className="mchips" role="radiogroup">
+          {MALLS.map(chip)}
+          <span className="mchips-sep" aria-hidden="true" />
+          {DISTRICTS.map(chip)}
+        </div>
+        <div className="ref-result" aria-live="polite">
+          {result(refKey, fitTimes(refKey))}
+        </div>
+      </div>
+    );
   return (
     <div className="refpicker">
       <div className="ref-group">
@@ -38,8 +62,30 @@ export function RefPicker({ malls, districts, result }: { malls: ReactNode; dist
 }
 
 /** The four home sizes as a list; the chosen one fills the one-hectare square in 3D. */
-export function HomePicker({ names, lot, count }: { names: Record<HomeKey, ReactNode>; lot: (m2: number) => ReactNode; count: (n: number) => ReactNode }) {
+export function HomePicker({
+  names,
+  lot,
+  count,
+  compact = false,
+}: {
+  names: Record<HomeKey, ReactNode>;
+  lot: (m2: number) => ReactNode;
+  count: (n: number) => ReactNode;
+  /** phones: one sideways row of chips (name and count) */
+  compact?: boolean;
+}) {
   const { homeKey, setHomeKey } = useDeck();
+  if (compact)
+    return (
+      <div className="mchips" role="radiogroup">
+        {HOME_KEYS.map((k) => (
+          <button key={k} type="button" role="radio" aria-checked={k === homeKey} className={`mchip ${k === homeKey ? 'on' : ''}`} onClick={() => setHomeKey(k)}>
+            <b>{names[k]}</b>
+            <span>{count(HOME_LOTS[k].perHectare)}</span>
+          </button>
+        ))}
+      </div>
+    );
   return (
     <div className="homes" role="radiogroup">
       {HOME_KEYS.map((k) => {
@@ -73,6 +119,7 @@ export function EnergyPicker({
   next,
   restart,
   mark = '*',
+  compact = false,
 }: {
   names: Record<EnergyKey, ReactNode>;
   kwh: (n: number) => ReactNode;
@@ -86,6 +133,8 @@ export function EnergyPicker({
   restart: ReactNode;
   /** footnote mark on the zone's bill: it is an illustration at household rates */
   mark?: string;
+  /** phones: the sideways row and the next button only (the bill in 3D carries the numbers) */
+  compact?: boolean;
 }) {
   const { energyKey: on, setEnergyKey: setOn } = useDeck();
   const nextKey = ENERGY_KEYS[ENERGY_KEYS.indexOf(on) + 1];
@@ -100,7 +149,7 @@ export function EnergyPicker({
     box.scrollTo({ left: Math.max(0, left), behavior: 'smooth' });
   }, [on]);
   return (
-    <div className="energy">
+    <div className={`energy ${compact ? 'compact' : ''}`}>
       <div className="energy-rows" role="radiogroup" ref={rowsRef}>
         {ENERGY_KEYS.map((k) => {
           const v = ENERGY[k];
@@ -134,9 +183,18 @@ export function EnergyPicker({
 }
 
 /** What is lined up against what is needed: a to-scale bar with a legend. */
-export function GapBar({ parts, rest }: { parts: { share: number; color: string; striped?: boolean; label: ReactNode }[]; rest: ReactNode }) {
+export function GapBar({
+  parts,
+  rest,
+  compact = false,
+}: {
+  parts: { share: number; color: string; striped?: boolean; label: ReactNode }[];
+  rest: ReactNode;
+  /** phones: the bar and the "no plan" line only */
+  compact?: boolean;
+}) {
   return (
-    <div className="gapbar">
+    <div className={`gapbar ${compact ? 'compact' : ''}`}>
       <div className="gap-track" aria-hidden="true">
         {parts.map((p, i) => (
           <span key={i} className={p.striped ? 'striped' : ''} style={{ width: `max(4px, ${p.share * 100}%)`, background: p.striped ? undefined : p.color, color: p.color }} />
@@ -185,25 +243,8 @@ export function FillOptions({ items }: { items: { icon: 'sun' | 'flame' | 'grid'
   );
 }
 
-/**
- * A clearly marked note on how to read a comparison (assumptions, illustration only, etc.).
- * On phones it starts folded to one line, so the card leaves room for the 3D; a tap opens it.
- */
+/** A clearly marked note on how to read a comparison (assumptions, illustration only, etc.). */
 export function Assumption({ title, children }: { title: ReactNode; children: ReactNode }) {
-  const phone = usePhone();
-  const [open, setOpen] = useState(false);
-  if (phone && !open)
-    return (
-      <button type="button" className="assume assume-fold" aria-expanded="false" onClick={() => setOpen(true)}>
-        <span className="assume-ico" aria-hidden="true">
-          i
-        </span>
-        <b>{title}</b>
-        <span className="assume-open" aria-hidden="true">
-          ＋
-        </span>
-      </button>
-    );
   return (
     <div className="assume" role="note">
       <span className="assume-ico" aria-hidden="true">
@@ -217,10 +258,21 @@ export function Assumption({ title, children }: { title: ReactNode; children: Re
 }
 
 /** The daily water scenarios; the chosen one sets the height of the 3D column. */
-export function WaterPicker({ names, tags, result }: { names: Record<WaterKey, ReactNode>; tags: Record<WaterKey, ReactNode>; result: (k: WaterKey, mld: number) => ReactNode }) {
+export function WaterPicker({
+  names,
+  tags,
+  result,
+  compact = false,
+}: {
+  names: Record<WaterKey, ReactNode>;
+  tags: Record<WaterKey, ReactNode>;
+  result: (k: WaterKey, mld: number) => ReactNode;
+  /** phones: smaller chips; pass a short `result` */
+  compact?: boolean;
+}) {
   const { waterKey, setWaterKey } = useDeck();
   return (
-    <div className="waterpick">
+    <div className={`waterpick ${compact ? 'compact' : ''}`}>
       <div className="water-chips" role="radiogroup">
         {WATER_KEYS.map((k) => (
           <button key={k} type="button" role="radio" aria-checked={waterKey === k} className={`water-chip w-${k} ${waterKey === k ? 'on' : ''}`} onClick={() => setWaterKey(k)}>
@@ -264,6 +316,23 @@ export function ProsCons({ prosTitle, consTitle, pros, cons }: { prosTitle: Reac
       </ul>
     </section>
   );
+  const phone = usePhone();
+  const [tab, setTab] = useState<'pros' | 'cons'>('pros');
+  // phones: one side at a time, behind two tabs, instead of two long lists one after the other
+  if (phone)
+    return (
+      <div className="proscons tabs">
+        <div className="pc-tabs" role="tablist">
+          <button type="button" role="tab" aria-selected={tab === 'pros'} className={`pc-tab pros ${tab === 'pros' ? 'on' : ''}`} onClick={() => setTab('pros')}>
+            {prosTitle} <span>{pros.length}</span>
+          </button>
+          <button type="button" role="tab" aria-selected={tab === 'cons'} className={`pc-tab cons ${tab === 'cons' ? 'on' : ''}`} onClick={() => setTab('cons')}>
+            {consTitle} <span>{cons.length}</span>
+          </button>
+        </div>
+        {tab === 'pros' ? col(pros, 'pros', prosTitle, '+') : col(cons, 'cons', consTitle, '−')}
+      </div>
+    );
   return (
     <div className="proscons">
       {col(pros, 'pros', prosTitle, '+')}
@@ -298,6 +367,26 @@ export function ScoreCard({
       </p>
     </>
   );
+  const phone = usePhone();
+  // phones: one topic at a time (tap to open), each with both sides one under the other
+  if (phone)
+    return (
+      <div className="scorecard acc">
+        {rows.map((r, i) => (
+          <details className="sc-acc" key={i} open={i === 0}>
+            <summary>{r.topic}</summary>
+            <div className="sc-cell ph">
+              <div className="sc-side">{head[1]}</div>
+              {cell(r.ph)}
+            </div>
+            <div className="sc-cell fo">
+              <div className="sc-side">{head[2]}</div>
+              {cell(r.foreign)}
+            </div>
+          </details>
+        ))}
+      </div>
+    );
   return (
     <div className="scorecard" role="table">
       <div className="sc-row sc-head snap" role="row">

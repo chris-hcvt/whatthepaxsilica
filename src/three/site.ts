@@ -11,6 +11,8 @@ export const EXAG = 2.4; // vertical exaggeration for readability
 const WALL_H = 0.32; // km, visual height of the boundary "curtain"
 const FLAT_BAND = 0.45; // km, width of the slope between the levelled pad and natural ground
 
+const phoneScreen = () => window.matchMedia('(max-width: 899px)').matches;
+
 /** the villages the people chapter keeps on screen: north, west, east and the two south of the zone */
 const FIT_SITIOS = ['Sta. Lucia', 'Binyayan', 'Manabayucan', 'Sapang Kawayan', 'Kalangitan', 'Mauricia', 'Gayaman'];
 
@@ -627,7 +629,9 @@ export class SiteScene {
     } else this.refLabel.on = false;
     for (const s of this.data.sitios) {
       const l = this.sitioLabels.get(s.name)!;
-      const visible = !!layers.sitios && (layers.sitios === 'all' || KEY_SITIOS.includes(s.name));
+      // phones: only the named villages get a label (the others keep their pins), so the picture stays readable
+      const named = KEY_SITIOS.includes(s.name) || FIT_SITIOS.includes(s.name);
+      const visible = !!layers.sitios && (layers.sitios === 'all' ? named || !phoneScreen() : KEY_SITIOS.includes(s.name));
       l.on = visible;
       if (visible && KEY_SITIOS.includes(s.name)) {
         l.el.innerHTML = '';

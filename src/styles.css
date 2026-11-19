@@ -826,21 +826,6 @@ details.more p {
   line-height: 1.5;
   color: #d5e3f7;
 }
-.assume.assume-fold {
-  display: flex;
-  align-items: center;
-  width: 100%;
-  text-align: left;
-  color: var(--text);
-  font: inherit;
-  cursor: pointer;
-}
-.assume-open {
-  margin-left: auto;
-  padding-left: 8px;
-  color: #9cc4ff;
-  font-weight: 700;
-}
 .assume b {
   color: #e9f1ff;
 }
@@ -2319,45 +2304,6 @@ html.snap-page {
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
-/* phones only: fold the card to its title so the 3D shows in full */
-.card-fold {
-  display: none;
-}
-@media (max-width: 899px) {
-  .card-count {
-    margin-left: auto;
-  }
-  .card-fold {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 3px 9px;
-    border: 1px solid var(--line-2);
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.06);
-    color: var(--text);
-    font: 600 11px/1.3 var(--sans);
-    letter-spacing: 0;
-    text-transform: none;
-    cursor: pointer;
-  }
-  .card-fold::after {
-    content: '▾';
-    font-size: 10px;
-  }
-  .card.folded .card-fold::after {
-    content: '▴';
-  }
-  .card.folded .card-body,
-  .card.folded .more,
-  .card.folded .kicker {
-    display: none;
-  }
-  .card.folded .card-title {
-    margin-bottom: 0;
-    cursor: pointer;
-  }
-}
 .card .kicker {
   color: var(--muted);
 }
@@ -2953,5 +2899,478 @@ html.snap-page {
   .label3d.fx {
     white-space: normal;
     max-width: min(300px, calc(100vw - 24px));
+  }
+}
+
+/* =====================================================================
+   phones: one idea per screen. The card is a headline, a sentence or two and at most one control;
+   the full text opens in a sheet; the top bar is the chapter and a menu.
+   ===================================================================== */
+.sbar-now,
+.menu-btn,
+.details-btn {
+  display: none;
+}
+@media (max-width: 899px) {
+  /* top bar: brand mark, where you are, menu (the story's bar; the report keeps its own) */
+  .sbar:not(.report-bar) .chapters,
+  .sbar:not(.report-bar) .sbar-actions {
+    display: none;
+  }
+  .sbar-now {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    min-width: 0;
+    font-size: 15px;
+  }
+  .sbar-now b {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .sbar-now span {
+    color: var(--muted);
+    font-size: 12.5px;
+    font-variant-numeric: tabular-nums;
+  }
+  .menu-btn {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border: 1px solid var(--line-2);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text);
+    cursor: pointer;
+  }
+  .menu-btn svg {
+    width: 20px;
+    height: 20px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+  }
+
+  /* the story card */
+  .card.m-card {
+    padding: 14px 16px 16px;
+    border-radius: 18px;
+  }
+  .m-card .card-meta {
+    margin-bottom: 6px;
+    font-size: 11px;
+  }
+  .m-card .card-title {
+    font-size: 21px;
+    line-height: 1.18;
+    margin: 0;
+  }
+  .card-brief {
+    margin: 8px 0 0;
+    font-size: 15.5px;
+    line-height: 1.45;
+    color: #d6dde6;
+  }
+  .card-brief b {
+    color: var(--text);
+  }
+  .card-control {
+    margin-top: 12px;
+  }
+  .details-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 11px;
+    border: 1px solid rgba(116, 169, 255, 0.45);
+    border-radius: 999px;
+    background: rgba(116, 169, 255, 0.12);
+    color: #cfe0ff;
+    font: 600 12px/1.3 var(--sans);
+    letter-spacing: 0;
+    text-transform: none;
+    cursor: pointer;
+  }
+
+  /* compact controls: one sideways row of chips */
+  .mchips {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    margin: 0 -16px;
+    padding: 2px 16px 4px;
+  }
+  .mchips::-webkit-scrollbar {
+    display: none;
+  }
+  .mchips .chip,
+  .mchip {
+    flex: none;
+    white-space: nowrap;
+  }
+  .mchip {
+    display: grid;
+    gap: 1px;
+    padding: 6px 12px;
+    border: 1px solid var(--line-2);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text);
+    font: 600 13px/1.25 var(--sans);
+    text-align: left;
+    cursor: pointer;
+  }
+  .mchip span {
+    color: var(--muted);
+    font-weight: 500;
+  }
+  .mchip.on {
+    border-color: var(--amber);
+    background: rgba(255, 201, 77, 0.14);
+  }
+  .mchip.on span b,
+  .mchip.on span {
+    color: #ffd98a;
+  }
+  .mchips-sep {
+    flex: none;
+    width: 1px;
+    margin: 4px 2px;
+    background: var(--line-2);
+  }
+  .refpicker.compact {
+    display: grid;
+    gap: 10px;
+  }
+  .refpicker.compact .ref-result {
+    border: 0;
+    padding: 0;
+  }
+  .refpicker.compact .ref-result p {
+    display: none;
+  }
+  .refpicker.compact .ref-big {
+    font-size: 16px;
+  }
+  .refpicker.compact .ref-big b {
+    font-size: 34px;
+  }
+  .energy.compact {
+    margin-top: 0;
+  }
+  .energy.compact .energy-detail {
+    display: none;
+  }
+  .gapbar.compact .gap-legend li:not(:last-child) {
+    display: none;
+  }
+  .gapbar.compact .gap-legend {
+    margin-top: 6px;
+    font-size: 13px;
+  }
+  .waterpick.compact .water-chip {
+    padding: 6px 8px;
+  }
+  .waterpick.compact .water-chip small {
+    font-size: 10.5px;
+  }
+  .waterpick.compact .water-result {
+    margin-top: 8px;
+    font-size: 14px;
+  }
+
+  /* sheets: the full text of a step, and the menu */
+  .psheet {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+  }
+  .psheet-scrim {
+    position: absolute;
+    inset: 0;
+    background: rgba(3, 5, 8, 0.6);
+    animation: fadein 0.2s ease both;
+  }
+  .psheet-panel {
+    position: relative;
+    max-height: 86vh;
+    max-height: 86svh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 0 18px calc(22px + env(safe-area-inset-bottom, 0px));
+    border-radius: 20px 20px 0 0;
+    border: 1px solid var(--line);
+    border-bottom: 0;
+    background: #0d1117;
+    box-shadow: 0 -20px 60px rgba(0, 0, 0, 0.5);
+    outline: none;
+    animation: sheetup 0.28s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+  .psheet-head {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 0 -18px 4px;
+    padding: 16px 18px 12px;
+    background: linear-gradient(#0d1117 85%, rgba(13, 17, 23, 0));
+  }
+  .psheet-head h2 {
+    margin: 4px 0 0;
+    font: 800 21px/1.2 var(--display);
+  }
+  .psheet-close {
+    flex: none;
+    width: 36px;
+    height: 36px;
+    border: 1px solid var(--line-2);
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text);
+    font: 400 22px/1 var(--sans);
+    cursor: pointer;
+  }
+  .psheet-body {
+    font-size: 15px;
+    line-height: 1.55;
+  }
+  .psheet-more {
+    margin-top: 18px;
+    padding-top: 14px;
+    border-top: 1px solid var(--line);
+    font-size: 14px;
+    color: #cfd7e1;
+  }
+  .psheet-more h3 {
+    margin: 0 0 8px;
+    font: 700 13px/1.3 var(--sans);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .pmenu-chapters {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 4px;
+  }
+  .pmenu-chapters button {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 11px 12px;
+    border: 1px solid transparent;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--text);
+    font: 600 16px/1.2 var(--sans);
+    text-align: left;
+    cursor: pointer;
+  }
+  .pmenu-chapters button.on {
+    border-color: rgba(255, 77, 77, 0.6);
+    background: rgba(255, 77, 77, 0.1);
+  }
+  .pmenu-n {
+    display: grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--muted);
+    font-size: 12px;
+  }
+  .pmenu-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 18px;
+  }
+  .pmenu-label {
+    color: var(--muted);
+    font-size: 14px;
+  }
+  .pmenu-langs {
+    display: flex;
+    gap: 6px;
+  }
+  .pmenu-langs button {
+    padding: 7px 14px;
+    border: 1px solid var(--line-2);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text);
+    font: 600 14px/1.2 var(--sans);
+    cursor: pointer;
+  }
+  .pmenu-langs button.on {
+    background: var(--text);
+    color: #0a0d12;
+  }
+  .pmenu-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 18px;
+  }
+}
+@keyframes sheetup {
+  from {
+    transform: translateY(40px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+@keyframes fadein {
+  from {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .psheet-panel,
+  .psheet-scrim {
+    animation: none;
+  }
+}
+
+/* phones: reading sections, one thing at a time */
+@media (max-width: 899px) {
+  .proscons.tabs {
+    display: block;
+  }
+  .pc-tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+  .pc-tab {
+    padding: 10px 8px;
+    border: 1px solid var(--line-2);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--muted);
+    font: 700 14px/1.25 var(--sans);
+    cursor: pointer;
+  }
+  .pc-tab span {
+    margin-left: 4px;
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+    font-size: 12px;
+  }
+  .pc-tab.pros.on {
+    border-color: var(--teal);
+    color: var(--text);
+    background: rgba(51, 195, 174, 0.12);
+  }
+  .pc-tab.cons.on {
+    border-color: var(--red);
+    color: var(--text);
+    background: rgba(255, 77, 77, 0.12);
+  }
+  .proscons.tabs .pc-col h3 {
+    display: none;
+  }
+  .scorecard.acc {
+    display: grid;
+    gap: 6px;
+  }
+  .sc-acc {
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.03);
+  }
+  .sc-acc summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px;
+    font: 700 16px/1.25 var(--sans);
+    cursor: pointer;
+    list-style: none;
+  }
+  .sc-acc summary::-webkit-details-marker {
+    display: none;
+  }
+  .sc-acc summary::after {
+    content: '＋';
+    color: var(--muted);
+    font-weight: 400;
+  }
+  .sc-acc[open] summary::after {
+    content: '－';
+  }
+  .sc-acc .sc-cell {
+    margin: 0 14px 12px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.04);
+  }
+  .sc-acc .sc-cell p {
+    margin: 6px 0 0;
+    font-size: 14.5px;
+    line-height: 1.45;
+  }
+  .sc-side {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .sc-acc .sc-cell.ph .sc-side {
+    color: #8fd6ff;
+  }
+  .sc-acc .sc-cell.fo .sc-side {
+    color: #ffc58f;
+  }
+}
+
+/* phones: the city-drop card is a search box and one sideways row of cities (the tip is in its details) */
+@media (max-width: 899px) {
+  .card.m-card {
+    max-height: none;
+    overflow: visible;
+  }
+  .m-card .dropcontrols .chips {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    margin: 0 -16px;
+    padding: 2px 16px 4px;
+  }
+  .m-card .dropcontrols .chips::-webkit-scrollbar {
+    display: none;
+  }
+  .m-card .dropcontrols .chip {
+    flex: none;
+    white-space: nowrap;
+  }
+  .m-card .dropcontrols .hint {
+    display: none;
+  }
+  /* the card sits at the bottom of the screen: suggestions open upward */
+  .m-card .drop-sugg {
+    top: auto;
+    bottom: calc(100% + 4px);
   }
 }
