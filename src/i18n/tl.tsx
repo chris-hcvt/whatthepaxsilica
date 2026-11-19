@@ -19,7 +19,7 @@ import {
 } from '../components/bits';
 import { FACTS, timesFit } from '../content/slides';
 import { MEMBERS } from '../content/members';
-import { ACWA_MW, BCDA_LNG_STUDY_MW, GAP_SHARE, LINED_UP_MW, jugsOf } from '../content/power';
+import { ACWA_MW, BCDA_LNG_STUDY_MW, GAP_SHARE, LINED_UP_MW } from '../content/power';
 import { bigNum, homesNum, pctNum } from './fmt';
 import { powerSlidesTl } from './report-power';
 import { chaptersTl, storyTl } from './story-tl';
@@ -160,8 +160,13 @@ export const tl: Locale = {
       },
       reservoir: 'Konseptong laki: 390–780 ektaryang imbakan (isang pagsusuri), hindi lugar ng proyekto',
       odonnell: 'Ilog O’Donnell',
-      waterDay: (day, m, mld) => `Araw ${day} · ${bigNum(jugsOf(mld) * day, 'milyon', 'bilyon')} galon · ${m} metro ang taas`,
-      waterTick: (days, m) => `${days === 1 ? '1 araw' : days === 7 ? '1 linggo' : '1 buwan'} · ${m} m`,
+      jugs: {
+        area: '1 ektarya · 100 × 100 metro',
+        few: (n, l) => `${bigNum(n, 'milyon', 'bilyon')} galon · ${l < 100 ? (Math.round(l * 10) / 10).toString() : bigNum(l, 'milyon', 'bilyon')} litro`,
+        day: (day, n, m) => `Araw ${day} · ${bigNum(n, 'milyon', 'bilyon')} galon · ${m} metro ang taas`,
+        scale: ['5-gallon na galon, tunay na laki', 'bawat galon dito = 1,000 galon (10 × 10 × 10)', 'bawat galon dito ≈ 50,653 galon (37 × 37 × 37)'],
+        tick: (days, m) => `${days === 1 ? '1 araw' : days === 7 ? '1 linggo' : '1 buwan'} · ${m} m`,
+      },
       makati: 'Lungsod ng Makati · 1,815 ektarya',
       families: '≈ 200 pamilyang Aeta Hungey',
       river: 'Ilog Bangut (OpenStreetMap: Bangot)',
@@ -174,7 +179,6 @@ export const tl: Locale = {
         },
         reservoir: 'Konseptong imbakan, 390–780 ektarya',
         river: 'Ilog Bangut',
-        waterDay: (day, _m, mld) => `Araw ${day} · ${bigNum(jugsOf(mld) * day, 'milyon', 'bilyon')} galon`,
         farms: 'Sakahan',
       },
       creek: 'Sapa ng Sapang Kawayan',

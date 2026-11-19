@@ -3666,3 +3666,33 @@ html.snap-page {
     pointer-events: none;
   }
 }
+
+/* the jug film's counter: the count, and what one drawn jug stands for */
+.label3d.fx.jug-counter {
+  display: grid;
+  justify-items: center;
+  gap: 1px;
+  padding: 6px 12px;
+  border-radius: 12px;
+  border-color: rgba(120, 190, 255, 0.7) !important;
+  background: rgba(8, 26, 48, 0.9);
+  text-align: center;
+  white-space: nowrap;
+}
+.jug-counter b {
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+.jug-counter small {
+  font-size: 11px;
+  font-weight: 500;
+  color: #a9d6ff;
+}
+@media (max-width: 899px) {
+  .jug-counter b {
+    font-size: 12.5px;
+  }
+  .jug-counter small {
+    font-size: 10px;
+  }
+}

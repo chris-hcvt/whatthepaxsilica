@@ -19,7 +19,7 @@ import {
 } from '../components/bits';
 import { FACTS, timesFit } from '../content/slides';
 import { MEMBERS } from '../content/members';
-import { ACWA_MW, BCDA_LNG_STUDY_MW, GAP_SHARE, LINED_UP_MW, jugsOf } from '../content/power';
+import { ACWA_MW, BCDA_LNG_STUDY_MW, GAP_SHARE, LINED_UP_MW } from '../content/power';
 import { bigNum, homesNum, pctNum } from './fmt';
 import { powerSlidesEn } from './report-power';
 import { chaptersEn, storyEn } from './story-en';
@@ -160,8 +160,13 @@ export const en: Locale = {
       },
       reservoir: 'Conceptual area: 390–780 ha of reservoirs (one analysis), not a site',
       odonnell: 'O’Donnell River',
-      waterDay: (day, m, mld) => `Day ${day} · ${bigNum(jugsOf(mld) * day)} jugs · ${m} m tall`,
-      waterTick: (days, m) => `${days === 1 ? '1 day' : days === 7 ? '1 week' : '1 month'} · ${m} m`,
+      jugs: {
+        area: '1 hectare · 100 × 100 meters',
+        few: (n, l) => `${n === 1 ? '1 jug' : `${bigNum(n)} jugs`} · ${l < 100 ? (Math.round(l * 10) / 10).toString() : bigNum(l)} liters`,
+        day: (day, n, m) => `Day ${day} · ${bigNum(n)} jugs · ${m} m tall`,
+        scale: ['5-gallon jugs, true size', 'each jug shown = 1,000 jugs (10 × 10 × 10)', 'each jug shown ≈ 50,653 jugs (37 × 37 × 37)'],
+        tick: (days, m) => `${days === 1 ? '1 day' : days === 7 ? '1 week' : '1 month'} · ${m} m`,
+      },
       makati: 'Makati City · 1,815 hectares',
       families: '≈ 200 Aeta Hungey families',
       river: 'Bangut River (OpenStreetMap: Bangot)',
@@ -174,7 +179,6 @@ export const en: Locale = {
         },
         reservoir: 'Conceptual reservoirs, 390–780 ha',
         river: 'Bangut River',
-        waterDay: (day, _m, mld) => `Day ${day} · ${bigNum(jugsOf(mld) * day)} jugs`,
         farms: 'Farmland',
       },
       creek: 'Sapang Kawayan creek',

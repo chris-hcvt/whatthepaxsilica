@@ -3,6 +3,7 @@ import { outerRing, pointInRing, ringCentroid, type LL } from './geo';
 import type { SiteScene } from './site';
 import { HectareFx, type HomeKey } from './hectare';
 import { LineupFx, type BillLabels } from './lineup';
+import { JugFx, type JugLabels } from './jugs';
 import { INDUSTRY_PHOTOS, PHOTOS } from '../content/photos';
 import { GaugeFx, type GaugeLabels } from './gauge';
 import type { EnergyKey } from '../content/power';
@@ -56,9 +57,8 @@ export interface FxLabels {
   gauge: GaugeLabels;
   reservoir: string;
   odonnell: string;
-  /** the rising water column: day counter, and marks at 1 day, 1 week, 1 month */
-  waterDay: (day: number, meters: number, mld: number) => string;
-  waterTick: (days: number, meters: number) => string;
+  /** the water as 5-gallon jugs: counter, what one drawn jug stands for, day/week/month marks */
+  jugs: JugLabels;
   makati: string;
   families: string;
   river: string;
@@ -69,7 +69,6 @@ export interface FxLabels {
     gauge?: Partial<GaugeLabels>;
     reservoir?: string;
     river?: string;
-    waterDay?: (day: number, meters: number, mld: number) => string;
     farms?: string;
   };
 }
@@ -114,6 +113,9 @@ export class SiteFx {
   private manilaEnd: [number, number];
   readonly hectare: HectareFx;
   readonly lineup: LineupFx;
+  readonly jugs: JugFx;
+  /** set by the engine each frame: the camera is still flying somewhere (the jug film waits for it) */
+  cameraBusy = false;
   readonly gauge: GaugeFx;
   private reservoirParts: LL[][];
   private liteMode = false;
@@ -127,6 +129,7 @@ export class SiteFx {
     this.hectare.lite = v;
     this.lineup.lite = v;
     this.gauge.lite = v;
+    this.jugs.lite = v;
     this.updateSun();
   }
 
@@ -196,6 +199,7 @@ export class SiteFx {
     this.hectare = new HectareFx(site);
 
     this.lineup = new LineupFx(site);
+    this.jugs = new JugFx(site, this.hectare);
     this.gauge = new GaugeFx(site);
     // reservoirs: the northern part of the zone with the same area as 390 and 780 hectares
     this.reservoirParts = RESERVOIR_HA.map((ha) => this.northPart(ha / 100));
@@ -422,7 +426,6 @@ export class SiteFx {
           gauge: { ...full.gauge, ...p.gauge },
           reservoir: p.reservoir ?? full.reservoir,
           river: p.river ?? full.river,
-          waterDay: p.waterDay ?? full.waterDay,
           farms: p.farms ?? full.farms,
         }
       : full;
@@ -441,7 +444,7 @@ export class SiteFx {
     this.lineup.setLabels(t.bill);
     this.gauge.setLabels(t.gauge);
     by('reservoir')[0].el.innerHTML = `${ICONS.drop}<span>${t.reservoir}</span>`;
-    this.hectare.setWaterLabels(t.waterDay, t.waterTick);
+    this.jugs.setLabels(t.jugs);
     by('makati')[0].el.innerHTML = `<span>${t.makati}</span>`;
     by('rings')[0].el.innerHTML = `${ICONS.home}<span>${t.families}</span>`;
     const rl = by('river');
@@ -473,6 +476,7 @@ export class SiteFx {
     );
     this.lineup.setVisible(next.has('lineup'));
     this.gauge.setVisible(next.has('gauge'), instant);
+    this.jugs.setVisible(next.has('water'), instant);
     this.updateSun();
     this.applyProgress();
   }
@@ -523,6 +527,7 @@ export class SiteFx {
     if (this.hectare.update(dt)) moving = true;
     if (this.lineup.update(dt)) moving = true;
     if (this.gauge.update(dt)) moving = true;
+    if (this.jugs.update(dt, this.cameraBusy)) moving = true;
     if (this.active.has('rings')) {
       this.rings.forEach((r, i) => {
         const ph = this.lite ? 0.35 + i * 0.25 : (this.t * 0.45 + i / 3) % 1;
@@ -559,7 +564,7 @@ export class SiteFx {
 
   /** places the effect modules' own labels; returns this layer's labels for the site's shared layout pass */
   updateLabels(camera: THREE.Camera, w: number, h: number): LabelItem[] {
-    this.hectare.updateLabels(camera, w, h);
+    this.jugs.updateLabels(camera, w, h);
     this.lineup.updateLabels(camera, w, h);
     this.gauge.updateLabels(camera, w, h);
     const v = new THREE.Vector3();
@@ -586,7 +591,7 @@ export class SiteFx {
 
   hideLabels() {
     for (const l of this.labels) l.el.style.display = 'none';
-    this.hectare.hideLabels();
+    this.jugs.hideLabels();
     this.lineup.hideLabels();
     this.gauge.hideLabels();
   }

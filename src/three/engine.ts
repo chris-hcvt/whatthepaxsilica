@@ -88,7 +88,7 @@ export class Engine {
     this.controls.enableDamping = true;
     this.controls.dampingFactor = 0.08;
     this.controls.maxPolarAngle = Math.PI * 0.47;
-    this.controls.minDistance = 0.025; // km: the jug stack's close-up sits about 35–40 m from its corner
+    this.controls.minDistance = 0.0015; // km: the jug film's first close-up sits about 2 m from a single jug
     this.controls.maxDistance = 45;
     this.controls.autoRotateSpeed = 0.35;
     // the story is driven by scrolling, so the camera is not user-controlled:
@@ -248,9 +248,7 @@ export class Engine {
       this.camera.position.copy(this.reducedMotion ? position : target.clone().add(new THREE.Vector3(0, 34, 26)));
       this.flyTo(position, target, 2.8);
     } else {
-      // the jug stack runs on a clock (about 5 s): the camera gets there in 1.4 s
-      const jugs = state.view === 'water' && site.waterClose;
-      this.flyTo(position, target, wasSite ? (jugs ? 1.4 : 1.6) : 0.01, jugs);
+      this.flyTo(position, target, wasSite ? 1.6 : 0.01);
     }
     this.dirty = true;
   }
@@ -305,13 +303,27 @@ export class Engine {
       if (f.t >= 1) this.fly = null;
       active = true;
     }
+    this.site.cameraBusy = !!this.fly;
     if (this.site.update(dt)) active = true;
-    // the jug stack: once its first day is up close, pull back to the whole month as it rises
+    // the jug film: from one jug up close it pulls back by itself; once the month starts, fly out to the tower
     if (this.site.takeCameraCue() && this.lastState?.view === 'water') {
       const { position, target } = this.siteView('water');
-      this.flyTo(position, target, 2.5, true);
+      this.flyTo(position, target, 2.4, true);
     }
     if (this.controls.update()) active = true;
+    const script = !this.fly && this.lastState?.view === 'water' ? this.site.scriptCamera() : null;
+    if (script) {
+      this.controls.target.copy(script.target);
+      this.camera.position.copy(script.position);
+      this.camera.lookAt(script.target);
+      active = true;
+    }
+    // close-ups (a single jug ~2 m away) need a near clipping plane well under the usual 10 m
+    const near = THREE.MathUtils.clamp(this.camera.position.distanceTo(this.controls.target) * 0.05, 0.0003, 0.01);
+    if (Math.abs(near - this.camera.near) > 1e-7) {
+      this.camera.near = near;
+      this.camera.updateProjectionMatrix();
+    }
     if (active || this.dirty) {
       this.dirty = false;
       this.renderer.render(this.site.scene, this.camera);

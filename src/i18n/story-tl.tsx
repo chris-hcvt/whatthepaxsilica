@@ -666,6 +666,10 @@ export const storyTl: Record<string, StoryStep> = {
           {jugStackM(90, 1)} metro bawat araw.
         </li>
         <li>
+          Sa 3D, isa-isang iginuhit ang galon sa tunay na laki hanggang 10,000. Pagkatapos, bawat galon na nakaguhit ay katumbas ng 1,000 tunay na
+          galon (10 × 10 × 10), at saka mga 50,653 (37 × 37 × 37), para makita pa rin sila mula sa malayo. Pareho pa rin ang taas ng salansan.
+        </li>
+        <li>
           Kung tubig lang sa 1 ektarya: lalim = milyong litro × 1,000 metro kubiko ÷ 10,000 metro kuwadrado: {depthPerDay(90)} metro bawat araw sa 90
           milyon, {depthPerDay(90) * DAYS_WEEK} metro sa isang linggo, {depthPerDay(90) * DAYS_MONTH} metro sa isang buwan. Katumbas ito ng{' '}
           {poolsOf(90)} Olympic pool bawat araw (2.5 milyong litro bawat isa); ang BCDA mismo ang nagkumpara ng 90 milyong litro sa 36 na pool.

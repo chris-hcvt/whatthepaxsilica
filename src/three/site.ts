@@ -622,7 +622,7 @@ export class SiteScene {
       this.layerKey = key;
       this.pop.hide();
       if (layers.home) this.fx.setHome(layers.home);
-      if (layers.water) this.fx.hectare.setWaterRate(WATER_MLD[layers.water]);
+      if (layers.water) this.fx.jugs.setRate(WATER_MLD[layers.water]);
       if (layers.energy) this.fx.setEnergy(layers.energy);
       this.fx.set(layers.fx ?? [], instant);
       this.drawOverlay(!!layers.ncc, layers.hub !== false, !!layers.flat);
@@ -690,8 +690,8 @@ export class SiteScene {
       hectare: { target: this.fx.hectareTarget(), offset: new THREE.Vector3(2.6, 6.2, 6.0).normalize().multiplyScalar(aspect < 0.9 ? 0.25 : 0.215) },
       // lower and further back, so a month of jugs (up to ~740 m) fits above the square
       water: {
-        target: this.fx.hectareTarget().add(new THREE.Vector3(0, this.fx.hectare.waterMonthKm * 0.48, 0)),
-        offset: new THREE.Vector3(0.62, 0.36, 0.78).normalize().multiplyScalar(Math.max(0.45, this.fx.hectare.waterMonthKm * 2.3)),
+        target: this.fx.hectareTarget().add(new THREE.Vector3(0, this.fx.jugs.monthKm * 0.48, 0)),
+        offset: new THREE.Vector3(0.62, 0.36, 0.78).normalize().multiplyScalar(Math.max(0.45, this.fx.jugs.monthKm * 2.3)),
       },
       // high enough to see the 14 km solar square around the zone
       // the power-gap gauge rising from the zone, with the zone around it
@@ -712,7 +712,11 @@ export class SiteScene {
       const target = new THREE.Vector3(b.cx, this.hFlat, b.cz);
       return { target, position: target.clone().add(new THREE.Vector3(0, need / t, 0.001)) };
     }
-    if (v === 'water' && this.fx.hectare.waterClose) return this.jugCloseView();
+    if (v === 'water') {
+      // the jug film starts over the square; it then drives the camera itself (scriptCamera)
+      const rest = this.fx.jugs.restingView(window.matchMedia('(max-width: 899px)').matches);
+      if (rest) return rest;
+    }
     const { target, offset } = views[v];
     const phone = window.matchMedia('(max-width: 899px)').matches;
     // phones: a steeper look for the villages, so the long north-south spread fits a tall screen without the map's edge
@@ -729,7 +733,7 @@ export class SiteScene {
     if (v === 'water') {
       // the square and the tallest column it can show (a month at the highest estimate), with its day label
       const c = this.fx.hectareTarget();
-      const top = this.fx.hectare.waterMonthKm;
+      const top = this.fx.jugs.monthKm;
       return [-1, 1].flatMap((sx) => [-1, 1].flatMap((sz) => [0, top].map((y) => c.clone().add(new THREE.Vector3(sx * 0.05, y, sz * 0.05)))));
     }
     if (v === 'hectare') {
@@ -750,27 +754,20 @@ export class SiteScene {
     return pts;
   }
 
-  /**
-   * The jug stack's first day, up close: low, about 40 m from its nearest corner, where single jugs (27 × 49 cm)
-   * can be told apart. The engine then pulls back to the whole month (takeCameraCue).
-   */
-  private jugCloseView() {
-    const c = this.fx.hectareTarget();
-    const corner = c.clone().add(new THREE.Vector3(0.05, 0, 0.05));
-    const target = corner.add(new THREE.Vector3(-0.007, 0.008, -0.007));
-    const dist = window.matchMedia('(max-width: 899px)').matches ? 0.032 : 0.034;
-    return { target, position: target.clone().add(new THREE.Vector3(0.62, 0.22, 0.78).normalize().multiplyScalar(dist)) };
+  /** the jug film's camera while it runs its close part (null otherwise) */
+  scriptCamera() {
+    return this.fx.jugs.scriptCamera(window.matchMedia('(max-width: 899px)').matches);
   }
 
-  /** the jug stack is still on its first day, seen up close */
-  get waterClose() {
-    return this.fx.hectare.waterClose;
+  /** the engine tells the scene whether the camera is still flying (the jug film waits for it to arrive) */
+  set cameraBusy(v: boolean) {
+    this.fx.cameraBusy = v;
   }
 
-  /** true once, when a scene wants the camera to move on by itself (the jug stack pulling back) */
+  /** true once, when a scene wants the camera to move on by itself (the jug film flying out to the month) */
   takeCameraCue() {
-    if (!this.fx.hectare.waterCue) return false;
-    this.fx.hectare.waterCue = false;
+    if (!this.fx.jugs.cue) return false;
+    this.fx.jugs.cue = false;
     return true;
   }
 

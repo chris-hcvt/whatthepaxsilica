@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { pointInRing, ringCentroid } from './geo';
 import type { SiteScene } from './site';
-import { DAYS_MONTH, DAYS_WEEK, HOME_LOTS, JUG_H_M, JUG_W_M, WATER_MLD, jugStackM, jugStackPerDay, type HomeKey } from '../content/story';
+import { HOME_LOTS, type HomeKey } from '../content/story';
 import { buildHouse, facadeTexture, roofTexture } from './houses';
 
 /**
@@ -60,33 +60,7 @@ export class HectareFx {
   private treeTops: THREE.InstancedMesh;
   private trunks: THREE.InstancedMesh;
   private trees: { x: number; z: number; s: number; h: number; a: number }[] = [];
-  /** a month of the zone's water in 5-gallon jugs, stacked on the square: rises one day at a time */
-  private water: THREE.Group;
-  private waterSides: THREE.Mesh;
-  private waterTop: THREE.Mesh;
-  private waterTex: THREE.CanvasTexture;
-  private jugTopTex: THREE.CanvasTexture;
-  private days = 0;
-  /** set once the first day of jugs is up: the camera then pulls back to the whole month */
-  waterCue = false;
-  /** seconds to wait before the water starts rising (lets the camera arrive first) */
-  private waterWait = 0;
-  private waterLabels: { el: HTMLDivElement; day: number; pos: THREE.Vector3 }[] = [];
-  private waterDayText: (day: number, meters: number, mld: number) => string = (d, m) => `${d} · ${m} m`;
-  private waterTickText: (days: number, meters: number) => string = (d, m) => `${d} · ${m} m`;
-  /** liters a day (millions) being shown, and the value the column is easing towards */
-  private rate = WATER_MLD.high;
-  private rateShown = WATER_MLD.high;
 
-  /** the tallest scenario's month of jugs, in km: the camera frames this so the scenarios compare by height */
-  get waterMonthKm() {
-    return (jugStackPerDay(Math.max(...Object.values(WATER_MLD))) * DAYS_MONTH) / 1000;
-  }
-
-  /** the first seconds: the camera is down by the stack's corner, where the jugs can be told apart */
-  get waterClose() {
-    return this.show.water && this.days < 1;
-  }
   private grid: THREE.LineSegments;
   private gridMat: THREE.ShaderMaterial;
   private home: HomeKey = 'regular';
@@ -200,35 +174,8 @@ export class HectareFx {
     this.grid.renderOrder = 4;
     this.grid.frustumCulled = false;
 
-    // the water as 5-gallon jugs: a solid block on the square, its sides and top tiled one jug per tile at true
-    // size (27 × 49 cm), so up close it is a wall of jugs and from afar a blue tower
-    this.waterTex = jugSideTexture();
-    this.jugTopTex = jugTopTexture();
-    const sides = new THREE.CylinderGeometry(SIDE / Math.SQRT2, SIDE / Math.SQRT2, 1, 4, 1, true);
-    sides.rotateY(Math.PI / 4);
-    sides.translate(0, 0.5, 0);
-    this.waterSides = new THREE.Mesh(sides, new THREE.MeshLambertMaterial({ map: this.waterTex, emissive: '#0b2c52', emissiveIntensity: 0.35, side: THREE.DoubleSide }));
-    const lid = new THREE.PlaneGeometry(SIDE, SIDE);
-    lid.rotateX(-Math.PI / 2);
-    this.waterTop = new THREE.Mesh(lid, new THREE.MeshLambertMaterial({ map: this.jugTopTex, emissive: '#0b2c52', emissiveIntensity: 0.35 }));
-    // jugs per tile row across the square, used for the texture repeat
-    const perSide = (SIDE * 1000) / JUG_W_M;
-    this.waterTex.repeat.x = 4 * perSide;
-    this.jugTopTex.repeat.set(perSide, perSide);
-    this.water = new THREE.Group();
-    this.water.add(this.waterSides, this.waterTop);
-    this.water.renderOrder = 8;
-    this.waterSides.renderOrder = 8;
-    this.waterTop.renderOrder = 9;
-    for (const day of [0, 1, DAYS_WEEK, DAYS_MONTH]) {
-      const el = document.createElement('div');
-      el.className = `label3d fx ${day === 0 ? 'fx-waterday' : 'fx-watertick'}`;
-      el.style.display = 'none';
-      site.labelLayer.appendChild(el);
-      this.waterLabels.push({ el, day, pos: new THREE.Vector3() });
-    }
 
-    this.group.add(this.plot, this.frame, this.court, this.beacon, this.ground, this.lots, this.walls, this.roofs, this.details, this.treeTops, this.trunks, this.grid, this.water);
+    this.group.add(this.plot, this.frame, this.court, this.beacon, this.ground, this.lots, this.walls, this.roofs, this.details, this.treeTops, this.trunks, this.grid);
     site.scene.add(this.group);
 
     // the sun casts shadows in a box around the square (only while the close-up is on screen)
@@ -419,11 +366,6 @@ export class HectareFx {
   set(show: { plot: boolean; court: boolean; homes: boolean; grid: boolean; water: boolean }, instant: boolean) {
     const was = this.show;
     this.show = show;
-    if (show.water && !was.water) {
-      this.days = instant ? 30 : 0;
-      this.waterWait = instant ? 0 : 1.2;
-      this.waterCue = false;
-    }
     if (show.homes && (!was.homes || this.builtHome !== this.home)) {
       this.buildHomes();
       this.grow = instant || this.lite ? 1 : 0;
@@ -442,13 +384,17 @@ export class HectareFx {
     this.plotMat.opacity = grid ? 0.95 : 0.22;
     this.court.visible = court;
     this.beacon.visible = grid;
-    this.ground.visible = homes;
+    // the level pad: under the homes, and under the water jugs (jugs.ts) so they stand on flat ground
+    this.ground.visible = homes || this.show.water;
     for (const m of [this.lots, this.walls, this.roofs, this.details]) m.visible = homes;
     this.treeTops.visible = this.trunks.visible = close;
     this.grid.visible = grid;
     this.gridMat.uniforms.uReveal.value = this.reveal;
-    this.water.visible = this.show.water;
-    this.placeWater();
+  }
+
+  /** the top of the level pad (scene km), where the homes and the water jugs stand */
+  get baseY() {
+    return this.padTop || this.site.heightAt(this.cx, this.cz);
   }
 
   /** true while the one-hectare close-up is on screen (it wants sun shadows) */
@@ -635,89 +581,10 @@ export class HectareFx {
     this.trunks.instanceMatrix.needsUpdate = true;
   }
 
-  /** text for the water labels: a day counter and the 1 day / 1 week / 1 month marks */
-  setWaterLabels(day: (day: number, meters: number, mld: number) => string, tick: (days: number, meters: number) => string) {
-    this.waterDayText = day;
-    this.waterTickText = tick;
-    this.placeWater();
-  }
-
-  /** switch the daily amount (million liters); the column eases to the new height */
-  setWaterRate(mld: number) {
-    if (mld === this.rate) return;
-    this.rate = mld;
-    if (!this.show.water) this.rateShown = mld;
-    this.placeWater();
-  }
-
-  private placeWater() {
-    if (!this.show.water) return;
-    const base = this.padTop || this.site.heightAt(this.cx, this.cz);
-    const shown = Math.max(0.02, this.days);
-    const perDay = jugStackPerDay(this.rateShown);
-    const h = (shown * perDay) / 1000;
-    this.water.position.set(this.cx, base, this.cz);
-    this.waterSides.scale.set(1, h, 1);
-    this.waterTop.position.y = h;
-    // one tile per jug layer, starting at the ground
-    this.waterTex.repeat.y = (h * 1000) / JUG_H_M;
-    const whole = Math.floor(this.days + 1e-6);
-    const day = this.waterLabels[0];
-    const dayNo = Math.max(1, Math.ceil(this.days - 1e-6));
-    day.el.innerHTML = `<span>${this.waterDayText(dayNo, jugStackM(this.rate, dayNo), this.rate)}</span>`;
-    day.pos.set(this.cx, base + h + 0.012, this.cz);
-    for (const l of this.waterLabels.slice(1)) {
-      l.pos.set(this.x0 + SIDE + 0.004, base + (l.day * perDay) / 1000, this.z0 + SIDE);
-      l.el.innerHTML = `<span>${this.waterTickText(l.day, jugStackM(this.rate, l.day))}</span>`;
-      l.el.dataset.on = whole >= l.day ? '1' : '';
-    }
-  }
-
-  updateLabels(camera: THREE.Camera, w: number, h: number) {
-    const v = new THREE.Vector3();
-    for (const l of this.waterLabels) {
-      const on = this.show.water && (l.day === 0 ? this.days > 0.05 : l.el.dataset.on === '1');
-      if (!on) {
-        if (l.el.style.display !== 'none') l.el.style.display = 'none';
-        continue;
-      }
-      v.copy(l.pos).project(camera);
-      if (v.z > 1 || Math.abs(v.x) > 1.1 || Math.abs(v.y) > 1.1) {
-        l.el.style.display = 'none';
-        continue;
-      }
-      l.el.style.display = '';
-      const anchor = l.day === 0 ? 'translate(-50%, -100%)' : 'translate(0, -50%)';
-      l.el.style.transform = `translate(${((v.x * 0.5 + 0.5) * w).toFixed(1)}px, ${((-v.y * 0.5 + 0.5) * h).toFixed(1)}px) ${anchor}`;
-    }
-  }
-
-  hideLabels() {
-    for (const l of this.waterLabels) l.el.style.display = 'none';
-  }
 
   /** returns true while animating */
   update(dt: number) {
     let moving = false;
-    if (this.show.water && Math.abs(this.rateShown - this.rate) > 0.01) {
-      // a new scenario: ease the column to its height
-      this.rateShown += (this.rate - this.rateShown) * Math.min(1, dt * 4);
-      if (Math.abs(this.rateShown - this.rate) < 0.05) this.rateShown = this.rate;
-      this.placeWater();
-      moving = true;
-    }
-    if (this.show.water && this.days < 30) {
-      // about 5 seconds in all: wait 1.2 s for the camera, the first day in 1 s (seen up close), then the rest of
-      // the month in about 2.4 s while the camera pulls back
-      if (this.waterWait > 0) this.waterWait -= dt;
-      else {
-        const before = this.days;
-        this.days = Math.min(30, this.days + dt * (this.days < 1 ? 1 : 4.5 + this.days * 0.65));
-        if (before < 1 && this.days >= 1) this.waterCue = true;
-      }
-      this.placeWater();
-      moving = true;
-    }
     if (this.show.homes && this.grow < 1) {
       this.grow = Math.min(1, this.grow + dt / 1.5);
       this.placeHomes();
@@ -790,90 +657,4 @@ function courtTexture() {
   return t;
 }
 
-/**
- * One 5-gallon jug seen from the side, filling one tile (27 × 49 cm when tiled): dark gaps between jugs,
- * a clear blue body with two ridges, a darker base and a blue cap.
- */
-function jugSideTexture() {
-  const W = 64;
-  const H = 128;
-  const cv = document.createElement('canvas');
-  cv.width = W;
-  cv.height = H;
-  const g = cv.getContext('2d')!;
-  g.fillStyle = '#0d2238';
-  g.fillRect(0, 0, W, H);
-  const body = g.createLinearGradient(4, 0, W - 4, 0);
-  body.addColorStop(0, '#5fb0f2');
-  body.addColorStop(0.35, '#b9e0ff');
-  body.addColorStop(1, '#3f8fdc');
-  // shoulders and neck
-  g.fillStyle = body;
-  g.beginPath();
-  g.moveTo(5, 34);
-  g.quadraticCurveTo(6, 22, 24, 17);
-  g.lineTo(24, 10);
-  g.lineTo(40, 10);
-  g.lineTo(40, 17);
-  g.quadraticCurveTo(58, 22, 59, 34);
-  g.lineTo(59, 120);
-  g.quadraticCurveTo(59, 125, 54, 125);
-  g.lineTo(10, 125);
-  g.quadraticCurveTo(5, 125, 5, 120);
-  g.closePath();
-  g.fill();
-  // two ridges and the base
-  g.fillStyle = 'rgba(255, 255, 255, 0.35)';
-  g.fillRect(5, 52, 54, 5);
-  g.fillRect(5, 78, 54, 5);
-  g.fillStyle = 'rgba(10, 50, 110, 0.35)';
-  g.fillRect(5, 57, 54, 2);
-  g.fillRect(5, 83, 54, 2);
-  g.fillStyle = '#2a6fd1';
-  g.fillRect(5, 108, 54, 17);
-  // a shine down the side
-  g.fillStyle = 'rgba(255, 255, 255, 0.45)';
-  g.fillRect(14, 38, 4, 64);
-  // the cap
-  g.fillStyle = '#1b4fbf';
-  g.fillRect(22, 2, 20, 10);
-  g.fillStyle = '#4f86ea';
-  g.fillRect(22, 2, 20, 3);
-  const t = new THREE.CanvasTexture(cv);
-  t.wrapS = t.wrapT = THREE.RepeatWrapping;
-  t.colorSpace = THREE.SRGBColorSpace;
-  t.anisotropy = 8;
-  return t;
-}
 
-/** the same jugs seen from above: a round body and a cap, one per 27 × 27 cm tile */
-function jugTopTexture() {
-  const S = 64;
-  const cv = document.createElement('canvas');
-  cv.width = S;
-  cv.height = S;
-  const g = cv.getContext('2d')!;
-  g.fillStyle = '#0d2238';
-  g.fillRect(0, 0, S, S);
-  const body = g.createRadialGradient(26, 26, 4, 32, 32, 30);
-  body.addColorStop(0, '#c6e6ff');
-  body.addColorStop(1, '#4b9ae0');
-  g.fillStyle = body;
-  g.beginPath();
-  g.arc(32, 32, 29, 0, Math.PI * 2);
-  g.fill();
-  g.strokeStyle = 'rgba(255, 255, 255, 0.4)';
-  g.lineWidth = 2;
-  g.beginPath();
-  g.arc(32, 32, 20, 0, Math.PI * 2);
-  g.stroke();
-  g.fillStyle = '#1b4fbf';
-  g.beginPath();
-  g.arc(32, 32, 8, 0, Math.PI * 2);
-  g.fill();
-  const t = new THREE.CanvasTexture(cv);
-  t.wrapS = t.wrapT = THREE.RepeatWrapping;
-  t.colorSpace = THREE.SRGBColorSpace;
-  t.anisotropy = 8;
-  return t;
-}

@@ -662,6 +662,10 @@ export const storyEn: Record<string, StoryStep> = {
           {jugStackM(90, 1)} m a day.
         </li>
         <li>
+          In the 3D, jugs are drawn one by one at true size up to 10,000. After that each drawn jug stands for 1,000 real jugs (10 × 10 × 10), then
+          about 50,653 (37 × 37 × 37), so they stay visible from far away. The stack’s height is the same either way.
+        </li>
+        <li>
           As plain water on 1 hectare: depth = million liters × 1,000 cubic meters ÷ 10,000 square meters: {depthPerDay(90)} m a day at 90 million,{' '}
           {depthPerDay(90) * DAYS_WEEK} m a week, {depthPerDay(90) * DAYS_MONTH} m a month. That is {poolsOf(90)} Olympic pools a day (2.5 million liters
           each); BCDA itself compares 90 million liters to 36 pools.
