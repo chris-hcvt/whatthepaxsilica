@@ -260,6 +260,7 @@ export const storyEn: Record<string, StoryStep> = {
     brief: (
       <>
         Plus nickel processing. <b>No data centers</b>, officials say. Construction target: <b>2028</b>.
+        <span className="tap-hint">Tap a label to see an example photo.</span>
       </>
     ),
     title: 'What: factories for chips and AI parts',
@@ -447,6 +448,7 @@ export const storyEn: Record<string, StoryStep> = {
     brief: (
       <>
         On the independent map, their village is <b>inside the zone</b>. They have claimed it as ancestral land since 1994; the claim was never approved.
+        <span className="tap-hint">Tap a village name to see the place.</span>
       </>
     ),
     title: 'About 200 Aeta Hungey families live in Sapang Kawayan',
@@ -520,7 +522,7 @@ export const storyEn: Record<string, StoryStep> = {
         BCDA expects <b>3 gigawatts</b>. Add buildings one by one and compare their monthly bills:
       </>
     ),
-    control: cloneElement(energyPickerEn, { compact: true }),
+    control: cloneElement(energyPickerEn, { compact: true, short: { regular: 'Regular', medium: 'Medium', large: 'Large', mansion: 'Mansion', office: 'Office', mall: 'Mall', fab: 'Chip factory', hub: 'The zone' } }),
     title: 'How much electricity is 3 gigawatts?',
     body: (
       <>

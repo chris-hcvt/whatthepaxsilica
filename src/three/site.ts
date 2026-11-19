@@ -43,6 +43,8 @@ export interface SiteLabels {
   levelled: string;
   fx: FxLabels;
   pop: PopLabels;
+  /** shorter village sub-labels for phones */
+  phone?: { inside: string; outside: (km: string) => string };
 }
 
 /** words for the picture pop-ups on village labels and the plan's industry tags */
@@ -122,7 +124,9 @@ export class SiteScene {
   private refLabel: Label;
   private flatLabel: Label;
   private sitioLabels = new Map<string, Label>();
-  private sitioXZ = new Map<string, { x: number; z: number; height: number; group: THREE.Group }>();
+  private sitioXZ = new Map<string, { x: number; z: number; height: number; group: THREE.Group; pin: THREE.Mesh; head: THREE.Mesh; ring: THREE.Mesh }>();
+  /** village pins are drawn bigger on phones, where the default size is a speck */
+  private pinScale = 1;
   private layerKey = '';
   private overlayKey = '';
 
@@ -357,7 +361,8 @@ export class SiteScene {
     for (const [name, s] of this.sitioXZ) {
       const h = this.heightAt(s.x, s.z);
       s.group.position.y = h;
-      this.sitioLabels.get(name)!.pos.y = h + s.height + 0.12;
+      // the label sits just above the pin's head, whatever its size
+      this.sitioLabels.get(name)!.pos.y = h + s.height + 0.075 * this.pinScale + 0.07;
     }
     const [lx, lz] = this.hubLabelXZ;
     this.hubLabel.pos.set(lx, this.heightAt(lx, lz) + WALL_H + 0.2, lz);
@@ -449,6 +454,8 @@ export class SiteScene {
     const pinGeo = new THREE.CylinderGeometry(0.012, 0.012, 1, 6);
     pinGeo.translate(0, 0.5, 0);
     const headGeo = new THREE.SphereGeometry(0.075, 16, 12);
+    // a ring on the ground marks the exact spot (phones)
+    const ringGeo = new THREE.RingGeometry(0.1, 0.16, 32).rotateX(-Math.PI / 2);
     for (const s of sitios) {
       const [x, z] = this.proj.xz(s.lonlat);
       const key = KEY_SITIOS.includes(s.name);
@@ -458,18 +465,39 @@ export class SiteScene {
       pin.scale.y = height;
       const head = new THREE.Mesh(headGeo, new THREE.MeshBasicMaterial({ color }));
       head.position.y = height;
+      // a dark rim so the head reads against green hills
+      const rim = new THREE.Mesh(headGeo, new THREE.MeshBasicMaterial({ color: '#0b0d10', side: THREE.BackSide }));
+      rim.scale.setScalar(1.28);
+      head.add(rim);
+      const ring = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.9, depthWrite: false }));
+      ring.position.y = 0.012;
+      ring.visible = false;
       const g = new THREE.Group();
-      g.add(pin, head);
+      g.add(pin, head, ring);
       g.position.set(x, 0, z);
       g.userData.name = s.name;
       this.sitioGroup.add(g);
-      this.sitioXZ.set(s.name, { x, z, height, group: g });
+      this.sitioXZ.set(s.name, { x, z, height, group: g, pin, head, ring });
       const label = this.addLabel(s.name, new THREE.Vector3(x, 0, z), `label3d sitio${s.insideHub ? ' inside' : ''}${key ? ' key' : ''}`);
       // the named villages are placed before the chapter's tags (0.5), which move aside instead
       label.rank = key ? 0 : FIT_SITIOS.includes(s.name) ? 0.4 : 2;
       this.sitioLabels.set(s.name, label);
       this.pop.attach(label.el, () => this.placePop(s));
     }
+  }
+
+  /** village pins: thicker poles, bigger heads and a ground ring on phones */
+  private setPinScale(k: number) {
+    if (k === this.pinScale) return;
+    this.pinScale = k;
+    for (const s of this.sitioXZ.values()) {
+      const t = k > 1 ? k * 1.6 : 1;
+      s.pin.scale.set(t, s.height, t);
+      s.head.scale.setScalar(k);
+      s.ring.visible = k > 1;
+      s.ring.scale.setScalar(k / 2.4);
+    }
+    this.placeDynamic();
   }
 
   addLabel(text: string, pos: THREE.Vector3, cls: string): Label {
@@ -602,6 +630,7 @@ export class SiteScene {
       // the zone glows amber while its electricity use is on screen
       (this.wallMat.uniforms.uColor.value as THREE.Color).set(this.fx.amber() ? '#ffb020' : '#ff3b3b');
       this.sitioGroup.visible = !!layers.sitios;
+      this.setPinScale(phoneScreen() ? 2.4 : 1);
       for (const g of this.sitioGroup.children) g.visible = layers.sitios === 'all' || KEY_SITIOS.includes(g.userData.name);
       this.flatTarget = layers.flat ? 1 : 0;
       if (instant) this.setFlatInstant(!!layers.flat);
@@ -638,7 +667,9 @@ export class SiteScene {
         const name = document.createElement('b');
         name.textContent = s.name;
         const sub = document.createElement('span');
-        sub.textContent = s.insideHub ? t.inside : t.outside((s.metersToHubEdge / 1000).toFixed(1));
+        const km = (s.metersToHubEdge / 1000).toFixed(1);
+        const short = phoneScreen() ? t.phone : undefined;
+        sub.textContent = s.insideHub ? (short?.inside ?? t.inside) : (short?.outside ?? t.outside)(km);
         l.el.append(name, sub);
       } else l.el.textContent = s.name;
     }
@@ -705,11 +736,13 @@ export class SiteScene {
       const c = this.fx.hectareTarget();
       return [-1, 1].flatMap((sx) => [-1, 1].map((sz) => c.clone().add(new THREE.Vector3(sx * 0.05, 0.008, sz * 0.05))));
     }
-    if (!['hub', 'compare', 'top', 'gauge', 'overview'].includes(v)) return undefined;
+    // the power gauge, close up: the gauge and the zone's ground under it, not the whole zone
+    if (v === 'gauge') return this.fx.gauge.fitPoints();
+    if (!['hub', 'compare', 'top', 'overview'].includes(v)) return undefined;
     const pts = this.hubXZ.map(([x, z]) => new THREE.Vector3(x, this.heightAt(x, z), z));
     const c = this.hubCenter;
-    // room for the tags that float over the zone, and for the power gauge
-    pts.push(c.clone().add(new THREE.Vector3(0, v === 'gauge' ? 2.5 : 0.45, 0)));
+    // room for the tags that float over the zone
+    pts.push(c.clone().add(new THREE.Vector3(0, 0.45, 0)));
     // and the chapter's own tags (river names, the reservoir note, the industry tags)
     pts.push(...this.fx.labelAnchors(c));
     if (v === 'overview') pts.push(...this.nccXZ.map(([x, z]) => new THREE.Vector3(x, this.heightAt(x, z), z)));

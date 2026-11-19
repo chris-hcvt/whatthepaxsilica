@@ -12,7 +12,17 @@ import { ENERGY, ENERGY_EVENT, ENERGY_KEYS, billOf, homesOf, type EnergyKey } fr
  */
 
 export interface BillLabels {
+  /** homes: a Meralco bill estimate */
   title: string;
+  /** office, mall, chip factory and the zone: the same household rate, for comparison only */
+  titleOther: string;
+  /** under the kWh: "average a month" */
+  kwhNote: string;
+  /** the rate line and its note ("November 2026 rate") */
+  rate: string;
+  rateNote: string;
+  /** phones: the short tag docked at the screen edge */
+  addShort: (name: string) => string;
   names: Record<EnergyKey, string>;
   kwh: (n: number) => string;
   peso: (n: number) => string;
@@ -58,6 +68,7 @@ export class LineupFx {
   private nextTag: HTMLButtonElement;
   private names: Record<EnergyKey, string> | null = null;
   private addLabel: ((name: string) => string) | null = null;
+  private addShort: ((name: string) => string) | null = null;
   lite = false;
 
   constructor(private site: SiteScene) {
@@ -284,14 +295,17 @@ export class LineupFx {
   setLabels(t: BillLabels) {
     this.names = t.names;
     this.addLabel = t.add;
+    this.addShort = t.addShort;
     for (const key of ENERGY_KEYS) {
       const kwh = ENERGY[key];
       const el = this.bills.get(key)!;
       const zone = key === 'hub';
+      const home = key === 'regular' || key === 'medium' || key === 'large' || key === 'mansion';
       el.innerHTML = `
-        <div class="bill-top"><span>${t.title}</span><b>${t.names[key]}</b></div>
-        <div class="bill-line"><span>${t.kwh(kwh)}</span><span>× ₱15.5510</span></div>
-        <div class="bill-amt">${t.peso(billOf(kwh))}${zone ? '*' : ''}</div>
+        <div class="bill-top"><span>${home ? t.title : t.titleOther}</span><b>${t.names[key]}</b></div>
+        <div class="bill-line"><span>${t.kwh(kwh)}</span><small>${t.kwhNote}</small></div>
+        <div class="bill-line"><span>× ${t.rate}</span><small>${t.rateNote}</small></div>
+        <div class="bill-amt">= ${t.peso(billOf(kwh))}${zone ? '*' : ''}</div>
         <div class="bill-foot">${zone ? t.zoneNote : t.homes(homesOf(kwh))}</div>
         <div class="bill-mini"><b>${t.names[key]}</b><span>${t.peso(billOf(kwh))}${zone ? '*' : ''}</span></div>`;
     }
@@ -347,11 +361,21 @@ export class LineupFx {
       tag.style.display = 'none';
       return;
     }
-    const text = this.addLabel(this.names[next]);
+    const phone = w < 600;
+    const text = phone && this.addShort ? this.addShort(this.names[next]) : this.addLabel(this.names[next]);
     if (tag.dataset.text !== text) {
       tag.dataset.text = text;
       tag.textContent = text;
     }
+    if (phone) {
+      // a small pill on the right edge, above the card: never over the buildings or their bills
+      tag.classList.add('dock');
+      tag.classList.remove('edge');
+      tag.style.display = '';
+      tag.style.transform = `translate(${w - 10}px, ${(h - this.site.insetBottom - 14).toFixed(1)}px) translate(-100%, -100%)`;
+      return;
+    }
+    tag.classList.remove('dock');
     let x = (v.x * 0.5 + 0.5) * w;
     let y = (-v.y * 0.5 + 0.5) * h;
     const edge = x > w - 24;

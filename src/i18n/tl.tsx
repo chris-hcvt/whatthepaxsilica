@@ -50,7 +50,7 @@ export const tl: Locale = {
     details: 'Detalye',
     menu: 'Menu',
     chaptersTitle: 'Mga kabanata',
-    scrollCue: 'Mag-scroll para magsimula',
+    scrollCue: 'Mag-scroll pababa para magsimula',
     chooseLanguage: 'Piliin ang wika',
     moreLanguagesSoon: 'Darating pa ang ibang wika',
     soon: 'malapit na',
@@ -98,6 +98,7 @@ export const tl: Locale = {
     ncc: 'New Clark City',
     inside: 'nasa loob ng minapang hub',
     outside: (km) => `${km} km sa labas ng gilid`,
+    phone: { inside: 'nasa loob ng zone', outside: (km) => `${km} km sa labas` },
     refCount: (n, name, kind) => (kind === 'mall' ? `${n} buong ${name}, ayon sa tunay na sukat` : `${n} buong ${name}, ayon sa tunay na sukat`),
     levelled: 'Pinatag para maikumpara (paglalarawan)',
     pop: {
@@ -129,7 +130,12 @@ export const tl: Locale = {
       oneHectare: '1 ektarya',
       power: '≈ 3 gigawatt kapag buo na (tantiya ng BCDA)',
       bill: {
-        title: 'Singil sa kuryente · presyong pambahay',
+        title: 'Singil sa Meralco · tantiya',
+        titleOther: 'Sa presyong pambahay ng Meralco',
+        kwhNote: 'karaniwan bawat buwan',
+        rate: '₱15.5510 bawat kWh',
+        rateNote: 'singil ng Nobyembre 2026',
+        addShort: (name) => `＋ ${name}`,
         names: {
           regular: 'Karaniwang bahay',
           medium: 'Katamtamang bahay',
@@ -169,6 +175,7 @@ export const tl: Locale = {
         reservoir: 'Konseptong imbakan, 390–780 ektarya',
         river: 'Ilog Bangut',
         waterDay: (day, m) => `Araw ${day} · ${m} metro ang lalim`,
+        farms: 'Sakahan',
       },
       creek: 'Sapa ng Sapang Kawayan',
       farms: 'Sakahan (OpenStreetMap)',

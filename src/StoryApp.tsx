@@ -62,6 +62,8 @@ export default function StoryApp() {
   /** phones: the step whose full text is open in the details sheet, and the top bar's menu */
   const [sheet, setSheet] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  // first screen: if nobody has scrolled after 3 seconds, a "scroll down to start" hint appears in the middle
+  const [idleCue, setIdleCue] = useState(false);
   // the sheets are history entries, so the phone's back button closes them
   useEffect(() => {
     const onPop = () => {
@@ -123,6 +125,21 @@ export default function StoryApp() {
   const insets = useInsets(active, phone);
   const reduced = useMemo(prefersReduced, []);
   const L = LOCALES[lang];
+
+  useEffect(() => {
+    if (active !== 0 || langOpen) {
+      setIdleCue(false);
+      return;
+    }
+    const t = window.setTimeout(() => window.scrollY < 40 && setIdleCue(true), 3000);
+    const off = () => setIdleCue(false);
+    // it goes away as soon as the page moves (a touch alone would remove it before its own tap lands)
+    window.addEventListener('scroll', off, { passive: true });
+    return () => {
+      window.clearTimeout(t);
+      window.removeEventListener('scroll', off);
+    };
+  }, [active, langOpen]);
 
   useEffect(() => {
     document.documentElement.lang = lang;
@@ -340,6 +357,14 @@ export default function StoryApp() {
         ))}
       </nav>
 
+      {idleCue && (
+        <button type="button" className="idle-cue" onClick={() => goStep(1)}>
+          <span>{L.ui.scrollCue}</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 9l6 6 6-6" />
+          </svg>
+        </button>
+      )}
       <main id="story" className="story">
         {STEPS.map((s, i) => {
           const t = L.story[s.id];

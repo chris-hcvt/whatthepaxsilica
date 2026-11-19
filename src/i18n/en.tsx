@@ -50,7 +50,7 @@ export const en: Locale = {
     details: 'Details',
     menu: 'Menu',
     chaptersTitle: 'Chapters',
-    scrollCue: 'Scroll to start',
+    scrollCue: 'Scroll down to start',
     chooseLanguage: 'Choose your language',
     moreLanguagesSoon: 'More languages coming soon',
     soon: 'soon',
@@ -98,6 +98,7 @@ export const en: Locale = {
     ncc: 'New Clark City',
     inside: 'inside the mapped hub',
     outside: (km) => `${km} km outside the edge`,
+    phone: { inside: 'inside the zone', outside: (km) => `${km} km outside` },
     refCount: (n, name, kind) => (kind === 'mall' ? `${n} whole ${name} sites, to scale` : n === 1 ? `1 whole ${name}, to scale` : `${n} whole ${name}s, to scale`),
     levelled: 'Leveled for comparison (illustration)',
     pop: {
@@ -129,7 +130,12 @@ export const en: Locale = {
       oneHectare: '1 hectare',
       power: '≈ 3 gigawatts at full development (BCDA estimate)',
       bill: {
-        title: 'Electric bill · household rate',
+        title: 'Meralco bill · estimate',
+        titleOther: 'At Meralco’s home rate',
+        kwhNote: 'average a month',
+        rate: '₱15.5510 per kWh',
+        rateNote: 'November 2026 rate',
+        addShort: (name) => `＋ ${name}`,
         names: {
           regular: 'Regular home',
           medium: 'Medium home',
@@ -169,6 +175,7 @@ export const en: Locale = {
         reservoir: 'Conceptual reservoirs, 390–780 ha',
         river: 'Bangut River',
         waterDay: (day, m) => `Day ${day} · ${m} m deep`,
+        farms: 'Farmland',
       },
       creek: 'Sapang Kawayan creek',
       farms: 'Farmland (OpenStreetMap)',

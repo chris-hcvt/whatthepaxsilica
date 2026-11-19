@@ -260,6 +260,7 @@ export const storyTl: Record<string, StoryStep> = {
     brief: (
       <>
         Kasama ang pagpoproseso ng nickel. <b>Walang data center</b>, sabi ng mga opisyal. Target ng konstruksyon: <b>2028</b>.
+        <span className="tap-hint">Pindutin ang label para makita ang halimbawang larawan.</span>
       </>
     ),
     title: 'Ano: mga pabrika ng chips at piyesa ng AI',
@@ -448,6 +449,7 @@ export const storyTl: Record<string, StoryStep> = {
     brief: (
       <>
         Sa independiyenteng mapa, <b>nasa loob ng zone</b> ang kanilang sitio. Mula 1994, inaangkin nila ito bilang lupaing ninuno; hindi pa naaaprubahan ang claim.
+        <span className="tap-hint">Pindutin ang pangalan ng sitio para makita ang lugar.</span>
       </>
     ),
     title: 'Mga 200 pamilyang Aeta Hungey ang nakatira sa Sapang Kawayan',
@@ -519,7 +521,7 @@ export const storyTl: Record<string, StoryStep> = {
         Tantiya ng BCDA: <b>3 gigawatt</b>. Idagdag ang mga gusali isa-isa at ikumpara ang buwanang singil:
       </>
     ),
-    control: cloneElement(energyPickerTl, { compact: true }),
+    control: cloneElement(energyPickerTl, { compact: true, short: { regular: 'Karaniwan', medium: 'Katamtaman', large: 'Malaki', mansion: 'Mansyon', office: 'Opisina', mall: 'Mall', fab: 'Pabrika', hub: 'Ang zone' } }),
     title: 'Gaano kalaki ang 3 gigawatt na kuryente?',
     body: (
       <>

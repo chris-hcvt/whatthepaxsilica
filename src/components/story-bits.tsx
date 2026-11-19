@@ -30,9 +30,12 @@ export function RefPicker({
   if (compact)
     return (
       <div className="refpicker compact">
-        <div className="mchips" role="radiogroup">
+        <div className="rgroup" role="radiogroup">
+          <span className="rgroup-label">{malls}</span>
           {MALLS.map(chip)}
-          <span className="mchips-sep" aria-hidden="true" />
+        </div>
+        <div className="rgroup" role="radiogroup">
+          <span className="rgroup-label">{districts}</span>
           {DISTRICTS.map(chip)}
         </div>
         <div className="ref-result" aria-live="polite">
@@ -77,11 +80,12 @@ export function HomePicker({
   const { homeKey, setHomeKey } = useDeck();
   if (compact)
     return (
-      <div className="mchips" role="radiogroup">
+      <div className="hgrid" role="radiogroup">
         {HOME_KEYS.map((k) => (
-          <button key={k} type="button" role="radio" aria-checked={k === homeKey} className={`mchip ${k === homeKey ? 'on' : ''}`} onClick={() => setHomeKey(k)}>
+          <button key={k} type="button" role="radio" aria-checked={k === homeKey} className={`hcell ${k === homeKey ? 'on' : ''}`} onClick={() => setHomeKey(k)}>
+            <span className={`home-ico h-${k}`} aria-hidden="true" />
             <b>{names[k]}</b>
-            <span>{count(HOME_LOTS[k].perHectare)}</span>
+            <span className="hcell-n">{count(HOME_LOTS[k].perHectare)}</span>
           </button>
         ))}
       </div>
@@ -120,6 +124,7 @@ export function EnergyPicker({
   restart,
   mark = '*',
   compact = false,
+  short,
 }: {
   names: Record<EnergyKey, ReactNode>;
   kwh: (n: number) => ReactNode;
@@ -133,8 +138,10 @@ export function EnergyPicker({
   restart: ReactNode;
   /** footnote mark on the zone's bill: it is an illustration at household rates */
   mark?: string;
-  /** phones: the sideways row and the next button only (the bill in 3D carries the numbers) */
+  /** phones: a grid of every building and the next button (the bill in 3D carries the numbers) */
   compact?: boolean;
+  /** short names for the phone grid */
+  short?: Record<EnergyKey, ReactNode>;
 }) {
   const { energyKey: on, setEnergyKey: setOn } = useDeck();
   const nextKey = ENERGY_KEYS[ENERGY_KEYS.indexOf(on) + 1];
@@ -148,6 +155,35 @@ export function EnergyPicker({
     const left = btn.offsetLeft - (box.clientWidth - btn.offsetWidth) / 2;
     box.scrollTo({ left: Math.max(0, left), behavior: 'smooth' });
   }, [on]);
+  if (compact) {
+    const at = ENERGY_KEYS.indexOf(on);
+    return (
+      <div className="energy compact">
+        {/* every building at once: added (✓), on screen now, next (+), still to come */}
+        <div className="egrid" role="radiogroup">
+          {ENERGY_KEYS.map((k, i) => (
+            <button
+              key={k}
+              type="button"
+              role="radio"
+              aria-checked={on === k}
+              aria-label={typeof names[k] === 'string' ? (names[k] as string) : undefined}
+              className={`ecell ${i < at ? 'past' : ''} ${on === k ? 'on' : ''} ${k === nextKey ? 'next' : ''}`}
+              onClick={() => setOn(k)}
+            >
+              <span className="ecell-mark" aria-hidden="true">
+                {i < at ? '✓' : on === k ? '●' : k === nextKey ? '＋' : ''}
+              </span>
+              {short?.[k] ?? names[k]}
+            </button>
+          ))}
+        </div>
+        <button type="button" className={`energy-next ${nextKey ? '' : 'again'}`} onClick={() => setOn(nextKey ?? ENERGY_KEYS[0])}>
+          {nextKey ? next(names[nextKey]) : restart}
+        </button>
+      </div>
+    );
+  }
   return (
     <div className={`energy ${compact ? 'compact' : ''}`}>
       <div className="energy-rows" role="radiogroup" ref={rowsRef}>

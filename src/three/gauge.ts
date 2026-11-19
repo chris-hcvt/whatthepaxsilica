@@ -95,6 +95,18 @@ export class GaugeFx {
     this.place();
   }
 
+  /**
+   * Phones: what the camera keeps in view: the whole gauge (base to the 3 GW top), a little ground around its
+   * foot, and room beside it for the notes.
+   */
+  fitPoints() {
+    const H = HUB_MW * KM_PER_MW;
+    const r = WIDTH * 0.9;
+    const pts: THREE.Vector3[] = [];
+    for (const y of [0, H + 0.12]) for (const sx of [-1, 1]) for (const sz of [-1, 1]) pts.push(this.base.clone().add(new THREE.Vector3(sx * r, y, sz * r)));
+    return pts;
+  }
+
   /** the camera target for this scene */
   target() {
     return this.base.clone().add(new THREE.Vector3(0, (HUB_MW * KM_PER_MW) / 2.4, 0));

@@ -70,6 +70,7 @@ export interface FxLabels {
     reservoir?: string;
     river?: string;
     waterDay?: (day: number, meters: number, mld: number) => string;
+    farms?: string;
   };
 }
 
@@ -416,7 +417,14 @@ export class SiteFx {
   setLabels(full: FxLabels) {
     const p = window.matchMedia('(max-width: 899px)').matches ? full.phone : undefined;
     const t: FxLabels = p
-      ? { ...full, gauge: { ...full.gauge, ...p.gauge }, reservoir: p.reservoir ?? full.reservoir, river: p.river ?? full.river, waterDay: p.waterDay ?? full.waterDay }
+      ? {
+          ...full,
+          gauge: { ...full.gauge, ...p.gauge },
+          reservoir: p.reservoir ?? full.reservoir,
+          river: p.river ?? full.river,
+          waterDay: p.waterDay ?? full.waterDay,
+          farms: p.farms ?? full.farms,
+        }
       : full;
     const by = (k: Fx) => this.labels.filter((l) => l.key === k);
     by('manila')[0].el.innerHTML = `<span>${t.manila}</span>`;
