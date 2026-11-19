@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import type { SlideText } from './types';
 import { Cite, DataTable, Note, Stat, StatGrid } from '../components/bits';
+import { bigNum } from './fmt';
 import {
   ACWA_AVG_MW,
   ACWA_MW,
@@ -23,6 +24,11 @@ import {
   WATER_MLD,
   billOf,
   depthPerDay,
+  jugsOf,
+  jugStackM,
+  JUG_H_M,
+  JUG_W_M,
+  JUGS_PER_LAYER_HA,
   homesOf,
   householdsOf,
   newWaterWithRecycling,
@@ -109,6 +115,21 @@ const waterRows = (w: Words) =>
       `${depthPerDay(mld)} m`,
       `${depthPerDay(mld) * DAYS_WEEK} m`,
       `${depthPerDay(mld) * DAYS_MONTH} m`,
+    ];
+  });
+
+/** the same amounts in 5-gallon jugs, stacked on one hectare */
+const jugRows = (w: Words) =>
+  WATER_KEYS.map((k) => {
+    const mld = WATER_MLD[k];
+    return [
+      <>
+        {mld} {w.million}
+      </>,
+      bigNum(jugsOf(mld), w.million, w.billion),
+      `${jugStackM(mld, 1)} m`,
+      `${jugStackM(mld, DAYS_WEEK)} m`,
+      `${jugStackM(mld, DAYS_MONTH)} m`,
     ];
   });
 
@@ -295,6 +316,12 @@ export const powerSlidesEn: Record<string, SlideText> = {
           rows={waterRows(EN)}
           caption="Depth = million liters × 1,000 m³ ÷ 10,000 m². A week = 7 days, a month = 30. An Olympic pool holds 2.5 million liters."
         />
+        <DataTable
+          head={['Liters a day', '5-gallon jugs a day', 'Jugs on 1 hectare: a day', 'a week', 'a month']}
+          num={[1, 2, 3, 4]}
+          rows={jugRows(EN)}
+          caption={`A 5-gallon jug holds 18.9 liters (5 US gallons). A round jug is about ${JUG_W_M * 100} cm wide and ${JUG_H_M * 100} cm tall, so ${JUGS_PER_LAYER_HA.toLocaleString('en-US')} stand on one hectare (370 × 370), ${JUG_H_M} m to a layer. Jugs leave gaps, so the stack is about twice the height of the water alone.`}
+        />
         <ul className="calc">
           <li>
             65 and 90 million: BCDA’s initial assessment, told to the Senate in August 2026 (“up to 36 Olympic-sized pools”).
@@ -310,7 +337,7 @@ export const powerSlidesEn: Record<string, SlideText> = {
             <Cite s="mendoza" />
           </li>
         </ul>
-        <Note>The story’s 3D water column shows volume only. It is not a planned reservoir or its height.</Note>
+        <Note>The story’s 3D stack of jugs only pictures the amount. It is not a plan to store water in jugs, a planned reservoir or its height.</Note>
       </>
     ),
   },
@@ -580,6 +607,12 @@ export const powerSlidesTl: Record<string, SlideText> = {
           rows={waterRows(TL)}
           caption="Lalim = milyong litro × 1,000 m³ ÷ 10,000 m². Isang linggo = 7 araw, isang buwan = 30. 2.5 milyong litro ang isang Olympic pool."
         />
+        <DataTable
+          head={['Litro bawat araw', '5-gallon na galon bawat araw', 'Galon sa 1 ektarya: isang araw', 'isang linggo', 'isang buwan']}
+          num={[1, 2, 3, 4]}
+          rows={jugRows(TL)}
+          caption={`18.9 litro ang isang 5-gallon na galon (5 US gallon). Mga ${JUG_W_M * 100} cm ang lapad at ${JUG_H_M * 100} cm ang taas ng bilog na galon, kaya ${JUGS_PER_LAYER_HA.toLocaleString('en-US')} ang kasya sa isang ektarya (370 × 370), ${JUG_H_M} m bawat patong. May puwang sa pagitan ng mga galon, kaya halos doble ang taas ng salansan kaysa sa tubig lang.`}
+        />
         <ul className="calc">
           <li>
             65 at 90 milyon: unang pagtatasa ng BCDA, sinabi sa Senado noong Agosto 2026 (“hanggang 36 na Olympic-sized pool”).
@@ -595,7 +628,7 @@ export const powerSlidesTl: Record<string, SlideText> = {
             <Cite s="mendoza" />
           </li>
         </ul>
-        <Note>Dami lang ng tubig ang ipinapakita ng 3D na haligi sa kuwento. Hindi ito planong imbakan o ang taas nito.</Note>
+        <Note>Paglalarawan lang ng dami ang 3D na salansan ng galon sa kuwento. Hindi ito planong mag-imbak ng tubig sa galon, planong imbakan, o ang taas nito.</Note>
       </>
     ),
   },

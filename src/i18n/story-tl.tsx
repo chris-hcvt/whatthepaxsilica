@@ -21,6 +21,12 @@ import {
   poolsOf,
   shortfall,
   solarPanelsMW,
+  jugsOf,
+  jugStackM,
+  JUG_H_M,
+  JUG_W_M,
+  JUGS_PER_LAYER_HA,
+  JUGS_PER_ROW_HA,
 } from '../content/power';
 import { Cite, CityBars, Timeline } from '../components/bits';
 import { Assumption, BigNumber, Bullets, DotChart, EnergyPicker, FillOptions, GapBar, HomePicker, ProsCons, RefPicker, ScoreCard, WaterPicker } from '../components/story-bits';
@@ -178,8 +184,9 @@ const waterPickerTl = (
     tags={{ low: 'BCDA, pinakamababa', high: 'BCDA, pinakamataas', max: 'Pinakamataas na tantiya (Science.ph)' }}
     result={(k, mld) => (
       <>
-        <b>{mld} milyong litro bawat araw</b> = {poolsOf(mld)} Olympic pool. Sa 1 ektarya: <b>{depthPerDay(mld)} metro</b> ang lalim sa isang
-        araw, {depthPerDay(mld) * DAYS_WEEK} metro sa isang linggo, <b>{depthPerDay(mld) * DAYS_MONTH} metro</b> sa isang buwan (30 araw)
+        <b>{mld} milyong litro bawat araw</b> = <b>{bigTl(jugsOf(mld))} galon</b> (5-gallon). Kapag isinalansan sa 1 ektarya:{' '}
+        <b>{jugStackM(mld, 1)} metro</b> ang taas sa isang araw, {jugStackM(mld, DAYS_WEEK)} metro sa isang linggo,{' '}
+        <b>{jugStackM(mld, DAYS_MONTH)} metro</b> sa isang buwan (30 araw)
         {k === 'max' ? <>, halos gamit ng {householdsOf(mld).toLocaleString('en-US')} na sambahayan sa 200 litro bawat isa.</> : '.'}
       </>
     )}
@@ -620,14 +627,14 @@ export const storyTl: Record<string, StoryStep> = {
   'water-volume': {
     brief: (
       <>
-        Tantiya ng BCDA para sa zone. Pumili ng dami bawat araw para isalansan ito sa isang ektarya:
+        Tantiya ng BCDA para sa zone, sa <b>5-gallon na galon ng tubig</b> na nakasalansan sa isang ektarya. Pumili ng dami:
       </>
     ),
     control: cloneElement(waterPickerTl, {
       compact: true,
       result: (_k: string, mld: number) => (
         <>
-          <b>{poolsOf(mld)} Olympic pool</b> bawat araw · <b>{depthPerDay(mld) * DAYS_MONTH} metro</b> ang lalim sa isang buwan
+          <b>{bigTl(jugsOf(mld))} galon</b> bawat araw · <b>{jugStackM(mld, DAYS_MONTH)} metro</b> ang taas sa isang buwan
         </>
       ),
     }),
@@ -635,17 +642,34 @@ export const storyTl: Record<string, StoryStep> = {
     body: (
       <>
         <p>
-          Tantiya ito ng BCDA para sa zone. Pumili ng dami bawat araw para makita ito bilang haligi sa 1-ektaryang parisukat:
+          Tantiya ito ng BCDA para sa zone. Pumili ng dami bawat araw para makita ito bilang 5-gallon na galon ng tubig (gaya ng sa refilling station,
+          18.9 litro bawat isa), nakasalansan sa 1-ektaryang parisukat:
           <Cite s={['tribune-water', 'scienceph']} />
         </p>
         {waterPickerTl}
-        <Assumption title="Dami lang ng tubig ang ipinapakita ng haligi.">Hindi ito planong imbakan o ang taas nito.</Assumption>
+        <Assumption title="Paglalarawan lang ang mga galon.">
+          Hindi ito planong mag-imbak ng tubig sa galon, o planong imbakan. May puwang sa pagitan ng mga galon, kaya halos doble ang taas ng salansan
+          kaysa sa tubig lang ({depthPerDay(90)} metro bawat araw sa 90 milyong litro).
+        </Assumption>
       </>
     ),
     more: (
       <ul className="calc">
-        <li>Lalim = milyong litro × 1,000 metro kubiko ÷ 10,000 metro kuwadrado. 90 milyong litro: 90 × 1,000 ÷ 10,000 = 9 metro. 7 araw ang isang linggo, 30 ang isang buwan.</li>
-        <li>2.5 milyong litro ang isang Olympic pool (50 × 25 × 2 m); ang BCDA mismo ang nagkumpara ng 90 milyong litro sa 36 na pool.</li>
+        <li>
+          Galon: 18.9 litro ang isang 5-gallon na galon (5 US gallon × 3.785 litro). 90 milyon ÷ 18.9 ≈ {bigTl(jugsOf(90))} galon bawat araw, mga{' '}
+          {Math.round((jugsOf(90) * DAYS_MONTH) / 1e6)} milyon sa isang buwan.
+        </li>
+        <li>
+          Pagsasalansan: mga {JUG_W_M * 100} cm ang lapad at {JUG_H_M * 100} cm ang taas ng bilog na galon (bahagyang iba-iba ayon sa gumawa), kaya{' '}
+          {JUGS_PER_ROW_HA} × {JUGS_PER_ROW_HA} = {JUGS_PER_LAYER_HA.toLocaleString('en-US')} ang kasya sa isang ektarya. Sa 90 milyong litro:{' '}
+          {bigTl(jugsOf(90))} ÷ {JUGS_PER_LAYER_HA.toLocaleString('en-US')} ≈ {Math.round(jugsOf(90) / JUGS_PER_LAYER_HA)} patong × {JUG_H_M} metro ≈{' '}
+          {jugStackM(90, 1)} metro bawat araw.
+        </li>
+        <li>
+          Kung tubig lang sa 1 ektarya: lalim = milyong litro × 1,000 metro kubiko ÷ 10,000 metro kuwadrado: {depthPerDay(90)} metro bawat araw sa 90
+          milyon, {depthPerDay(90) * DAYS_WEEK} metro sa isang linggo, {depthPerDay(90) * DAYS_MONTH} metro sa isang buwan. Katumbas ito ng{' '}
+          {poolsOf(90)} Olympic pool bawat araw (2.5 milyong litro bawat isa); ang BCDA mismo ang nagkumpara ng 90 milyong litro sa 36 na pool.
+        </li>
         <li>
           65 at 90 milyon: unang pagtatasa ng BCDA, sinabi sa Senado noong Agosto 2026. 130 milyon: Science.ph, mas mataas na tantiya ng ibang nagsuri.
           <Cite s={['tribune-water', 'scienceph']} />

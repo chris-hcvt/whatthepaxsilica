@@ -688,7 +688,7 @@ export class SiteScene {
       hubClose: { target: hc.clone(), offset: new THREE.Vector3(2.6, 6.2, 6.0) },
       // close on the one-hectare square, from the same direction as hubClose so the zoom-out is a straight pull-back
       hectare: { target: this.fx.hectareTarget(), offset: new THREE.Vector3(2.6, 6.2, 6.0).normalize().multiplyScalar(aspect < 0.9 ? 0.25 : 0.215) },
-      // lower and further back, so a month of water (270 m) fits above the square
+      // lower and further back, so a month of jugs (up to ~740 m) fits above the square
       water: {
         target: this.fx.hectareTarget().add(new THREE.Vector3(0, this.fx.hectare.waterMonthKm * 0.48, 0)),
         offset: new THREE.Vector3(0.62, 0.36, 0.78).normalize().multiplyScalar(Math.max(0.45, this.fx.hectare.waterMonthKm * 2.3)),
@@ -712,6 +712,7 @@ export class SiteScene {
       const target = new THREE.Vector3(b.cx, this.hFlat, b.cz);
       return { target, position: target.clone().add(new THREE.Vector3(0, need / t, 0.001)) };
     }
+    if (v === 'water' && this.fx.hectare.waterClose) return this.jugCloseView();
     const { target, offset } = views[v];
     const phone = window.matchMedia('(max-width: 899px)').matches;
     // phones: a steeper look for the villages, so the long north-south spread fits a tall screen without the map's edge
@@ -747,6 +748,30 @@ export class SiteScene {
     pts.push(...this.fx.labelAnchors(c));
     if (v === 'overview') pts.push(...this.nccXZ.map(([x, z]) => new THREE.Vector3(x, this.heightAt(x, z), z)));
     return pts;
+  }
+
+  /**
+   * The jug stack's first day, up close: low, about 40 m from its nearest corner, where single jugs (27 × 49 cm)
+   * can be told apart. The engine then pulls back to the whole month (takeCameraCue).
+   */
+  private jugCloseView() {
+    const c = this.fx.hectareTarget();
+    const corner = c.clone().add(new THREE.Vector3(0.05, 0, 0.05));
+    const target = corner.add(new THREE.Vector3(-0.007, 0.008, -0.007));
+    const dist = window.matchMedia('(max-width: 899px)').matches ? 0.032 : 0.034;
+    return { target, position: target.clone().add(new THREE.Vector3(0.62, 0.22, 0.78).normalize().multiplyScalar(dist)) };
+  }
+
+  /** the jug stack is still on its first day, seen up close */
+  get waterClose() {
+    return this.fx.hectare.waterClose;
+  }
+
+  /** true once, when a scene wants the camera to move on by itself (the jug stack pulling back) */
+  takeCameraCue() {
+    if (!this.fx.hectare.waterCue) return false;
+    this.fx.hectare.waterCue = false;
+    return true;
   }
 
   /** ground points of the named villages (for fitting the camera) */

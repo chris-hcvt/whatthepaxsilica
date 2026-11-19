@@ -19,7 +19,7 @@ import {
 } from '../components/bits';
 import { FACTS, timesFit } from '../content/slides';
 import { MEMBERS } from '../content/members';
-import { ACWA_MW, BCDA_LNG_STUDY_MW, GAP_SHARE, LINED_UP_MW } from '../content/power';
+import { ACWA_MW, BCDA_LNG_STUDY_MW, GAP_SHARE, LINED_UP_MW, jugsOf } from '../content/power';
 import { bigNum, homesNum, pctNum } from './fmt';
 import { powerSlidesTl } from './report-power';
 import { chaptersTl, storyTl } from './story-tl';
@@ -160,7 +160,7 @@ export const tl: Locale = {
       },
       reservoir: 'Konseptong laki: 390–780 ektaryang imbakan (isang pagsusuri), hindi lugar ng proyekto',
       odonnell: 'Ilog O’Donnell',
-      waterDay: (day, m, mld) => `Araw ${day} · ${m} metro · ${mld} milyong litro bawat araw`,
+      waterDay: (day, m, mld) => `Araw ${day} · ${bigNum(jugsOf(mld) * day, 'milyon', 'bilyon')} galon · ${m} metro ang taas`,
       waterTick: (days, m) => `${days === 1 ? '1 araw' : days === 7 ? '1 linggo' : '1 buwan'} · ${m} m`,
       makati: 'Lungsod ng Makati · 1,815 ektarya',
       families: '≈ 200 pamilyang Aeta Hungey',
@@ -174,7 +174,7 @@ export const tl: Locale = {
         },
         reservoir: 'Konseptong imbakan, 390–780 ektarya',
         river: 'Ilog Bangut',
-        waterDay: (day, m) => `Araw ${day} · ${m} metro ang lalim`,
+        waterDay: (day, _m, mld) => `Araw ${day} · ${bigNum(jugsOf(mld) * day, 'milyon', 'bilyon')} galon`,
         farms: 'Sakahan',
       },
       creek: 'Sapa ng Sapang Kawayan',

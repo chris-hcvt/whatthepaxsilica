@@ -19,7 +19,7 @@ import {
 } from '../components/bits';
 import { FACTS, timesFit } from '../content/slides';
 import { MEMBERS } from '../content/members';
-import { ACWA_MW, BCDA_LNG_STUDY_MW, GAP_SHARE, LINED_UP_MW } from '../content/power';
+import { ACWA_MW, BCDA_LNG_STUDY_MW, GAP_SHARE, LINED_UP_MW, jugsOf } from '../content/power';
 import { bigNum, homesNum, pctNum } from './fmt';
 import { powerSlidesEn } from './report-power';
 import { chaptersEn, storyEn } from './story-en';
@@ -160,7 +160,7 @@ export const en: Locale = {
       },
       reservoir: 'Conceptual area: 390–780 ha of reservoirs (one analysis), not a site',
       odonnell: 'O’Donnell River',
-      waterDay: (day, m, mld) => `Day ${day} · ${m} m deep · ${mld} million liters a day`,
+      waterDay: (day, m, mld) => `Day ${day} · ${bigNum(jugsOf(mld) * day)} jugs · ${m} m tall`,
       waterTick: (days, m) => `${days === 1 ? '1 day' : days === 7 ? '1 week' : '1 month'} · ${m} m`,
       makati: 'Makati City · 1,815 hectares',
       families: '≈ 200 Aeta Hungey families',
@@ -174,7 +174,7 @@ export const en: Locale = {
         },
         reservoir: 'Conceptual reservoirs, 390–780 ha',
         river: 'Bangut River',
-        waterDay: (day, m) => `Day ${day} · ${m} m deep`,
+        waterDay: (day, _m, mld) => `Day ${day} · ${bigNum(jugsOf(mld) * day)} jugs`,
         farms: 'Farmland',
       },
       creek: 'Sapang Kawayan creek',

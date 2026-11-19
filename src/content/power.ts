@@ -117,6 +117,25 @@ export const poolsOf = (mld: number) => mld / POOL_ML;
 export const HOUSEHOLD_L_DAY = 200;
 export const householdsOf = (mld: number) => (mld * 1_000_000) / HOUSEHOLD_L_DAY;
 
+/* ---------- 5-gallon water jugs (the refilling-station kind), to picture the water ---------- */
+/** liters in a 5-gallon jug: 5 US gallons × 3.785411784 liters */
+export const JUG_L = 5 * 3.785411784;
+/** a round 5-gallon jug: about 27 cm wide and 49 cm tall (sizes vary a little by maker) */
+export const JUG_W_M = 0.27;
+export const JUG_H_M = 0.49;
+/** jugs standing side by side on one hectare: 100 m ÷ 0.27 m = 370 to a row, 370 rows */
+export const JUGS_PER_ROW_HA = Math.floor(100 / JUG_W_M);
+export const JUGS_PER_LAYER_HA = JUGS_PER_ROW_HA ** 2;
+/** jugs a day for a daily amount in million liters */
+export const jugsOf = (mld: number) => (mld * 1_000_000) / JUG_L;
+/** how tall a day's jugs stand, stacked on one hectare (m); taller than the water alone, because jugs leave gaps */
+export const jugStackPerDay = (mld: number) => (jugsOf(mld) / JUGS_PER_LAYER_HA) * JUG_H_M;
+/** stack heights as shown: a day, a week, a month (m, rounded the same way everywhere) */
+export const jugStackM = (mld: number, days: number) => {
+  const m = jugStackPerDay(mld) * days;
+  return m < 10 ? Math.round(m * 10) / 10 : Math.round(m);
+};
+
 /** BCDA (preliminary, dry-season): the Bangut River alone 130–200 million liters a day [tribune-water] */
 export const BANGUT_MLD: [number, number] = [130, 200];
 /** Science.ph: reservoirs supplying 65–120 million liters a day; shortfall = demand − reservoir supply */

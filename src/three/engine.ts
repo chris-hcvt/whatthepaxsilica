@@ -88,7 +88,7 @@ export class Engine {
     this.controls.enableDamping = true;
     this.controls.dampingFactor = 0.08;
     this.controls.maxPolarAngle = Math.PI * 0.47;
-    this.controls.minDistance = 0.05; // km: the one-hectare close-up sits about 300 m away
+    this.controls.minDistance = 0.025; // km: the jug stack's close-up sits about 35–40 m from its corner
     this.controls.maxDistance = 45;
     this.controls.autoRotateSpeed = 0.35;
     // the story is driven by scrolling, so the camera is not user-controlled:
@@ -248,7 +248,9 @@ export class Engine {
       this.camera.position.copy(this.reducedMotion ? position : target.clone().add(new THREE.Vector3(0, 34, 26)));
       this.flyTo(position, target, 2.8);
     } else {
-      this.flyTo(position, target, wasSite ? 1.6 : 0.01);
+      // the jug stack runs on a clock (about 5 s): the camera gets there in 1.4 s
+      const jugs = state.view === 'water' && site.waterClose;
+      this.flyTo(position, target, wasSite ? (jugs ? 1.4 : 1.6) : 0.01, jugs);
     }
     this.dirty = true;
   }
@@ -265,7 +267,8 @@ export class Engine {
     }
   }
 
-  private flyTo(position: THREE.Vector3, target: THREE.Vector3, dur: number) {
+  /** `exact`: keep `dur` even for a big zoom (the jug stack's timed sequence) */
+  private flyTo(position: THREE.Vector3, target: THREE.Vector3, dur: number, exact = false) {
     if (this.reducedMotion || dur < 0.05) {
       this.camera.position.copy(position);
       this.controls.target.copy(target);
@@ -280,7 +283,7 @@ export class Engine {
     const lnFrom = Math.log(Math.max(1e-4, from.length()));
     const lnTo = Math.log(Math.max(1e-4, to.length()));
     const zoom = Math.abs(lnTo - lnFrom);
-    if (zoom > 1.2) dur = Math.max(dur, Math.min(3.4, 1.3 + zoom * 0.55));
+    if (zoom > 1.2 && !exact) dur = Math.max(dur, Math.min(3.4, 1.3 + zoom * 0.55));
     this.fly = { tFrom: this.controls.target.clone(), tTo: target.clone(), dFrom: from.normalize(), dTo: to.normalize(), lnFrom, lnTo, t: 0, dur };
   }
 
@@ -303,6 +306,11 @@ export class Engine {
       active = true;
     }
     if (this.site.update(dt)) active = true;
+    // the jug stack: once its first day is up close, pull back to the whole month as it rises
+    if (this.site.takeCameraCue() && this.lastState?.view === 'water') {
+      const { position, target } = this.siteView('water');
+      this.flyTo(position, target, 2.5, true);
+    }
     if (this.controls.update()) active = true;
     if (active || this.dirty) {
       this.dirty = false;

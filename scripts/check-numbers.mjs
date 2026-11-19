@@ -56,6 +56,15 @@ eq('week depth (m) at 90', P.depthPerDay(90) * P.DAYS_WEEK, 63);
 eq('month depth (m) at 90', P.depthPerDay(90) * P.DAYS_MONTH, 270);
 eq('month depth (m) at 65 / 130', [65, 130].map((m) => P.depthPerDay(m) * 30), [195, 390]);
 eq('Olympic pools: 65 / 90 / 130', [65, 90, 130].map(P.poolsOf), [26, 36, 52]);
+// 5-gallon jugs
+eq('liters in a 5-gallon jug', P.JUG_L, 18.92705892);
+eq('jugs in one layer on a hectare (370 × 370)', P.JUGS_PER_LAYER_HA, 136900);
+eq('jugs a day: 65 / 90 / 130', [65, 90, 130].map(P.jugsOf), [65e6 / 18.92705892, 90e6 / 18.92705892, 130e6 / 18.92705892]);
+eq('jugs a day at 90 ≈ 4.76 million', Math.round(P.jugsOf(90) / 1e4) * 1e4, 4.76e6);
+eq('jug stack a day (m): 65 / 90 / 130', [65, 90, 130].map((m) => P.jugStackM(m, 1)), [12, 17, 25]);
+eq('jug stack a week (m): 65 / 90 / 130', [65, 90, 130].map((m) => P.jugStackM(m, 7)), [86, 119, 172]);
+eq('jug stack a month (m): 65 / 90 / 130', [65, 90, 130].map((m) => P.jugStackM(m, 30)), [369, 511, 738]);
+eq('jugs a month at 90 ≈ 143 million', Math.round((P.jugsOf(90) * 30) / 1e6), 143);
 eq('households at 200 L/day for 130 million L', P.householdsOf(130), 650000);
 eq('shortfall at 130 vs reservoirs 65–120', P.shortfall(130), [10, 65]);
 eq('shortfall at 90 vs reservoirs 65–120', P.shortfall(90), [0, 25]);

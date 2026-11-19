@@ -21,6 +21,12 @@ import {
   poolsOf,
   shortfall,
   solarPanelsMW,
+  jugsOf,
+  jugStackM,
+  JUG_H_M,
+  JUG_W_M,
+  JUGS_PER_LAYER_HA,
+  JUGS_PER_ROW_HA,
 } from '../content/power';
 import { Cite, CityBars, Timeline } from '../components/bits';
 import { Assumption, BigNumber, Bullets, DotChart, EnergyPicker, FillOptions, GapBar, HomePicker, ProsCons, RefPicker, ScoreCard, WaterPicker } from '../components/story-bits';
@@ -179,8 +185,8 @@ const waterPickerEn = (
     tags={{ low: 'BCDA, low end', high: 'BCDA, high end', max: 'Highest estimate (Science.ph)' }}
     result={(k, mld) => (
       <>
-        <b>{mld} million liters a day</b> = {poolsOf(mld)} Olympic pools. On 1 hectare: <b>{depthPerDay(mld)} m</b> deep after a day,{' '}
-        {depthPerDay(mld) * DAYS_WEEK} m after a week, <b>{depthPerDay(mld) * DAYS_MONTH} m</b> after a month (30 days)
+        <b>{mld} million liters a day</b> = <b>{bigEn(jugsOf(mld))} five-gallon jugs</b>. Stacked on 1 hectare: <b>{jugStackM(mld, 1)} m</b> high
+        after a day, {jugStackM(mld, DAYS_WEEK)} m after a week, <b>{jugStackM(mld, DAYS_MONTH)} m</b> after a month (30 days)
         {k === 'max' ? <>, about what {householdsOf(mld).toLocaleString('en-US')} households use at 200 liters each.</> : '.'}
       </>
     )}
@@ -617,14 +623,14 @@ export const storyEn: Record<string, StoryStep> = {
   'water-volume': {
     brief: (
       <>
-        BCDA’s estimate for the zone. Pick a daily amount to stack it on one hectare:
+        BCDA’s estimate for the zone, in <b>5-gallon water jugs</b> stacked on one hectare. Pick an amount:
       </>
     ),
     control: cloneElement(waterPickerEn, {
       compact: true,
       result: (_k: string, mld: number) => (
         <>
-          <b>{poolsOf(mld)} Olympic pools</b> a day · <b>{depthPerDay(mld) * DAYS_MONTH} m</b> deep after a month
+          <b>{bigEn(jugsOf(mld))} jugs</b> a day · <b>{jugStackM(mld, DAYS_MONTH)} m</b> tall after a month
         </>
       ),
     }),
@@ -632,18 +638,36 @@ export const storyEn: Record<string, StoryStep> = {
     body: (
       <>
         <p>
-          That’s BCDA’s estimate for the zone. Pick a daily amount to see it as a column on the 1-hectare square:
+          That’s BCDA’s estimate for the zone. Pick a daily amount to see it as 5-gallon water jugs (the refilling-station kind, 18.9 liters each),
+          stacked on the 1-hectare square:
           <Cite s={['tribune-water', 'scienceph']} />
         </p>
         {waterPickerEn}
-        <Assumption title="The column shows volume only.">It is not a planned reservoir or its height.</Assumption>
+        <Assumption title="The jugs only picture the amount.">
+          It is not a plan to store water in jugs, or a planned reservoir. Jugs leave gaps, so the stack stands about twice as tall as the water alone
+          would ({depthPerDay(90)} m a day at 90 million liters).
+        </Assumption>
       </>
     ),
     more: (
       <ul className="calc">
-        <li>Depth = million liters × 1,000 cubic meters ÷ 10,000 square meters. 90 million liters: 90 × 1,000 ÷ 10,000 = 9 m. A week is 7 days, a month 30.</li>
-        <li>An Olympic pool holds 2.5 million liters (50 × 25 × 2 m); BCDA itself compares 90 million liters to 36 pools.</li>
-        <li>65 and 90 million: BCDA’s initial assessment, told to the Senate in August 2026. 130 million: Science.ph, an independent higher-end figure.
+        <li>
+          Jugs: a 5-gallon jug holds 18.9 liters (5 US gallons × 3.785 liters). 90 million ÷ 18.9 ≈ {bigEn(jugsOf(90))} jugs a day, about{' '}
+          {Math.round((jugsOf(90) * DAYS_MONTH) / 1e6)} million in a month.
+        </li>
+        <li>
+          Stacking: a round jug is about {JUG_W_M * 100} cm wide and {JUG_H_M * 100} cm tall (sizes vary a little by maker), so{' '}
+          {JUGS_PER_ROW_HA} × {JUGS_PER_ROW_HA} = {JUGS_PER_LAYER_HA.toLocaleString('en-US')} stand on one hectare. At 90 million liters:{' '}
+          {bigEn(jugsOf(90))} ÷ {JUGS_PER_LAYER_HA.toLocaleString('en-US')} ≈ {Math.round(jugsOf(90) / JUGS_PER_LAYER_HA)} layers × {JUG_H_M} m ≈{' '}
+          {jugStackM(90, 1)} m a day.
+        </li>
+        <li>
+          As plain water on 1 hectare: depth = million liters × 1,000 cubic meters ÷ 10,000 square meters: {depthPerDay(90)} m a day at 90 million,{' '}
+          {depthPerDay(90) * DAYS_WEEK} m a week, {depthPerDay(90) * DAYS_MONTH} m a month. That is {poolsOf(90)} Olympic pools a day (2.5 million liters
+          each); BCDA itself compares 90 million liters to 36 pools.
+        </li>
+        <li>
+          65 and 90 million: BCDA’s initial assessment, told to the Senate in August 2026. 130 million: Science.ph, an independent higher-end figure.
           <Cite s={['tribune-water', 'scienceph']} />
         </li>
       </ul>
